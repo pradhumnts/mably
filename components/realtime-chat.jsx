@@ -1,0 +1,141 @@
+'use client'
+
+import { cn } from '@/lib/utils'
+import { ChatMessageItem } from '@/components/chat-message'
+import { useChatScroll } from '@/hooks/use-chat-scroll'
+import { useRealtimeChat } from '@/hooks/use-realtime-chat'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Send } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+
+/**
+ * Realtime chat component
+ * @param {string} roomName - The name of the room to join. Each room is a unique chat.
+ * @param {string} username - The username of the user
+ * @param {string} userRole - The role of the user (client or freelancer)
+ * @param {string} clientAvatar - Avatar URL for the client
+ * @param {string} freelancerAvatar - Avatar URL for the freelancer
+ * @param {Function} onMessage - The callback function to handle the messages. Useful if you want to store the messages in a database.
+ * @param {Array} messages - The messages to display in the chat. Useful if you want to display messages from a database.
+ * @returns The chat component
+ */
+export const RealtimeChat = ({
+  roomName,
+  username,
+  userRole,
+  clientAvatar,
+  freelancerAvatar,
+  onMessage,
+  messages: initialMessages = [],
+}) => {
+  const { containerRef, scrollToBottom } = useChatScroll()
+
+  const {
+    messages: realtimeMessages,
+    sendMessage,
+    isConnected,
+  } = useRealtimeChat({
+    roomName,
+    username,
+  })
+  const [newMessage, setNewMessage] = useState('')
+
+  // Merge realtime messages with initial messages
+  const allMessages = useMemo(() => {
+    const mergedMessages = [...initialMessages, ...realtimeMessages]
+    // Remove duplicates based on message id
+    const uniqueMessages = mergedMessages.filter(
+      (message, index, self) => index === self.findIndex((m) => m.id === message.id)
+    )
+    // Sort by creation date
+    const sortedMessages = uniqueMessages.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+
+    return sortedMessages
+  }, [initialMessages, realtimeMessages])
+
+  useEffect(() => {
+    if (onMessage) {
+      onMessage(allMessages)
+    }
+  }, [allMessages, onMessage])
+
+  useEffect(() => {
+    // Scroll to bottom whenever messages change
+    scrollToBottom()
+  }, [allMessages, scrollToBottom])
+
+  const handleSendMessage = useCallback(
+    (e) => {
+      e.preventDefault()
+      if (!newMessage.trim() || !isConnected) return
+
+      sendMessage(newMessage)
+      setNewMessage('')
+    },
+    [newMessage, isConnected, sendMessage]
+  )
+
+  return (
+    <div className="flex flex-col h-full w-full text-foreground antialiased">
+      {/* Messages */}
+      <div ref={containerRef} className="flex-1 overflow-y-auto p-4">
+        {allMessages.length === 0 ? (
+          <div className="text-center text-sm text-muted-foreground">
+            No messages yet. Start the conversation!
+          </div>
+        ) : null}
+        <div>
+          {allMessages.map((message, index) => {
+            const prevMessage = index > 0 ? allMessages[index - 1] : null
+            const showHeader = !prevMessage || prevMessage.user.name !== message.user.name
+            const isOwnMessage = message.user.name === username
+
+            // Determine which avatar to use
+            const messageAvatar = isOwnMessage 
+              ? (userRole === "client" ? clientAvatar : freelancerAvatar)
+              : (userRole === "client" ? freelancerAvatar : clientAvatar)
+
+            return (
+              <div
+                key={message.id}
+                className="animate-in fade-in slide-in-from-bottom-4 duration-300"
+              >
+                <ChatMessageItem
+                  message={message}
+                  isOwnMessage={isOwnMessage}
+                  showHeader={showHeader}
+                  avatar={messageAvatar}
+                />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <form onSubmit={handleSendMessage} className="flex w-full gap-2 border-t bg-white/80 backdrop-blur-sm border-border p-4">
+        <Input
+          className={cn(
+            'rounded-full bg-background text-sm transition-all duration-300 border-zinc-200',
+            isConnected && newMessage.trim() ? 'w-[calc(100%-48px)]' : 'w-full'
+          )}
+          type="text"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          placeholder="Message"
+          disabled={!isConnected}
+        />
+        {isConnected && newMessage.trim() && (
+          <Button
+            variant="outline"
+            className="aspect-square rounded-full animate-in fade-in slide-in-from-right-4 duration-300"
+            type="submit"
+            disabled={!isConnected}
+          >
+            <Send className="size-4" />
+          </Button>
+        )}
+      </form>
+    </div>
+  )
+}
