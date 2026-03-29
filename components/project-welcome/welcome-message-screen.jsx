@@ -48,10 +48,10 @@ export function WelcomeMessageScreen({ clientName, onContinue }) {
         <Button
           onClick={onContinue}
           size="lg"
-          className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-8"
+          className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-4"
         >
           Enter your portal
-          <ArrowRight className="ml-2 h-4 w-4" />
+          <ArrowRight className=" h-4 w-4" />
         </Button>
       </div>
     </div>

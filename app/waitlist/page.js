@@ -163,16 +163,16 @@ export default function WaitlistPage() {
             )}
 
             {currentStep < steps.length ? (
-              <Button onClick={handleNext} className="gap-2">
+              <Button onClick={handleNext} className="gap-1">
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>
             ) : (
               <Button
-                className="gap-2 px-6"
+                className="gap-1 px-4"
                 onClick={() => (window.location.href = "/project/1")}
               >
-                See it in action
+                Experience the Client Portal
                 <ChevronRight className="h-4 w-4" />
               </Button>
             )}
