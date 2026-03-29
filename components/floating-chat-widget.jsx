@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,7 +11,14 @@ import { cn } from "@/lib/utils";
 
 export function FloatingChatWidget({ projectId, userName, userRole, projectData }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(3); // Mock unread count
+  const [unreadCount, setUnreadCount] = useState(3);
+  const [introPhase, setIntroPhase] = useState("icon"); // "icon" → "avatar"
+
+  // After 1.8s, cross-fade from chat icon to avatar
+  useEffect(() => {
+    const timer = setTimeout(() => setIntroPhase("avatar"), 1800);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleOpenChat = () => {
     setIsOpen(true);
@@ -144,28 +151,54 @@ export function FloatingChatWidget({ projectId, userName, userRole, projectData 
         </Card>
       )}
 
-      {/* Floating Avatar Button */}
-      <div className={cn("relative", isOpen && "hidden")}>
+      {/* Floating Button — intro animation: icon → avatar */}
+      <div className={cn(
+        "relative animate-in slide-in-from-bottom-4 zoom-in-75 duration-500",
+        isOpen && "hidden"
+      )}>
         <Button
           onClick={handleOpenChat}
           size="icon"
           variant="outline"
-          className="h-16 w-16 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 p-0 overflow-hidden border-2 border-white"
+          className="h-16 w-16 rounded-full shadow-xl hover:shadow-2xl transition-shadow duration-300 p-0 overflow-hidden border-2 border-white relative"
         >
-          <Avatar className="h-full w-full">
-            <AvatarImage 
-              src={userRole === "client" ? freelancerAvatar : clientAvatar} 
-              alt={userRole === "client" ? "Freelancer" : "Client"} 
-            />
-            <AvatarFallback>{userRole === "client" ? "F" : "C"}</AvatarFallback>
-          </Avatar>
+          {/* Phase 1: Chat icon */}
+          <span
+            className={cn(
+              "absolute inset-0 flex items-center justify-center bg-white rounded-full transition-all duration-600",
+              introPhase === "avatar"
+                ? "opacity-0 scale-75"
+                : "opacity-100 scale-100"
+            )}
+          >
+
+            <MessageCircle className="h-9 w-9 text-black" />
+          </span>
+
+          {/* Phase 2: Avatar */}
+          <span
+            className={cn(
+              "absolute inset-0 transition-all duration-600",
+              introPhase === "avatar"
+                ? "opacity-100 scale-100"
+                : "opacity-0 scale-110"
+            )}
+          >
+            <Avatar className="h-full w-full">
+              <AvatarImage
+                src={userRole === "client" ? freelancerAvatar : clientAvatar}
+                alt={userRole === "client" ? "Freelancer" : "Client"}
+              />
+              <AvatarFallback>{userRole === "client" ? "F" : "C"}</AvatarFallback>
+            </Avatar>
+          </span>
         </Button>
-        
-        {/* Unread Badge */}
-        {unreadCount > 0 && (
-          <Badge 
-            variant="destructive" 
-            className="absolute -top-0.5 -right-0.5 h-5 w-5 bg-red-500 text-white flex items-center justify-center p-0 rounded-full text-xs font-semibold animate-in zoom-in duration-200"
+
+        {/* Unread Badge — only show once avatar is visible */}
+        {unreadCount > 0 && introPhase === "avatar" && (
+          <Badge
+            variant="destructive"
+            className="absolute -top-0.5 -right-0.5 h-5 w-5 bg-red-500 text-white flex items-center justify-center p-0 rounded-full text-xs font-semibold animate-in zoom-in duration-300"
           >
             {unreadCount}
           </Badge>
