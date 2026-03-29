@@ -9,7 +9,7 @@ import { WelcomeMessageScreen } from "./welcome-message-screen";
 
 export function ProjectWelcome({ projectData }) {
   const router = useRouter();
-  const [currentScreen, setCurrentScreen] = useState(1);
+  const [currentScreen, setCurrentScreen] = useState(4);
   const [answers, setAnswers] = useState({});
 
   const handleNext = () => {

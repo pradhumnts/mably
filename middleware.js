@@ -39,6 +39,7 @@ export async function middleware(request) {
                          request.nextUrl.pathname.startsWith('/features') ||
                          request.nextUrl.pathname.startsWith('/demo')
   const isPublicPage = request.nextUrl.pathname === '/' ||
+                       request.nextUrl.pathname.startsWith('/waitlist') ||
                        request.nextUrl.pathname.startsWith('/auth/callback') ||
                        request.nextUrl.pathname.startsWith('/project/')
 

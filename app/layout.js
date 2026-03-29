@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: {
     template: "%s | Mably",
-    default: "Mably - Project Management Made Simple",
+    default: "Mably - Client Experience Made Easy",
   },
-  description: "Manage your projects and clients with ease",
+  description: "Manage your clients and their information with ease",
 };
 
 export default function RootLayout({ children }) {
