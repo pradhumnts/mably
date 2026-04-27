@@ -215,10 +215,8 @@ export function BillingPageClient({
             </Card>
 
             <Card className="relative flex flex-col border-orange-500/50 bg-gradient-to-b from-orange-50/80 via-card to-card shadow-md dark:from-orange-950/25 dark:via-card dark:to-card">
-              <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background shadow">
-                Growth
-              </span>
-              <CardHeader className="pt-10">
+             
+              <CardHeader>
                 <CardTitle>Growth</CardTitle>
                 <CardDescription>$19/mo · full workspace</CardDescription>
                 <p className="pt-2 text-3xl font-bold tracking-tight">$19</p>

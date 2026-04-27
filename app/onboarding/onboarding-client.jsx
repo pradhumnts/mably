@@ -26,6 +26,7 @@ import {
 import { updateProfile, uploadProfileAvatar } from "@/lib/actions/profile";
 import { completeFreelancerOnboarding } from "@/lib/actions/onboarding";
 import { toast } from "sonner";
+import { LegalFooterLinks } from "@/components/legal-footer-links";
 
 const STEP1_BULLETS = [
   {
@@ -172,7 +173,8 @@ export function FreelancerOnboardingClient({ initialProfile }) {
   const rightImage = STEP_IMAGES[Math.min(currentStep, STEP_IMAGES.length) - 1] ?? STEP_IMAGES[0];
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen overflow-hidden bg-background">
+    <div className="flex min-h-screen flex-col overflow-hidden bg-background">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
       <div className="flex flex-col w-full lg:w-[48%] min-h-0 px-8 py-10 sm:px-12 sm:py-14 lg:px-20 lg:py-20 justify-between overflow-y-auto">
         <div className="mb-10">
           <img
@@ -434,6 +436,10 @@ export function FreelancerOnboardingClient({ initialProfile }) {
           </div>
         )}
       </div>
+      </div>
+      <footer className="shrink-0 border-t border-border/50 bg-background/95 py-2 backdrop-blur-sm supports-[backdrop-filter]:bg-background/90">
+        <LegalFooterLinks />
+      </footer>
     </div>
   );
 }

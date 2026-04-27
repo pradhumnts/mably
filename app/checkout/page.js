@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { initializePaddle } from "@paddle/paddle-js";
 import Link from "next/link";
+import { LegalFooterLinks } from "@/components/legal-footer-links";
 
 /**
  * Public page for Paddle “default payment link” + Paddle.js script host.
@@ -53,6 +54,7 @@ export default function CheckoutHostPage() {
           </Link>
         </div>
       </div>
+      <LegalFooterLinks className="mt-6 text-[11px]" />
     </div>
   );
 }

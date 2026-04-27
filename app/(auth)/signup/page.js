@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { SignupForm } from "@/components/signup-form";
 import { FieldDescription } from "@/components/ui/field";
 import { sanitizeNextPath } from "@/lib/auth/safe-next-path";
+import { LEGAL_LINKS } from "@/lib/constants/legal-links";
 
 export const metadata = {
   title: "Sign Up",
@@ -35,16 +35,35 @@ export default async function SignupPage({ searchParams }) {
         <div className="w-full max-w-sm">
           <SignupForm key={next ? `signup-${next}` : "signup-form"} next={next} intent={intent} />
         </div>
-        <FieldDescription className="text-center text-xs absolute bottom-[60px] max-w-full w-full">
-          By clicking continue, you agree to our{" "}
-          <Link href="/terms" className="underline underline-offset-4">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="underline underline-offset-4">
-            Privacy Policy
-          </Link>
-          .
+        <FieldDescription className="absolute bottom-8 left-0 right-0 mx-auto max-w-full px-4 text-center text-xs leading-relaxed">
+          By continuing, you agree to our{" "}
+          <a
+            href={LEGAL_LINKS.terms}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-4"
+          >
+            Terms
+          </a>
+          ,{" "}
+          <a
+            href={LEGAL_LINKS.privacy}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-4"
+          >
+            Privacy
+          </a>
+          , and{" "}
+          <a
+            href={LEGAL_LINKS.refund}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-4"
+          >
+            Refund
+          </a>{" "}
+          policy.
         </FieldDescription>
       </div>
     </div>
