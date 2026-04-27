@@ -1,13 +1,20 @@
 import Link from "next/link";
 import { SignupForm } from "@/components/signup-form";
 import { FieldDescription } from "@/components/ui/field";
+import { sanitizeNextPath } from "@/lib/auth/safe-next-path";
 
 export const metadata = {
   title: "Sign Up",
   description: "Create your Mably account",
 };
 
-export default function SignupPage() {
+export default async function SignupPage({ searchParams }) {
+  const sp = await searchParams;
+  const rawNext = Array.isArray(sp.next) ? sp.next[0] : sp.next;
+  const next = sanitizeNextPath(typeof rawNext === "string" ? rawNext : undefined) ?? null;
+  const rawIntent = Array.isArray(sp.intent) ? sp.intent[0] : sp.intent;
+  const intent = rawIntent === "portal" ? "portal" : null;
+
   return (
     <div>
       <img
@@ -26,7 +33,7 @@ export default function SignupPage() {
       </div>
       <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10 relative max-w-full">
         <div className="w-full max-w-sm">
-          <SignupForm key="signup-form" />
+          <SignupForm key={next ? `signup-${next}` : "signup-form"} next={next} intent={intent} />
         </div>
         <FieldDescription className="text-center text-xs absolute bottom-[60px] max-w-full w-full">
           By clicking continue, you agree to our{" "}
@@ -43,4 +50,3 @@ export default function SignupPage() {
     </div>
   );
 }
-

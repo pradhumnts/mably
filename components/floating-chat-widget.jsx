@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { X, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,122 +8,147 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { RealtimeChat } from "@/components/realtime-chat";
 import { cn } from "@/lib/utils";
+import { getProjectChatBootstrap, markProjectChatRead } from "@/lib/actions/project-chat";
+import { toast } from "sonner";
 
-export function FloatingChatWidget({ projectId, userName, userRole, projectData }) {
+/**
+ * @param {{
+ *   projectId: string;
+ *   userRole: "client" | "freelancer";
+ *   portalChatPersonas: {
+ *     projectName?: string;
+ *     projectLogo?: string | null;
+ *     clientName?: string;
+ *     clientAvatar?: string | null;
+ *     freelancerName?: string;
+ *     freelancerAvatar?: string | null;
+ *   };
+ * }}
+ */
+export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(3);
-  const [introPhase, setIntroPhase] = useState("icon"); // "icon" → "avatar"
+  const [boot, setBoot] = useState(null);
+  const [bootError, setBootError] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [introPhase, setIntroPhase] = useState("icon");
+  const isOpenRef = useRef(false);
 
-  // After 1.8s, cross-fade from chat icon to avatar
+  const h = boot?.header;
+  const clientAvatar = (h?.clientAvatar ?? portalChatPersonas?.clientAvatar) ?? null;
+  const freelancerAvatar = (h?.freelancerAvatar ?? portalChatPersonas?.freelancerAvatar) ?? null;
+  const projectLogo = (h?.projectLogo ?? portalChatPersonas?.projectLogo) ?? null;
+  const clientName = h?.clientName?.trim() || portalChatPersonas?.clientName || "Client";
+  const freelancerName = h?.freelancerName?.trim() || portalChatPersonas?.freelancerName || "Freelancer";
+  const projectName = h?.projectName?.trim() || portalChatPersonas?.projectName || "Project";
+  const senderDisplayName = userRole === "client" ? clientName : freelancerName;
+  const selfAvatarUrl = userRole === "client" ? clientAvatar : freelancerAvatar;
+
   useEffect(() => {
     const timer = setTimeout(() => setIntroPhase("avatar"), 1800);
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    setBoot(null);
+    setBootError(null);
+    (async () => {
+      const r = await getProjectChatBootstrap(String(projectId));
+      if (cancelled) return;
+      if (!r.ok) {
+        setBootError(r.error || "Could not load chat");
+        setUnreadCount(0);
+        return;
+      }
+      setBoot(r);
+      setUnreadCount(typeof r.unreadCount === "number" ? r.unreadCount : 0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  const initialMessages = useMemo(() => boot?.messages ?? [], [boot]);
+
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  const onRemoteMessage = useCallback(() => {
+    setUnreadCount((n) => (isOpenRef.current ? n : n + 1));
+  }, []);
+
+  // Refetch persisted messages when opening (heals stale snapshot) then mark read.
+  useEffect(() => {
+    if (!isOpen || !boot?.conversationId) return;
+    const cid = String(boot.conversationId);
+    let cancelled = false;
+    void (async () => {
+      const r = await getProjectChatBootstrap(String(projectId));
+      if (cancelled || !r.ok) return;
+      setBoot(r);
+      setUnreadCount(typeof r.unreadCount === "number" ? r.unreadCount : 0);
+      const mark = await markProjectChatRead(String(projectId), cid);
+      if (cancelled || !mark.ok) return;
+      setUnreadCount(0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, boot?.conversationId, projectId]);
+
   const handleOpenChat = () => {
     setIsOpen(true);
-    setUnreadCount(0); // Clear unread count when opening chat
   };
 
-  // Mock data - replace with actual data from props
-  const clientAvatar = "https://plus.unsplash.com/premium_photo-1690034979551-65a363a0e4a6?q=80&w=1287&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
-  const freelancerAvatar = "https://plus.unsplash.com/premium_photo-1675710868549-3c9d54a40219?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
-  const projectLogo = projectData?.logo || "/images/Logo-icon.svg";
-
-  // Dummy messages for testing
-  const dummyMessages = [
-    {
-      id: "1",
-      content: "Hey! I've started working on the project. Just wanted to confirm the design specifications.",
-      user: {
-        name: userRole === "client" ? "Freelancer" : "Client",
-      },
-      createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-    },
-    {
-      id: "2",
-      content: "That's great! Yes, please follow the latest Figma designs I shared yesterday.",
-      user: {
-        name: userName,
-      },
-      createdAt: new Date(Date.now() - 3000000).toISOString(), // 50 minutes ago
-    },
-    {
-      id: "3",
-      content: "Perfect! I'll make sure everything matches. Do you have any preference for the color scheme?",
-      user: {
-        name: userRole === "client" ? "Freelancer" : "Client",
-      },
-      createdAt: new Date(Date.now() - 2400000).toISOString(), // 40 minutes ago
-    },
-    {
-      id: "4",
-      content: "Let's stick with the primary colors we discussed. The orange accent works really well.",
-      user: {
-        name: userName,
-      },
-      createdAt: new Date(Date.now() - 1800000).toISOString(), // 30 minutes ago
-    },
-    {
-      id: "5",
-      content: "Sounds good! I'll have the first draft ready by tomorrow.",
-      user: {
-        name: userRole === "client" ? "Freelancer" : "Client",
-      },
-      createdAt: new Date(Date.now() - 1200000).toISOString(), // 20 minutes ago
-    },
-    {
-      id: "6",
-      content: "That's great! I'll have the first draft ready by tomorrow.",
-      user: {
-        name: userRole === "client" ? "Freelancer" : "Client",
-      },
-      createdAt: new Date(Date.now() - 1200000).toISOString(), // 20 minutes ago
-    },
-  ];
+  const chatDisabled = Boolean(bootError || !boot?.conversationId);
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
-      {/* Chat Panel */}
-      {isOpen && (
-        <Card className="mb-4 w-[500px] h-[70vh] shadow-2xl border-[1px] animate-in slide-in-from-bottom-4 duration-300 overflow-hidden p-0 gap-0 relative">
-          {/* Background Image */}
-          <div 
+      {/* Keep chat mounted when closed so Realtime + local message state are not lost to the initial bootstrap snapshot. */}
+      <Card
+        className={cn(
+          "mb-4 w-[500px] h-[70vh] shadow-2xl border-[1px] overflow-hidden p-0 gap-0 relative",
+          isOpen
+            ? "animate-in slide-in-from-bottom-4 duration-300"
+            : "hidden pointer-events-none"
+        )}
+        aria-hidden={!isOpen}
+      >
+          <div
             className="absolute inset-0 z-0"
             style={{
-              backgroundImage: 'url(/images/chat-bg.webp)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
+              backgroundImage: "url(/images/chat-bg.webp)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
             }}
           />
 
-          {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-zinc-100 backdrop-blur-sm relative z-10">
             <div className="flex items-center gap-3">
-              {/* Show 2 avatars for freelancer, 1 for client */}
               <div className="flex items-center -space-x-2">
                 {userRole === "freelancer" ? (
                   <>
-                    <Avatar className="h-[48px] w-[48px] border-1 border-white">
-                      <AvatarImage src={clientAvatar} alt="Client" />
-                      <AvatarFallback>C</AvatarFallback>
+                    <Avatar className="h-[48px] w-[48px] border border-white">
+                      <AvatarImage src={clientAvatar || undefined} alt={clientName} />
+                      <AvatarFallback>{clientName.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <Avatar className="h-[48px] w-[48px] border-1 border-white">
-                      <AvatarImage src={projectLogo} alt="Project" />
-                      <AvatarFallback>P</AvatarFallback>
+                    <Avatar className="h-[48px] w-[48px] border border-white">
+                      <AvatarImage src={projectLogo || undefined} alt="" />
+                      <AvatarFallback>{(projectName || "P").charAt(0)}</AvatarFallback>
                     </Avatar>
                   </>
                 ) : (
-                  <Avatar className="h-[48px] w-[48px] border-1 border-white">
-                    <AvatarImage src={freelancerAvatar} alt="Freelancer" />
-                    <AvatarFallback>F</AvatarFallback>
+                  <Avatar className="h-[48px] w-[48px] border border-white">
+                    <AvatarImage src={freelancerAvatar || undefined} alt={freelancerName} />
+                    <AvatarFallback>{freelancerName.charAt(0)}</AvatarFallback>
                   </Avatar>
                 )}
               </div>
               <div>
                 <h3 className="font-semibold text-sm text-foreground">
-                  {userRole === "client" ? "Emma Reed" : "Sophie James"}
+                  {userRole === "client" ? freelancerName : clientName}
                 </h3>
               </div>
             </div>
@@ -131,80 +156,89 @@ export function FloatingChatWidget({ projectId, userName, userRole, projectData 
               variant="outline"
               size="icon"
               className="h-8 w-8 rounded-full"
+              type="button"
               onClick={() => setIsOpen(false)}
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* Chat Content */}
-          <div className="h-[calc(70vh-5.3rem)] relative z-10">
-            <RealtimeChat
-              roomName={`project-${projectId}`}
-              username={userName}
-              userRole={userRole}
-              clientAvatar={clientAvatar}
-              freelancerAvatar={freelancerAvatar}
-              messages={dummyMessages}
-            />
+          <div className="relative z-10 flex h-[calc(70vh-5.3rem)] min-h-0 flex-col">
+            {bootError ? (
+              <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+                {bootError}
+              </div>
+            ) : (
+              <RealtimeChat
+                projectId={String(projectId)}
+                conversationId={boot?.conversationId ?? null}
+                currentUserId={boot?.currentUserId ?? null}
+                initialMessages={initialMessages}
+                userRole={userRole}
+                clientAvatar={clientAvatar}
+                freelancerAvatar={freelancerAvatar}
+                senderDisplayName={senderDisplayName}
+                selfAvatarUrl={selfAvatarUrl}
+                onRemoteMessage={onRemoteMessage}
+                disabled={chatDisabled}
+              />
+            )}
           </div>
         </Card>
-      )}
 
-      {/* Floating Button — intro animation: icon → avatar */}
-      <div className={cn(
-        "relative animate-in slide-in-from-bottom-4 zoom-in-75 duration-500",
-        isOpen && "hidden"
-      )}>
+      <div
+        className={cn(
+          "relative animate-in slide-in-from-bottom-4 zoom-in-75 duration-500",
+          isOpen && "hidden"
+        )}
+      >
         <Button
-          onClick={handleOpenChat}
+          onClick={() => {
+            if (bootError) {
+              toast.error(bootError);
+              return;
+            }
+            handleOpenChat();
+          }}
           size="icon"
           variant="outline"
           className="h-16 w-16 rounded-full shadow-xl hover:shadow-2xl transition-shadow duration-300 p-0 overflow-hidden border-2 border-white relative"
+          type="button"
         >
-          {/* Phase 1: Chat icon */}
           <span
             className={cn(
               "absolute inset-0 flex items-center justify-center bg-white rounded-full transition-all duration-600",
-              introPhase === "avatar"
-                ? "opacity-0 scale-75"
-                : "opacity-100 scale-100"
+              introPhase === "avatar" ? "opacity-0 scale-75" : "opacity-100 scale-100"
             )}
           >
-
             <MessageCircle className="h-9 w-9 text-black" />
           </span>
 
-          {/* Phase 2: Avatar */}
           <span
             className={cn(
               "absolute inset-0 transition-all duration-600",
-              introPhase === "avatar"
-                ? "opacity-100 scale-100"
-                : "opacity-0 scale-110"
+              introPhase === "avatar" ? "opacity-100 scale-100" : "opacity-0 scale-110"
             )}
           >
             <Avatar className="h-full w-full">
               <AvatarImage
-                src={userRole === "client" ? freelancerAvatar : clientAvatar}
-                alt={userRole === "client" ? "Freelancer" : "Client"}
+                src={userRole === "client" ? freelancerAvatar || undefined : clientAvatar || undefined}
+                alt={userRole === "client" ? freelancerName : clientName}
               />
-              <AvatarFallback>{userRole === "client" ? "F" : "C"}</AvatarFallback>
+              <AvatarFallback>{userRole === "client" ? freelancerName.charAt(0) : clientName.charAt(0)}</AvatarFallback>
             </Avatar>
           </span>
         </Button>
 
-        {/* Unread Badge — only show once avatar is visible */}
-        {unreadCount > 0 && introPhase === "avatar" && (
+        {unreadCount > 0 && introPhase === "avatar" && !bootError && (
           <Badge
             variant="destructive"
-            className="absolute -top-0.5 -right-0.5 h-5 w-5 bg-red-500 text-white flex items-center justify-center p-0 rounded-full text-xs font-semibold animate-in zoom-in duration-300"
+            className="absolute -top-0.5 -right-0.5 h-5 min-w-5 px-1 bg-red-500 text-white flex items-center justify-center rounded-full text-xs font-semibold animate-in zoom-in duration-300"
           >
-            {unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </Badge>
         )}
       </div>
     </div>
   );
 }
-

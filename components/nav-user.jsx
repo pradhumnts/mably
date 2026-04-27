@@ -2,6 +2,7 @@
 
 import {
   ChevronsUpDown,
+  Lightbulb,
   LogOut,
   User,
   Settings,
@@ -28,11 +29,16 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth/actions";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export function NavUser({ user }) {
+  const pathname = usePathname();
   const { isMobile } = useSidebar();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const onFeatureLab = pathname === "/features" || pathname.startsWith("/features/");
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -88,15 +94,35 @@ export function NavUser({ user }) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <User />
-                Profile
+              <DropdownMenuItem asChild>
+                <Link href="/settings" className="cursor-pointer">
+                  <User />
+                  Profile
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings />
-                Settings
+              <DropdownMenuItem asChild>
+                <Link href="/settings" className="cursor-pointer">
+                  <Settings />
+                  Settings
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link
+                href="/features"
+                className={cn(
+                  "cursor-pointer",
+                  "bg-orange-500/[0.06] dark:bg-orange-500/10",
+                  "hover:bg-orange-500/10 dark:hover:bg-orange-500/15",
+                  "data-[highlighted]:bg-orange-500/10 dark:data-[highlighted]:bg-orange-500/15",
+                  onFeatureLab && "bg-orange-500/12 font-medium dark:bg-orange-500/18"
+                )}
+              >
+                <Lightbulb className="size-4 shrink-0 text-orange-600 dark:text-orange-400" aria-hidden />
+                Feature lab
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
               <LogOut />

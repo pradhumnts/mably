@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import {
+  LIBRARY_MAX_UPLOAD_BYTES,
+  LIBRARY_MAX_UPLOAD_LABEL,
+} from "@/lib/constants/library-upload";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,8 +19,25 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Upload } from "lucide-react";
+import { uploadLibraryFile } from "@/lib/actions/project-library";
+import { toast } from "sonner";
 
-export function UploadFileDialog({ open, onOpenChange }) {
+/**
+ * @param {{
+ *   open: boolean;
+ *   onOpenChange: (open: boolean) => void;
+ *   projectId: string;
+ *   onUploaded?: () => void;
+ *   isFreelancer?: boolean;
+ * }}
+ */
+export function UploadFileDialog({
+  open,
+  onOpenChange,
+  projectId,
+  onUploaded,
+  isFreelancer = true,
+}) {
   const [formData, setFormData] = useState({
     fileName: "",
     file: null,
@@ -24,6 +45,7 @@ export function UploadFileDialog({ open, onOpenChange }) {
     needsApproval: false,
   });
   const [selectedFileName, setSelectedFileName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -34,32 +56,70 @@ export function UploadFileDialog({ open, onOpenChange }) {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData((prev) => ({
-        ...prev,
-        file: file,
-      }));
-      setSelectedFileName(file.name);
+    const input = e.target;
+    const file = input.files?.[0];
+    if (!file) {
+      setFormData((prev) => ({ ...prev, file: null }));
+      setSelectedFileName("");
+      return;
     }
+    if (file.size > LIBRARY_MAX_UPLOAD_BYTES) {
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      setFormData((prev) => ({ ...prev, file: null }));
+      setSelectedFileName("");
+      input.value = "";
+      toast.error("File too large", {
+        description: `This file is about ${mb} MB. The maximum upload size is ${LIBRARY_MAX_UPLOAD_LABEL}. Choose a smaller file or compress it first.`,
+      });
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      file,
+    }));
+    setSelectedFileName(file.name);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // In the future, this will upload the file to storage
-    console.log("File data:", {
-      customFileName: formData.fileName,
-      originalFileName: formData.file?.name,
-      fileSize: formData.file?.size,
-      fileType: formData.file?.type,
-      comment: formData.comment,
-      needsApproval: formData.needsApproval,
+    const file = formData.file;
+    if (!file) {
+      toast.error("No file selected", {
+        description: "Choose a file from your device before uploading.",
+      });
+      return;
+    }
+    if (file.size > LIBRARY_MAX_UPLOAD_BYTES) {
+      toast.error("File too large", {
+        description: `This file exceeds the ${LIBRARY_MAX_UPLOAD_LABEL} limit. Pick a smaller file.`,
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    const fd = new FormData();
+    fd.set("projectId", projectId);
+    fd.set("file", file);
+    fd.set("displayName", formData.fileName.trim());
+    fd.set("description", formData.comment);
+    fd.set("needsApproval", formData.needsApproval ? "1" : "0");
+
+    const res = await uploadLibraryFile(fd);
+    setSubmitting(false);
+
+    if (!res.ok) {
+      const msg = res.error || "Something went wrong. Please try again.";
+      const sizeRelated = /too large|maximum upload|body exceeded|limit/i.test(msg);
+      toast.error(sizeRelated ? "File too large" : "Upload failed", {
+        description: msg,
+      });
+      return;
+    }
+
+    toast.success("File uploaded", {
+      description: "It is now available in the project library.",
     });
-    
     onOpenChange(false);
-    
-    // Reset form
     setFormData({
       fileName: "",
       file: null,
@@ -67,6 +127,7 @@ export function UploadFileDialog({ open, onOpenChange }) {
       needsApproval: false,
     });
     setSelectedFileName("");
+    onUploaded?.();
   };
 
   return (
@@ -75,13 +136,13 @@ export function UploadFileDialog({ open, onOpenChange }) {
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">Upload File</DialogTitle>
           <DialogDescription>
-            Upload a file to share with your team. Supported formats include PDFs, images, documents, and more.
+            Upload a file for everyone on this project with portal access. Maximum file size:{" "}
+            {LIBRARY_MAX_UPLOAD_LABEL}.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => void handleSubmit(e)}>
           <div className="grid gap-4 py-4">
-            {/* File Name */}
             <div className="grid gap-2">
               <Label htmlFor="fileName">File Name</Label>
               <Input
@@ -91,10 +152,10 @@ export function UploadFileDialog({ open, onOpenChange }) {
                 value={formData.fileName}
                 onChange={handleInputChange}
                 required
+                disabled={submitting}
               />
             </div>
 
-            {/* File Upload */}
             <div className="grid gap-2">
               <Label htmlFor="file">File</Label>
               <div className="relative">
@@ -104,6 +165,7 @@ export function UploadFileDialog({ open, onOpenChange }) {
                   type="file"
                   onChange={handleFileChange}
                   required
+                  disabled={submitting}
                   className="cursor-pointer"
                 />
                 {selectedFileName && (
@@ -115,49 +177,44 @@ export function UploadFileDialog({ open, onOpenChange }) {
               </div>
             </div>
 
-            {/* Comment/Description */}
             <div className="grid gap-2">
               <Label htmlFor="comment">
-                Comment/Description <span className="text-muted-foreground text-sm">(Optional)</span>
+                Comment / description <span className="text-muted-foreground text-sm">(optional)</span>
               </Label>
               <Textarea
                 id="comment"
                 name="comment"
-                placeholder="Add any notes or comments about this file..."
+                placeholder="Add any notes about this file…"
                 value={formData.comment}
                 onChange={handleInputChange}
                 rows={4}
+                disabled={submitting}
               />
             </div>
 
-            {/* Needs Approval Checkbox */}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="needsApproval"
                 checked={formData.needsApproval}
-                onCheckedChange={(checked) => 
-                  setFormData((prev) => ({ ...prev, needsApproval: checked }))
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({ ...prev, needsApproval: Boolean(checked) }))
                 }
+                disabled={submitting}
               />
-              <Label
-                htmlFor="needsApproval"
-                className="text-sm font-normal cursor-pointer"
-              >
-                This file needs client approval
+              <Label htmlFor="needsApproval" className="text-sm font-normal cursor-pointer">
+                {isFreelancer
+                  ? "This file needs client approval"
+                  : "This file needs freelancer approval"}
               </Label>
             </div>
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
               Cancel
             </Button>
-            <Button type="submit">
-              Upload File
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Uploading…" : "Upload File"}
             </Button>
           </DialogFooter>
         </form>
@@ -165,4 +222,3 @@ export function UploadFileDialog({ open, onOpenChange }) {
     </Dialog>
   );
 }
-

@@ -19,14 +19,17 @@ export const ChatMessageItem = ({ message, isOwnMessage, showHeader, avatar }) =
       >
         {showHeader && (
           <div
-            className={cn('flex items-center gap-2 text-xs px-3', {
-              'justify-end flex-row-reverse': isOwnMessage,
+            className={cn("flex items-center gap-2 text-xs px-3", {
+              "justify-end flex-row-reverse": isOwnMessage,
             })}
           >
+            {!isOwnMessage && message.user?.name ? (
+              <span className="text-foreground/70 font-medium truncate max-w-[10rem]">{message.user.name}</span>
+            ) : null}
             <span className="text-foreground/50 text-xs">
-              {new Date(message.createdAt).toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
+              {new Date(message.createdAt).toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
                 hour12: true,
               })}
             </span>

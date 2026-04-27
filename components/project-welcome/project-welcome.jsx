@@ -3,43 +3,44 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { WelcomeScreen } from "./welcome-screen";
-import { QuestionsScreen } from "./questions-screen";
-import { AllSetScreen } from "./all-set-screen";
+// import { QuestionsScreen } from "./questions-screen";
+// import { AllSetScreen } from "./all-set-screen";
 import { WelcomeMessageScreen } from "./welcome-message-screen";
 
 export function ProjectWelcome({ projectData }) {
   const router = useRouter();
-  const [currentScreen, setCurrentScreen] = useState(4);
-  const [answers, setAnswers] = useState({});
+  const [currentScreen, setCurrentScreen] = useState(1);
+  // const [answers, setAnswers] = useState({}); // used when QuestionsScreen + AllSet flow returns
 
   const handleNext = () => {
-    setCurrentScreen(currentScreen + 1);
-  };
-
-  const handleSubmitQuestions = (questionAnswers) => {
-    setAnswers(questionAnswers);
-    // Go to "All Set" screen
-    setCurrentScreen(3);
-  };
-
-  const handleAllSetComplete = () => {
-    // After "All Set", show the personalized welcome message
+    // Kickoff questions disabled — always go to personalized welcome (screen 4).
+    // if (projectData.hasQuestions) {
+    //   setCurrentScreen(2);
+    // } else {
+    //   setCurrentScreen(4);
+    // }
     setCurrentScreen(4);
   };
 
+  // const handleSubmitQuestions = (questionAnswers) => {
+  //   setAnswers(questionAnswers);
+  //   setCurrentScreen(3);
+  // };
+
+  // const handleAllSetComplete = () => {
+  //   setCurrentScreen(4);
+  // };
+
   const handleSkipToWelcome = () => {
-    // Skip questions and go directly to personalized welcome
     setCurrentScreen(4);
   };
 
   const handleSkipToProject = () => {
-    // Redirect to the project dashboard
     router.push(`/project/${projectData.id}/dashboard`);
   };
 
   return (
     <div className="relative min-h-screen">
-      {/* Background Image */}
       <img
         src="/images/welcome-bg.webp"
         alt="Welcome background"
@@ -47,44 +48,35 @@ export function ProjectWelcome({ projectData }) {
         draggable={false}
       />
 
-      {/* Content */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
-        {/* Screen 1: Initial Welcome */}
         {currentScreen === 1 && (
-          <WelcomeScreen
-            projectData={projectData}
-            onNext={handleNext}
-            onSkip={handleSkipToWelcome}
-          />
+          <WelcomeScreen onNext={handleNext} />
         )}
 
-        {/* Screen 2: Questions Form (only if there are questions) */}
-        {currentScreen === 2 && projectData.hasQuestions && (
+        {/* Screen 2–3: kickoff questions + “all set” — restore when `hasQuestions` is wired again */}
+        {/* {currentScreen === 2 && projectData.hasQuestions && (
           <QuestionsScreen
             questions={projectData.questions}
             onSubmit={handleSubmitQuestions}
             onDoLater={handleSkipToWelcome}
           />
         )}
-
-        {/* Screen 3: All Set Confirmation */}
         {currentScreen === 3 && (
           <AllSetScreen
             clientName={projectData.clientName}
             onContinue={handleAllSetComplete}
           />
-        )}
+        )} */}
 
-        {/* Screen 4: Personalized Welcome Message */}
         {currentScreen === 4 && (
           <WelcomeMessageScreen
             clientName={projectData.clientName}
+            welcomeMessage={projectData.welcomeMessage}
             onContinue={handleSkipToProject}
           />
         )}
       </div>
 
-      {/* Mably.io Footer */}
       <div className="absolute bottom-6 right-6 z-20 flex items-center gap-2 text-sm text-gray-600">
         <span>Created with</span>
         <img
@@ -97,4 +89,3 @@ export function ProjectWelcome({ projectData }) {
     </div>
   );
 }
-

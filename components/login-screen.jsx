@@ -2,7 +2,7 @@ import Link from "next/link";
 import { LoginForm } from "@/components/login-form";
 import { FieldDescription } from "@/components/ui/field";
 
-export function LoginScreen() {
+export function LoginScreen({ next = null, intent = null }) {
   return (
     <div>
       <img
@@ -21,7 +21,7 @@ export function LoginScreen() {
       </div>
       <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10 relative">
         <div className="w-full max-w-sm">
-          <LoginForm key="login-form" />
+          <LoginForm key={next ? `login-${next}` : "login-form"} next={next} intent={intent} />
         </div>
         <FieldDescription className="text-center text-xs absolute bottom-[60px] max-w-full w-full">
           By clicking continue, you agree to our{" "}

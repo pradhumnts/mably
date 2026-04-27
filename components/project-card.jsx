@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar, MoreVertical, Pencil, Trash2, Eye } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
-export function ProjectCard({ project }) {
+export function ProjectCard({ project, onRequestDelete }) {
   return (
     <Link href={`/project/${project.id}/dashboard`}>
     <Card className="overflow-hidden hover:shadow-lg shadow-sm transition-shadow p-[16px] duration-200 cursor-pointer">
@@ -26,7 +26,7 @@ export function ProjectCard({ project }) {
             <Avatar className="size-[48px] border-background">
               <AvatarImage src={project.logo} alt="Project logo" />
               <AvatarFallback className="bg-primary text-primary-foreground">
-                {project.name.charAt(0)}
+                {(project.name || "?").charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <Avatar className="size-[48px] border-background">
@@ -62,9 +62,12 @@ export function ProjectCard({ project }) {
                 Edit
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
-                onClick={(e) => e.preventDefault()}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onRequestDelete?.(project);
+                }}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete

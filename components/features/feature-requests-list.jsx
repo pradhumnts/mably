@@ -1,148 +1,138 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Triangle } from "lucide-react";
+import { ChevronRight, ChevronUp, Lightbulb } from "lucide-react";
 import { FeatureDetailDialog } from "./feature-detail-dialog";
-import { toast } from "sonner";
+import { PersonAvatar } from "./person-avatar";
+import { cn } from "@/lib/utils";
 
-// Dummy data
-const featureRequests = [
-  {
-    id: 1,
-    title: "This is an in-progress feature request",
-    description: "Show your users that you listen and care for them",
-    status: "In Progress",
-    votes: 9,
-    createdBy: "Anonymous",
-  },
-  {
-    id: 2,
-    title: "This is a sample request",
-    description: "Drag this around to update the status",
-    status: "Pending",
-    votes: 4,
-    createdBy: "Anonymous",
-  },
-  {
-    id: 3,
-    title: "This is another sample request",
-    description: "You can delete this by clicking on the three dots on the right portion of this card",
-    status: "Pending",
-    votes: 3,
-    createdBy: "Anonymous",
-  },
-  {
-    id: 4,
-    title: "This is another sample request",
-    description: "You can delete this by clicking on the three dots on the right portion of this card",
-    status: "Approved",
-    votes: 2,
-    createdBy: "Anonymous",
-  },
-];
+function getStatusBadgeClass(status) {
+  switch (status) {
+    case "In Progress":
+      return "bg-orange-100 text-orange-900 border-orange-200/80 dark:bg-orange-950/50 dark:text-orange-100 dark:border-orange-800/60";
+    case "Pending":
+      return "bg-muted text-foreground border-border";
+    case "Approved":
+      return "bg-emerald-100 text-emerald-900 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-100 dark:border-emerald-800/50";
+    case "Done":
+      return "bg-violet-100 text-violet-900 border-violet-200/80 dark:bg-violet-950/40 dark:text-violet-100 dark:border-violet-800/50";
+    default:
+      return "bg-muted text-foreground border-border";
+  }
+}
 
-export function FeatureRequestsList({ filter = "open" }) {
+function statusAccent(statusDb) {
+  switch (statusDb) {
+    case "pending":
+      return "border-l-slate-400 dark:border-l-slate-500";
+    case "approved":
+      return "border-l-emerald-500 dark:border-l-emerald-400";
+    case "in_progress":
+      return "border-l-orange-500";
+    case "done":
+      return "border-l-violet-500 dark:border-l-violet-400";
+    default:
+      return "border-l-border";
+  }
+}
+
+export function FeatureRequestsList({
+  requests = [],
+  myVoteIds = [],
+  filter = "open",
+  onVote,
+  voteBusyId = null,
+}) {
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [features, setFeatures] = useState(featureRequests);
-  const [votedFeatures, setVotedFeatures] = useState([]);
 
-  // Load voted features from localStorage on mount
-  useEffect(() => {
-    const storedVotes = localStorage.getItem("votedFeatures");
-    if (storedVotes) {
-      setVotedFeatures(JSON.parse(storedVotes));
-    }
-  }, []);
+  const hasVoted = (id) => myVoteIds.includes(id);
 
-  const handleVote = (id) => {
-    // Check if user has already voted on this feature
-    if (votedFeatures.includes(id)) {
-      toast.error("Already voted", {
-        description: "You've already voted on this feature request.",
-      });
-      return;
-    }
-
-    // Update features with new vote count
-    setFeatures(features.map(f => 
-      f.id === id ? { ...f, votes: f.votes + 1 } : f
-    ));
-
-    // Add feature to voted list
-    const newVotedFeatures = [...votedFeatures, id];
-    setVotedFeatures(newVotedFeatures);
-    
-    // Save to localStorage
-    localStorage.setItem("votedFeatures", JSON.stringify(newVotedFeatures));
-
-    toast.success("Vote recorded!", {
-      description: "Thank you for your feedback.",
-    });
-  };
-
-  const handleFeatureClick = (feature) => {
-    setSelectedFeature(feature);
-    setDetailDialogOpen(true);
-  };
-
-  const hasVoted = (id) => votedFeatures.includes(id);
-
-  const openFeatures = features.filter(f => f.status !== "Done");
-  const doneFeatures = features.filter(f => f.status === "Done");
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "In Progress":
-        return "bg-orange-100 text-orange-800 border-orange-200";
-      case "Pending":
-        return "bg-gray-100 text-gray-800 border-gray-200";
-      case "Approved":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "Done":
-        return "bg-green-100 text-green-800 border-green-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
+  const openFeatures = requests.filter((f) => f.statusDb !== "done");
+  const doneFeatures = requests.filter((f) => f.statusDb === "done");
+  const displayedFeatures = filter === "open" ? openFeatures : doneFeatures;
 
   const renderFeatureCard = (feature) => {
     const voted = hasVoted(feature.id);
-    
+    const busy = voteBusyId === feature.id;
+    const canVote = feature.statusDb !== "done";
+
     return (
-      <Card 
-        key={feature.id} 
-        className="hover:shadow-md transition-shadow cursor-pointer py-[16px]"
-        onClick={() => handleFeatureClick(feature)}
+      <Card
+        key={feature.id}
+        className={cn(
+          "group relative cursor-pointer overflow-hidden border-l-[3px] bg-card transition-all duration-150",
+          "border border-border/60 shadow-sm hover:border-border hover:shadow-md",
+          "focus-within:ring-2 focus-within:ring-ring/30 p-0",
+          statusAccent(feature.statusDb)
+        )}
+        onClick={() => {
+          setSelectedFeature(feature);
+          setDetailDialogOpen(true);
+        }}
       >
-        <CardContent className="px-4 py-0">
-          <div className="flex items-start gap-4">
-            <div className="flex-1">
-              <h3 className="font-semibold text-base mb-2">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground mb-3">{feature.description}</p>
-              <Badge variant="outline" className={getStatusColor(feature.status)}>
-                
-                {feature.status}
-              </Badge>
+        <CardContent className="p-0">
+          <div className="flex items-start gap-2.5 p-3 sm:gap-3 sm:p-3.5">
+            <PersonAvatar
+              name={feature.createdBy}
+              avatarUrl={feature.createdByAvatarUrl}
+              size="md"
+              className="mt-px ring-1 ring-border/40"
+            />
+            <div className="min-w-0 flex-1 space-y-1">
+              <h3 className="text-sm font-semibold leading-snug tracking-tight text-balance sm:text-[15px]">
+                {feature.title}
+              </h3>
+              <p className="line-clamp-1 text-xs leading-snug text-muted-foreground">
+                {feature.description || "No description — click to add context in the thread."}
+              </p>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-0.5">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "h-5 border px-1.5 text-[10px] font-semibold uppercase tracking-wide",
+                    getStatusBadgeClass(feature.status)
+                  )}
+                >
+                  {feature.status}
+                </Badge>
+                <span className="text-[11px] text-muted-foreground">
+                  <span className="font-medium text-foreground/85">{feature.createdBy}</span>
+                </span>
+                <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-primary opacity-90 group-hover:opacity-100">
+                  Thread
+                  <ChevronRight className="h-3 w-3" aria-hidden />
+                </span>
+              </div>
             </div>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className={`flex flex-col items-center gap-1 h-auto py-2 px-3 transition-colors ${
-                voted 
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                  : "hover:bg-zinc-100"
-              }`}
+              type="button"
+              disabled={busy || voted || !canVote}
+              title={!canVote ? "Voting closed for shipped items" : voted ? "You already upvoted" : "Upvote"}
+              className={cn(
+                "mt-0.5 flex h-auto shrink-0 flex-col items-center gap-0 rounded-lg border border-border/70 bg-muted/30 px-2 py-1.5 transition-all",
+                "hover:bg-muted/60",
+                voted &&
+                  "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
+                canVote && !voted && "group-hover:border-primary/40 group-hover:bg-orange-500/5"
+              )}
               onClick={(e) => {
                 e.stopPropagation();
-                handleVote(feature.id);
+                if (canVote && !voted && onVote) onVote(feature.id);
               }}
             >
-              <Triangle className={`h-4 w-4 ${voted ? "fill-current" : ""}`} />
-              <span className="text-sm font-semibold">{feature.votes}</span>
+              <ChevronUp className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+              <span className="text-sm font-bold tabular-nums leading-none">
+                {busy ? "…" : feature.votes}
+              </span>
+              <span className="text-[9px] font-semibold uppercase tracking-wide opacity-80">
+                {voted ? "You" : "Vote"}
+              </span>
             </Button>
           </div>
         </CardContent>
@@ -150,31 +140,52 @@ export function FeatureRequestsList({ filter = "open" }) {
     );
   };
 
-  const displayedFeatures = filter === "open" ? openFeatures : doneFeatures;
-
   return (
     <>
-      <div className="space-y-3">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
+            {filter === "open" ? "Open ideas" : "Shipped"}
+          </h2>
+          <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+            {filter === "open"
+              ? "Upvote what matters to your workflow. Open a card to read the full story and join the thread."
+              : "Features we’ve delivered — thanks for the feedback that helped us get here."}
+          </p>
+        </div>
+        <Badge variant="secondary" className="w-fit shrink-0 px-3 py-1 text-sm tabular-nums">
+          {displayedFeatures.length} {displayedFeatures.length === 1 ? "item" : "items"}
+        </Badge>
+      </div>
+
+      <div className="space-y-2">
         {displayedFeatures.length > 0 ? (
           displayedFeatures.map(renderFeatureCard)
         ) : (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              {filter === "open" ? "No open feature requests yet" : "No completed features yet"}
-            </CardContent>
-          </Card>
+          <div className="rounded-2xl border border-dashed border-orange-200/60 bg-gradient-to-b from-orange-50/40 to-muted/20 px-6 py-14 text-center dark:border-orange-900/40 dark:from-orange-950/20 dark:to-muted/10">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/15 text-orange-600 ring-8 ring-orange-500/5 dark:bg-orange-500/20 dark:text-orange-400">
+              <Lightbulb className="h-7 w-7" aria-hidden />
+            </div>
+            <p className="text-base font-medium text-foreground">
+              {filter === "open" ? "Quiet in here — for now" : "Nothing shipped yet"}
+            </p>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+              {filter === "open"
+                ? "Share the first idea using the form on the left. Even a rough note is enough to start the conversation."
+                : "When we mark requests as done, they’ll show up in this tab."}
+            </p>
+          </div>
         )}
-
       </div>
 
       <FeatureDetailDialog
         feature={selectedFeature}
         open={detailDialogOpen}
         onOpenChange={setDetailDialogOpen}
-        onVote={handleVote}
+        onVote={onVote}
         hasVoted={selectedFeature ? hasVoted(selectedFeature.id) : false}
+        voteBusyId={voteBusyId}
       />
     </>
   );
 }
-

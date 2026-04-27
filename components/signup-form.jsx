@@ -18,8 +18,9 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { sanitizeNextPath } from "@/lib/auth/safe-next-path";
 
-export function SignupForm({ className, ...props }) {
+export function SignupForm({ className, next = null, intent = null, ...props }) {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -49,8 +50,13 @@ export function SignupForm({ className, ...props }) {
     setIsLoading(true);
     setMessage("");
 
-    const { verifyOtp } = await import('@/lib/auth/actions');
-    const result = await verifyOtp(email, otp);
+    const { verifyOtp } = await import("@/lib/auth/actions");
+    const fromUrl =
+      typeof window !== "undefined"
+        ? sanitizeNextPath(new URLSearchParams(window.location.search).get("next"))
+        : null;
+    const nextForVerify = next ?? fromUrl ?? undefined;
+    const result = await verifyOtp(email, otp, nextForVerify);
 
     if (result?.error) {
       setMessage(result.error);
@@ -59,17 +65,30 @@ export function SignupForm({ className, ...props }) {
     // If successful, verifyOtp will redirect to dashboard
   };
 
-  return (
+  const loginQs = new URLSearchParams();
+  if (next) loginQs.set("next", next);
+  if (intent) loginQs.set("intent", intent);
+  const loginHref = loginQs.toString() ? `/?${loginQs.toString()}` : "/";
+  const portalFlow =
+    intent === "portal" || (typeof next === "string" && next.startsWith("/project/"));
 
+  return (
     <div className={cn("flex flex-col gap-[24px] animate-in fade-in slide-in-from-bottom-4 duration-500 z-3 relative", className)} {...props}>
-     
       <form onSubmit={handleSubmit}>
         <FieldGroup className="gap-[40px]">
           <div className="flex flex-col items-center gap-[8px] text-center">
-            <p className="text-sm text-primary font-semibold uppercase">Get started</p>
-            <h1 className="text-2xl font-semibold">Create an account</h1>
+            <p className="text-sm text-primary font-semibold uppercase">
+              {portalFlow ? "Project portal" : "Get started"}
+            </p>
+            <h1 className="text-2xl font-semibold">
+              {portalFlow ? "Create your account" : "Create an account"}
+            </h1>
             <FieldDescription className="text-center text-sm">
-              {!showOtpInput ? "Enter your email to create an account" : `We sent a 6-digit code to ${email}`}
+              {!showOtpInput
+                ? portalFlow
+                  ? "Use the email your freelancer invited. We will send a one-time code to verify it."
+                  : "Enter your email to create an account"
+                : `We sent a 6-digit code to ${email}`}
             </FieldDescription>
           </div>
           <div className="flex flex-col gap-[24px]">
@@ -189,7 +208,7 @@ export function SignupForm({ className, ...props }) {
           </div>
           <FieldDescription className="text-center">
               Already have an account?{" "}
-              <Link href="/" className="text-zinc-900 font-semibold no-underline transition duration-200">
+              <Link href={loginHref} className="text-zinc-900 font-semibold no-underline transition duration-200">
                 Sign in
               </Link>
         </FieldDescription>

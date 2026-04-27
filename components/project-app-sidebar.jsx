@@ -7,7 +7,6 @@ import {
   Folder,
   CreditCard,
   Settings,
-  FileText,
   Link as LinkIcon,
 } from "lucide-react";
 import { usePathname, useParams } from "next/navigation";
@@ -22,48 +21,37 @@ import {
 } from "@/components/ui/sidebar";
 import { NavMain } from "./nav-main";
 import { ProjectNavUser } from "./project-nav-user";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-function SidebarLogo({ projectName, planType }) {
+function SidebarLogo({ projectName, planType, logoUrl }) {
   const { state } = useSidebar();
-  
+  const initial = (projectName || "?").trim().charAt(0).toUpperCase() || "?";
+
+  const mark = (
+    <Avatar className="h-10 w-10 shrink-0 rounded-lg bg-background">
+      <AvatarImage src={logoUrl || undefined} alt={projectName || "Project"} className="object-cover rounded-lg" />
+      <AvatarFallback className="rounded-lg text-sm font-semibold bg-muted text-muted-foreground">
+        {initial}
+      </AvatarFallback>
+    </Avatar>
+  );
+
   if (state === "collapsed") {
-    return (
-      <div className="w-full flex justify-center p-2">
-        <div className="w-10 h-10 p-1 bg-white border border-zinc-200 rounded-lg flex items-center justify-center flex-shrink-0">
-          <img
-            src="/images/Logo-icon.svg"
-            alt=""
-            className="w-6 h-6"
-            draggable={false}
-          />
-        </div>
-      </div>
-    );
+    return <div className="w-full flex justify-center p-2">{mark}</div>;
   }
-  
+
   return (
-    <div className="w-full flex items-center gap-3 p-2 ">
-      <div className="w-10 h-10 bg-white border border-zinc-200 rounded-lg flex items-center justify-center flex-shrink-0">
-        <img
-          src="/images/Logo-icon.svg"
-          alt=""
-          className="w-6 h-6"
-          draggable={false}
-        />
-      </div>
+    <div className="w-full flex items-center gap-3 p-2">
+      {mark}
       <div className="flex-1 min-w-0">
-        <h2 className="text-sm font-semibold text-gray-900 truncate">
-          {projectName}
-        </h2>
-        <p className="text-xs text-gray-500">
-          {planType}
-        </p>
+        <h2 className="text-sm font-semibold text-gray-900 truncate">{projectName}</h2>
+        <p className="text-xs text-gray-500">{planType}</p>
       </div>
     </div>
   );
 }
 
-export function ProjectAppSidebar({ projectData, ...props }) {
+export function ProjectAppSidebar({ projectData, isFreelancer = false, ...props }) {
   const pathname = usePathname();
   const params = useParams();
   const projectId = params.projectId;
@@ -152,9 +140,10 @@ export function ProjectAppSidebar({ projectData, ...props }) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <SidebarLogo 
-          projectName={projectData?.projectName || "Project Name"} 
-          planType={projectData?.planType || "Enterprise"} 
+        <SidebarLogo
+          projectName={projectData?.projectName || "Project"}
+          planType={projectData?.planType || "Active"}
+          logoUrl={projectData?.logo || null}
         />
       </SidebarHeader>
       <SidebarContent>
@@ -162,7 +151,7 @@ export function ProjectAppSidebar({ projectData, ...props }) {
         <NavMain items={navOtherWithActive} label="Other" />
       </SidebarContent>
       <SidebarFooter>
-        <ProjectNavUser user={user} />
+        <ProjectNavUser user={user} projectId={String(projectId)} isFreelancer={Boolean(isFreelancer)} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createClientRecord, updateClient } from "@/lib/actions/clients";
 import {
   Dialog,
   DialogContent,
@@ -68,7 +69,8 @@ const getLinkIcon = (url, label) => {
   return <LinkIcon className="h-5 w-5" />;
 };
 
-export function AddClientDialog({ open, onOpenChange }) {
+export function AddClientDialog({ open, onOpenChange, client = null, onSaved }) {
+  const isEdit = Boolean(client);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -80,6 +82,31 @@ export function AddClientDialog({ open, onOpenChange }) {
   const [showLinkForm, setShowLinkForm] = useState(false);
   const [currentLink, setCurrentLink] = useState({ label: "", url: "" });
   const [editingLinkId, setEditingLinkId] = useState(null);
+
+  useEffect(() => {
+    if (!open) return;
+    if (client) {
+      setFormData({
+        name: client.name ?? "",
+        email: client.email ?? "",
+        phone: client.phone ?? "",
+        location: client.location ?? "",
+      });
+      setLinks(
+        (client.links ?? []).map((l, i) => ({
+          id: `link-${i}-${l.url}`,
+          label: l.label,
+          url: l.url,
+        }))
+      );
+    } else {
+      setFormData({ name: "", email: "", phone: "", location: "" });
+      setLinks([]);
+    }
+    setShowLinkForm(false);
+    setCurrentLink({ label: "", url: "" });
+    setEditingLinkId(null);
+  }, [open, client?.id, client?.email]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -143,31 +170,39 @@ export function AddClientDialog({ open, onOpenChange }) {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const linksPayload = links.map(({ label, url }) => ({ label, url }));
 
-    // Show success toast
-    toast.success("Client has been created", {
-      description: `${formData.name} has been added to your clients list.`,
-      action: {
-        label: "View Client",
-        onClick: () => console.log("View client:", formData.name, links),
-      },
-    });
+    const payload = {
+      fullName: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      location: formData.location,
+      links: linksPayload,
+    };
 
-    // Reset form
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      location: "",
-    });
-    setLinks([]);
-    setShowLinkForm(false);
-    setCurrentLink({ label: "", url: "" });
+    const result = isEdit
+      ? await updateClient({ id: client.id, ...payload })
+      : await createClientRecord(payload);
 
     setIsLoading(false);
+
+    if (!result.ok) {
+      toast.error(result.error || "Something went wrong");
+      return;
+    }
+
+    toast.success(isEdit ? "Client updated" : "Client created", {
+      description: isEdit
+        ? `${formData.name} has been saved.`
+        : `${formData.name} has been added to your list.`,
+    });
+
     onOpenChange(false);
+    if (!isEdit && result.id) {
+      onSaved?.({ id: result.id });
+    } else {
+      onSaved?.();
+    }
   };
 
   return (
@@ -176,9 +211,13 @@ export function AddClientDialog({ open, onOpenChange }) {
         {!showLinkForm ? (
           <>
             <DialogHeader>
-              <DialogTitle className="text-2xl font-semibold">Add New Client</DialogTitle>
+              <DialogTitle className="text-2xl font-semibold">
+                {isEdit ? "Edit Client" : "Add New Client"}
+              </DialogTitle>
               <DialogDescription>
-                Fill in the client details below to add them to your list.
+                {isEdit
+                  ? "Update this client’s details and links."
+                  : "Fill in the client details below to add them to your list."}
               </DialogDescription>
             </DialogHeader>
 
@@ -328,7 +367,13 @@ export function AddClientDialog({ open, onOpenChange }) {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Creating..." : "Create Client"}
+                  {isLoading
+                    ? isEdit
+                      ? "Saving..."
+                      : "Creating..."
+                    : isEdit
+                      ? "Save changes"
+                      : "Create Client"}
                 </Button>
               </div>
             </form>

@@ -1,12 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  ClipboardList,
-  Users,
-  Settings,
-  Lightbulb,
-} from "lucide-react";
+import { ClipboardList, Users, Settings, CreditCard } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { NavUser } from "@/components/nav-user";
@@ -20,13 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { NavMain } from "./nav-main";
 
-// Navigation data for Mably
-const data = {
-  user: {
-    name: "Emma Reed",
-    email: "emma@designstudio.com",
-    avatar: "https://plus.unsplash.com/premium_photo-1675710868549-3c9d54a40219?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  },
+const navData = {
   navGeneral: [
     {
       title: "Projects",
@@ -40,14 +29,14 @@ const data = {
       icon: Users,
       isActive: false,
     },
-    {
-      title: "Suggest Feature",
-      url: "/features",
-      icon: Lightbulb,
-      isActive: false,
-    },
   ],
   navOther: [
+    {
+      title: "Billing",
+      url: "/billing",
+      icon: CreditCard,
+      isActive: false,
+    },
     {
       title: "Settings",
       url: "/settings",
@@ -81,16 +70,16 @@ function SidebarLogo() {
   );
 }
 
-export function AppSidebar({ ...props }) {
+export function AppSidebar({ user, ...props }) {
   const pathname = usePathname();
-  
+
   // Update active state based on current pathname
-  const navGeneralWithActive = data.navGeneral.map(item => ({
+  const navGeneralWithActive = navData.navGeneral.map((item) => ({
     ...item,
     isActive: pathname === item.url || pathname.startsWith(item.url + '/')
   }));
   
-  const navOtherWithActive = data.navOther.map(item => ({
+  const navOtherWithActive = navData.navOther.map((item) => ({
     ...item,
     isActive: pathname === item.url || pathname.startsWith(item.url + '/')
   }));
@@ -105,7 +94,7 @@ export function AppSidebar({ ...props }) {
         <NavMain items={navOtherWithActive} label="Other" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

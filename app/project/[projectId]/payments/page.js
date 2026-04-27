@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { ProjectLayoutWrapper } from "../project-layout-wrapper";
+import { usePortalProject } from "../project-portal-shell";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -15,7 +15,17 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, MoreVertical, ArrowUpDown, DollarSign, Link as LinkIcon, ChevronLeft, ChevronRight, Search, FileX } from "lucide-react";
+import {
+  DollarSign,
+  MoreVertical,
+  ArrowUpDown,
+  Link as LinkIcon,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  FileX,
+  ExternalLink,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -41,230 +51,120 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { CreateInvoiceDialog } from "@/components/create-invoice-dialog";
+import { DeleteProjectInvoiceDialog } from "@/components/delete-project-invoice-dialog";
 import { toast } from "sonner";
+import { listProjectInvoices, updateProjectInvoiceStatus } from "@/lib/actions/project-invoices";
 
-// Dummy invoices data
-const dummyInvoices = [
-  {
-    id: 1,
-    invoiceNo: "#25-043",
-    projectName: "Social Waves Media Website Design...",
-    clientName: "Sophie James",
-    clientEmail: "shophie@arcmetals.co",
-    clientAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
-    amount: 1625.00,
-    dueDate: "Mar 4 2025",
-    status: "Paid",
-    invoiceLink: "https://stripe.com/invoice/inv_1234567890",
-  },
-  {
-    id: 2,
-    invoiceNo: "#25-038",
-    projectName: "E-Commerce Platform Development",
-    clientName: "Michael Chen",
-    clientEmail: "michael@techcorp.com",
-    clientAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
-    amount: 3850.00,
-    dueDate: "Mar 15 2025",
-    status: "Unpaid",
-    invoiceLink: "https://contra.com/invoice/con_9876543210",
-  },
-  {
-    id: 3,
-    invoiceNo: "#25-029",
-    projectName: "Mobile Banking App UI/UX",
-    clientName: "Emma Wilson",
-    clientEmail: "emma@banktech.io",
-    clientAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150",
-    amount: 5200.00,
-    dueDate: "Feb 28 2025",
-    status: "Canceled",
-    invoiceLink: "https://upwork.com/invoice/up_1122334455",
-  },
-  {
-    id: 4,
-    invoiceNo: "#25-051",
-    projectName: "Real Estate Portal - Phase 2",
-    clientName: "Lisa Anderson",
-    clientEmail: "lisa@realestate.com",
-    clientAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-    amount: 2900.00,
-    dueDate: "Mar 20 2025",
-    status: "Paid",
-    invoiceLink: "https://stripe.com/invoice/inv_5544332211",
-  },
-  {
-    id: 5,
-    invoiceNo: "#25-019",
-    projectName: "Healthcare Dashboard Analytics",
-    clientName: "David Park",
-    clientEmail: "david@healthcare.co",
-    clientAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
-    amount: 4100.00,
-    dueDate: "Feb 10 2025",
-    status: "Paid",
-    invoiceLink: "https://contra.com/invoice/con_7788990011",
-  },
-  {
-    id: 6,
-    invoiceNo: "#25-055",
-    projectName: "Fitness Tracker Mobile App",
-    clientName: "James Smith",
-    clientEmail: "james@fitness.io",
-    clientAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
-    amount: 1800.00,
-    dueDate: "Mar 25 2025",
-    status: "Unpaid",
-    invoiceLink: "https://upwork.com/invoice/up_4455667788",
-  },
-  {
-    id: 7,
-    invoiceNo: "#25-012",
-    projectName: "Corporate Website Redesign",
-    clientName: "Sarah Johnson",
-    clientEmail: "sarah@corporate.com",
-    clientAvatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=150",
-    amount: 2750.00,
-    dueDate: "Jan 30 2025",
-    status: "Paid",
-    invoiceLink: "https://stripe.com/invoice/inv_2233445566",
-  },
-  {
-    id: 8,
-    invoiceNo: "#25-047",
-    projectName: "SaaS Platform - Monthly Retainer",
-    clientName: "Robert Anderson",
-    clientEmail: "robert@saastech.io",
-    clientAvatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150",
-    amount: 6500.00,
-    dueDate: "Mar 10 2025",
-    status: "Unpaid",
-    invoiceLink: "https://contra.com/invoice/con_9988776655",
-  },
-  {
-    id: 9,
-    invoiceNo: "#25-033",
-    projectName: "Restaurant Booking System",
-    clientName: "Emily Rodriguez",
-    clientEmail: "emily@foodtech.com",
-    clientAvatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150",
-    amount: 3200.00,
-    dueDate: "Feb 20 2025",
-    status: "Canceled",
-    invoiceLink: "https://upwork.com/invoice/up_3344556677",
-  },
-  {
-    id: 10,
-    invoiceNo: "#25-058",
-    projectName: "Education Platform - LMS Integration",
-    clientName: "Daniel Lee",
-    clientEmail: "daniel@edutech.io",
-    clientAvatar: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150",
-    amount: 4750.00,
-    dueDate: "Apr 5 2025",
-    status: "Paid",
-    invoiceLink: "https://stripe.com/invoice/inv_6677889900",
-  },
-  {
-    id: 11,
-    invoiceNo: "#25-062",
-    projectName: "Travel Booking App - MVP",
-    clientName: "Jessica Martinez",
-    clientEmail: "jessica@traveltech.io",
-    clientAvatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=150",
-    amount: 5800.00,
-    dueDate: "Apr 12 2025",
-    status: "Unpaid",
-    invoiceLink: "https://contra.com/invoice/con_1122998877",
-  },
-  {
-    id: 12,
-    invoiceNo: "#25-024",
-    projectName: "Inventory Management System",
-    clientName: "Thomas Brown",
-    clientEmail: "thomas@warehouse.co",
-    clientAvatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150",
-    amount: 3400.00,
-    dueDate: "Feb 15 2025",
-    status: "Paid",
-    invoiceLink: "https://stripe.com/invoice/inv_8899001122",
-  },
-  {
-    id: 13,
-    invoiceNo: "#25-067",
-    projectName: "Social Media Dashboard - Analytics",
-    clientName: "Amanda Taylor",
-    clientEmail: "amanda@socialmedia.com",
-    clientAvatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150",
-    amount: 2200.00,
-    dueDate: "Apr 18 2025",
-    status: "Unpaid",
-    invoiceLink: "https://upwork.com/invoice/up_5566778899",
-  },
-  {
-    id: 14,
-    invoiceNo: "#25-041",
-    projectName: "CRM Integration - Salesforce",
-    clientName: "Kevin Zhang",
-    clientEmail: "kevin@enterprise.io",
-    clientAvatar: "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=150",
-    amount: 7200.00,
-    dueDate: "Mar 8 2025",
-    status: "Canceled",
-    invoiceLink: "https://contra.com/invoice/con_6677334455",
-  },
-  {
-    id: 15,
-    invoiceNo: "#25-070",
-    projectName: "Video Streaming Platform - Beta",
-    clientName: "Olivia Martin",
-    clientEmail: "olivia@streamtech.com",
-    clientAvatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150",
-    amount: 8900.00,
-    dueDate: "Apr 30 2025",
-    status: "Paid",
-    invoiceLink: "https://stripe.com/invoice/inv_3344112233",
-  },
-];
+const ITEMS_PER_PAGE = 10;
+
+function invoiceDisplayId(id) {
+  const compact = String(id).replace(/-/g, "");
+  return `#${compact.slice(0, 8).toUpperCase()}`;
+}
+
+function formatDue(iso) {
+  if (!iso || typeof iso !== "string") return "—";
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function statusUi(db) {
+  if (db === "paid") return "Paid";
+  if (db === "canceled") return "Canceled";
+  return "Unpaid";
+}
+
+function getStatusBadge(statusLabel) {
+  const colors = {
+    Paid: "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-950 dark:text-green-200",
+    Canceled: "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-950 dark:text-red-200",
+    Unpaid: "bg-purple-100 text-purple-700 hover:bg-purple-100 dark:bg-purple-950 dark:text-purple-200",
+  };
+
+  return <Badge className={colors[statusLabel] || ""}>{statusLabel}</Badge>;
+}
 
 export default function ProjectPayments() {
   const params = useParams();
   const projectId = params.projectId;
+  const { sidebar, meta } = usePortalProject();
+  const isFreelancer = Boolean(meta?.isFreelancer);
+
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [createInvoiceDialogOpen, setCreateInvoiceDialogOpen] = useState(false);
+  const [deleteInvoiceTarget, setDeleteInvoiceTarget] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const itemsPerPage = 10;
 
-  const projectData = {
-    projectName: "Sophie & Co.",
-    planType: "Enterprise",
-    clientName: "Sophie James",
-    clientEmail: "shophie@arcmetals.co",
-    clientAvatar: "https://plus.unsplash.com/premium_photo-1690034979551-65a363a0e4a6?q=80&w=1287&auto=format&fit=crop",
-  };
+  const load = useCallback(async () => {
+    setLoading(true);
+    const r = await listProjectInvoices(String(projectId));
+    setLoading(false);
+    if (!r.ok) {
+      toast.error(r.error || "Could not load invoices");
+      setRows([]);
+      return;
+    }
+    setRows(r.rows);
+  }, [projectId]);
 
-  // Filter invoices based on search query and status
-  const filteredInvoices = dummyInvoices.filter((invoice) => {
-    const matchesSearch = 
-      invoice.invoiceNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.clientEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.amount.toString().includes(searchQuery);
-    
-    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const tableRows = useMemo(() => {
+    return rows.map((row) => ({
+      ...row,
+      invoiceNo: invoiceDisplayId(row.id),
+      statusLabel: statusUi(row.status),
+      dueLabel: formatDue(row.dueDate),
+      subtitle:
+        (row.notes && String(row.notes).trim()) ||
+        sidebar?.clientEmail ||
+        "—",
+    }));
+  }, [rows, sidebar?.clientEmail]);
+
+  const filteredInvoices = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return tableRows.filter((invoice) => {
+      const matchesSearch =
+        !q ||
+        invoice.invoiceNo.toLowerCase().includes(q) ||
+        (sidebar?.projectName && sidebar.projectName.toLowerCase().includes(q)) ||
+        (sidebar?.clientName && sidebar.clientName.toLowerCase().includes(q)) ||
+        (sidebar?.clientEmail && sidebar.clientEmail.toLowerCase().includes(q)) ||
+        String(invoice.amount).includes(q) ||
+        (invoice.notes && invoice.notes.toLowerCase().includes(q)) ||
+        invoice.invoiceLink.toLowerCase().includes(q);
+
+      const matchesStatus =
+        statusFilter === "all" || invoice.statusLabel === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [tableRows, searchQuery, statusFilter, sidebar]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / ITEMS_PER_PAGE));
+
+  useEffect(() => {
+    setCurrentPage((p) => {
+      const tp = Math.max(1, Math.ceil(filteredInvoices.length / ITEMS_PER_PAGE));
+      return p > tp ? tp : p;
+    });
+  }, [filteredInvoices.length]);
+
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentInvoices = filteredInvoices.slice(startIndex, endIndex);
 
-  // Handle page changes
   const handlePrevious = () => {
     setCurrentPage((prev) => Math.max(prev - 1, 1));
   };
@@ -273,17 +173,15 @@ export default function ProjectPayments() {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
 
-  // Handle copy invoice link
   const handleCopyInvoiceLink = async (invoiceLink) => {
     try {
       await navigator.clipboard.writeText(invoiceLink);
-      toast.success("Invoice link copied to clipboard");
-    } catch (err) {
-      toast.error("Failed to copy link");
+      toast.success("Invoice link copied");
+    } catch {
+      toast.error("Could not copy link");
     }
   };
 
-  // Reset to page 1 when filters change
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
     setCurrentPage(1);
@@ -294,42 +192,64 @@ export default function ProjectPayments() {
     setCurrentPage(1);
   };
 
-  const getStatusBadge = (status) => {
-    const variants = {
-      Paid: "default",
-      Canceled: "destructive",
-      Unpaid: "secondary",
-    };
+  const handleMarkPaid = async (id) => {
+    const r = await updateProjectInvoiceStatus(String(projectId), id, "paid");
+    if (!r.ok) {
+      toast.error(r.error || "Could not update");
+      return;
+    }
+    toast.success("Marked as paid");
+    void load();
+  };
 
-    const colors = {
-      Paid: "bg-green-100 text-green-700 hover:bg-green-100",
-      Canceled: "bg-red-100 text-red-700 hover:bg-red-100",
-      Unpaid: "bg-purple-100 text-purple-700 hover:bg-purple-100",
-    };
+  const handleMarkUnpaid = async (id) => {
+    const r = await updateProjectInvoiceStatus(String(projectId), id, "unpaid");
+    if (!r.ok) {
+      toast.error(r.error || "Could not update");
+      return;
+    }
+    toast.success("Marked as unpaid");
+    void load();
+  };
 
-    return (
-      <Badge className={colors[status]}>
-        {status}
-      </Badge>
-    );
+  const handleMarkCanceled = async (id) => {
+    const r = await updateProjectInvoiceStatus(String(projectId), id, "canceled");
+    if (!r.ok) {
+      toast.error(r.error || "Could not update");
+      return;
+    }
+    toast.success("Invoice canceled");
+    void load();
+  };
+
+  const openDeleteInvoice = (invoice) => {
+    const amountLabel = `$${invoice.amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+    setDeleteInvoiceTarget({
+      id: invoice.id,
+      invoiceNo: invoice.invoiceNo,
+      amountLabel,
+    });
+  };
+
+  const subtitlePreview = (text) => {
+    const t = typeof text === "string" ? text.trim() : "";
+    if (!t || t === "—") return "—";
+    return t.length > 72 ? `${t.slice(0, 72)}…` : t;
   };
 
   return (
-    <ProjectLayoutWrapper projectData={projectData}>
-      {/* Header */}
+    <>
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
         <div className="flex h-16 items-center gap-2 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
           <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="h-4 my-auto mr-2"
-          />
+          <Separator orientation="vertical" className="h-4 my-auto mr-2" />
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href={`/project/${projectId}/dashboard`}>
-                  Dashboard
-                </BreadcrumbLink>
+                <BreadcrumbLink href={`/project/${projectId}/dashboard`}>Dashboard</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
@@ -337,40 +257,39 @@ export default function ProjectPayments() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <Button 
-            className="ml-auto flex items-center gap-1 font-semibold rounded-lg"
-            onClick={() => setCreateInvoiceDialogOpen(true)}
-          >
-            <DollarSign className="h-5 w-5 stroke-2" />
-            <span className="hidden sm:inline">Create Invoice</span>
-          </Button>
+          {isFreelancer ? (
+            <Button
+              className="ml-auto flex items-center gap-1 font-semibold rounded-lg"
+              onClick={() => setCreateInvoiceDialogOpen(true)}
+            >
+              <DollarSign className="h-5 w-5 stroke-2" />
+              <span className="hidden sm:inline">Add invoice</span>
+            </Button>
+          ) : null}
         </div>
       </header>
 
-      {/* Content */}
       <div className="flex-1">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          {/* Filters */}
           <div className="flex items-center gap-4 mb-6">
-            {/* Search Bar */}
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search invoices..."
+                placeholder="Search invoices…"
                 value={searchQuery}
                 onChange={handleSearch}
                 className="pl-9 h-10"
+                disabled={loading}
               />
             </div>
 
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={handleStatusFilter}>
+            <Select value={statusFilter} onValueChange={handleStatusFilter} disabled={loading}>
               <SelectTrigger className="w-[180px] h-10">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="Paid">Paid</SelectItem>
                 <SelectItem value="Unpaid">Unpaid</SelectItem>
                 <SelectItem value="Canceled">Canceled</SelectItem>
@@ -378,126 +297,156 @@ export default function ProjectPayments() {
             </Select>
           </div>
 
-          {/* Payments Table */}
           <div className="rounded-lg border bg-card">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent h-[48px]">
                   <TableHead className="w-[120px]">
-                    <button className="flex items-center gap-2 font-medium text-muted-foreground hover:text-foreground">
-                      Invoice No.
-                      <ArrowUpDown className="h-4 w-4" />
-                    </button>
+                    <span className="flex items-center gap-2 font-medium text-muted-foreground">
+                      Invoice no.
+                      <ArrowUpDown className="h-4 w-4 opacity-50" />
+                    </span>
                   </TableHead>
-                  <TableHead className="w-[350px]">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      Invoice
-                    </div>
+                  <TableHead className="min-w-[240px]">
+                    <span className="text-muted-foreground">Details</span>
                   </TableHead>
                   <TableHead>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      Amount
-                    </div>
+                    <span className="text-muted-foreground">Amount</span>
                   </TableHead>
                   <TableHead>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      Due
-                    </div>
+                    <span className="text-muted-foreground">Due</span>
                   </TableHead>
                   <TableHead>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      Status
-                    </div>
+                    <span className="text-muted-foreground">Status</span>
                   </TableHead>
-                  <TableHead className="w-4"></TableHead>
-                  <TableHead className="w-4"></TableHead>
+                  <TableHead className="w-[88px]">
+                    <span className="sr-only">Link</span>
+                  </TableHead>
+                  {isFreelancer ? <TableHead className="w-10" /> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentInvoices.length > 0 ? (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={isFreelancer ? 7 : 6} className="py-16 text-center text-muted-foreground">
+                      Loading invoices…
+                    </TableCell>
+                  </TableRow>
+                ) : currentInvoices.length > 0 ? (
                   currentInvoices.map((invoice) => (
-                  <TableRow
-                    key={invoice.id}
-                    className="group h-[68px] border-none hover:bg-zinc-100"
-                  >
-                    <TableCell className="font-medium">{invoice.invoiceNo}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-[36px] w-[36px]">
-                          <AvatarImage src={invoice.clientAvatar} alt={invoice.clientName} />
-                          <AvatarFallback>{invoice.clientName.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{invoice.projectName}</span>
-                          <span className="text-sm text-muted-foreground">
-                            {invoice.clientEmail}
-                          </span>
+                    <TableRow key={invoice.id} className="group h-[68px] border-none hover:bg-muted/60">
+                      <TableCell className="font-medium font-mono text-sm">{invoice.invoiceNo}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Avatar className="h-9 w-9 shrink-0">
+                            <AvatarImage src={sidebar?.clientAvatar || undefined} alt={sidebar?.clientName || ""} />
+                            <AvatarFallback>{(sidebar?.clientName || "C").charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-medium truncate">{sidebar?.projectName || "Project"}</span>
+                            <span className="text-sm text-muted-foreground truncate">
+                              {subtitlePreview(invoice.subtitle)}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      ${invoice.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-foreground">{invoice.dueDate}</TableCell>
-                    <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                    <TableCell className="pr-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 p-0 border border-slate-200"
-                        aria-label="Copy invoice link"
-                        onClick={() => handleCopyInvoiceLink(invoice.invoiceLink)}
-                      >
-                        <LinkIcon className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                    <TableCell className="pr-4">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild className="border border-slate-200">
+                      </TableCell>
+                      <TableCell className="font-medium whitespace-nowrap">
+                        $
+                        {invoice.amount.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </TableCell>
+                      <TableCell className="text-foreground whitespace-nowrap">{invoice.dueLabel}</TableCell>
+                      <TableCell>{getStatusBadge(invoice.statusLabel)}</TableCell>
+                      <TableCell className="pr-0">
+                        <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 p-0"
-                            aria-label="Open invoice menu"
+                            className="h-8 w-8 shrink-0 border border-border"
+                            type="button"
+                            aria-label="Copy invoice link"
+                            onClick={() => void handleCopyInvoiceLink(invoice.invoiceLink)}
                           >
-                            <MoreVertical className="h-4 w-4" />
+                            <LinkIcon className="h-4 w-4" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="border border-slate-200">
-                          <DropdownMenuItem>
-                            Mark as paid
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            Cancel
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive focus:text-destructive">
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 border border-border"
+                            type="button"
+                            aria-label="Open invoice in new tab"
+                            onClick={() => window.open(invoice.invoiceLink, "_blank", "noopener,noreferrer")}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                      {isFreelancer ? (
+                        <TableCell className="pr-4">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 p-0 border border-border"
+                                type="button"
+                                aria-label="Invoice actions"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="border border-border">
+                              {invoice.status === "unpaid" ? (
+                                <DropdownMenuItem onClick={() => void handleMarkPaid(invoice.id)}>
+                                  Mark as paid
+                                </DropdownMenuItem>
+                              ) : null}
+                              {invoice.status === "paid" ? (
+                                <DropdownMenuItem onClick={() => void handleMarkUnpaid(invoice.id)}>
+                                  Mark as unpaid
+                                </DropdownMenuItem>
+                              ) : null}
+                              {invoice.status !== "canceled" ? (
+                                <DropdownMenuItem onClick={() => void handleMarkCanceled(invoice.id)}>
+                                  Cancel invoice
+                                </DropdownMenuItem>
+                              ) : null}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => openDeleteInvoice(invoice)}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      ) : null}
+                    </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-12">
+                    <TableCell colSpan={isFreelancer ? 7 : 6} className="py-12">
                       <div className="flex flex-col items-center justify-center px-4 text-center">
                         <div className="rounded-full bg-muted p-6 mb-4">
                           <FileX className="h-12 w-12 text-muted-foreground" />
                         </div>
                         <h3 className="text-lg font-semibold mb-2">No invoices found</h3>
                         <p className="text-muted-foreground max-w-sm mb-4">
-                          {searchQuery 
-                            ? `No invoices match "${searchQuery}". Try adjusting your search or filters.`
+                          {searchQuery
+                            ? `Nothing matches "${searchQuery}". Try another search or filter.`
                             : statusFilter !== "all"
-                            ? "No invoices match the selected status filter. Try selecting a different status."
-                            : "No invoices have been created yet. Create your first invoice to get started."
-                          }
+                              ? "No rows match this status. Try another filter."
+                              : isFreelancer
+                                ? "Add an external invoice link so your client always knows where to pay."
+                                : "Your freelancer has not added any invoice links yet."}
                         </p>
                         {(searchQuery || statusFilter !== "all") && (
                           <Button
                             variant="outline"
+                            type="button"
                             onClick={() => {
                               setSearchQuery("");
                               setStatusFilter("all");
@@ -514,20 +463,14 @@ export default function ProjectPayments() {
             </Table>
           </div>
 
-          {/* Pagination */}
-          {filteredInvoices.length > 0 && (
+          {!loading && filteredInvoices.length > 0 && (
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">
                 Showing {startIndex + 1} to {Math.min(endIndex, filteredInvoices.length)} of{" "}
-                {filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''}
+                {filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? "s" : ""}
               </p>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handlePrevious}
-                  disabled={currentPage === 1}
-                >
+                <Button variant="ghost" size="sm" type="button" onClick={handlePrevious} disabled={currentPage === 1}>
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Previous
                 </Button>
@@ -537,6 +480,7 @@ export default function ProjectPayments() {
                 <Button
                   variant="ghost"
                   size="sm"
+                  type="button"
                   onClick={handleNext}
                   disabled={currentPage === totalPages}
                 >
@@ -549,13 +493,26 @@ export default function ProjectPayments() {
         </div>
       </div>
 
-      {/* Create Invoice Dialog */}
-      <CreateInvoiceDialog
-        open={createInvoiceDialogOpen}
-        onOpenChange={setCreateInvoiceDialogOpen}
-        projectData={projectData}
-      />
-    </ProjectLayoutWrapper>
+      {isFreelancer ? (
+        <>
+          <CreateInvoiceDialog
+            open={createInvoiceDialogOpen}
+            onOpenChange={setCreateInvoiceDialogOpen}
+            projectId={String(projectId)}
+            projectData={sidebar}
+            onCreated={() => void load()}
+          />
+          <DeleteProjectInvoiceDialog
+            open={Boolean(deleteInvoiceTarget)}
+            onOpenChange={(open) => {
+              if (!open) setDeleteInvoiceTarget(null);
+            }}
+            projectId={String(projectId)}
+            item={deleteInvoiceTarget}
+            onDeleted={() => void load()}
+          />
+        </>
+      ) : null}
+    </>
   );
 }
-

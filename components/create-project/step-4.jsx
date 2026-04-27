@@ -2,37 +2,33 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldGroup, FieldLabel, FieldDescription } from "@/components/ui/field";
-import { Separator } from "@/components/ui/separator";
-import { ChevronRight, ChevronLeft, Plus, X, Info } from "lucide-react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// -----------------------------------------------------------------------------
+// Client kickoff questions (step 4) — UI paused; keep handlers below for restore.
+// -----------------------------------------------------------------------------
+// import { Input } from "@/components/ui/input";
+// import { Separator } from "@/components/ui/separator";
+// import { Plus, X, Info } from "lucide-react";
+//
+// const [questions, setQuestions] = useState(formData.questions || [""]);
+// const handleAddQuestion = () => { setQuestions([...questions, ""]); };
+// const handleRemoveQuestion = (index) => { ... };
+// const handleQuestionChange = (index, value) => { ... };
+// In handleNext: questions: questions.filter((q) => q.trim() !== ""),
+// In JSX: Separator + “Client questions” fields + Add Question button (see git history / questions-screen).
 
 export function CreateProjectStep4({ formData, updateFormData, nextStep, prevStep, className, ...props }) {
   const [welcomeMessage, setWelcomeMessage] = useState(formData.welcomeMessage || "");
-  const [questions, setQuestions] = useState(formData.questions || [""]);
-
-  const handleAddQuestion = () => {
-    setQuestions([...questions, ""]);
-  };
-
-  const handleRemoveQuestion = (index) => {
-    const newQuestions = questions.filter((_, i) => i !== index);
-    setQuestions(newQuestions.length > 0 ? newQuestions : [""]);
-  };
-
-  const handleQuestionChange = (index, value) => {
-    const newQuestions = [...questions];
-    newQuestions[index] = value;
-    setQuestions(newQuestions);
-  };
 
   const handleNext = (e) => {
     e.preventDefault();
     updateFormData({
       welcomeMessage,
-      questions: questions.filter(q => q.trim() !== ""),
+      questions: [],
     });
     nextStep();
   };
@@ -55,24 +51,19 @@ export function CreateProjectStep4({ formData, updateFormData, nextStep, prevSte
     >
       <form onSubmit={handleNext}>
         <FieldGroup className="space-y-8">
-          {/* Header */}
           <div className="space-y-2">
             <p className="text-xs sm:text-sm text-primary font-semibold uppercase">
               Step 4 of 5
             </p>
             <h1 className="text-2xl sm:text-3xl font-bold">Client Kickoff</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Set the tone and collect any details from client you need before starting.
+              Set the welcome message your client sees when they first open the project portal.
             </p>
           </div>
 
-          {/* Form Fields */}
           <div className="space-y-8">
-            {/* Welcome Message */}
             <Field>
-              <FieldLabel htmlFor="welcomeMessage">
-                Welcome message
-              </FieldLabel>
+              <FieldLabel htmlFor="welcomeMessage">Welcome message</FieldLabel>
               <Textarea
                 id="welcomeMessage"
                 placeholder="Hey Sophie, Welcome to your project portal. We'll use this space to share updates, files, and feedback throughout the project."
@@ -86,10 +77,9 @@ export function CreateProjectStep4({ formData, updateFormData, nextStep, prevSte
               </FieldDescription>
             </Field>
 
-            {/* Separator */}
+            {/*
             <Separator />
 
-            {/* Client Questions */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <FieldLabel className="mb-0">Client questions</FieldLabel>
@@ -104,9 +94,7 @@ export function CreateProjectStep4({ formData, updateFormData, nextStep, prevSte
                   <div key={index} className="flex gap-2 items-start">
                     <Field className="flex-1">
                       {index === 0 && (
-                        <FieldLabel htmlFor={`question-${index}`}>
-                          Question
-                        </FieldLabel>
+                        <FieldLabel htmlFor={`question-${index}`}>Question</FieldLabel>
                       )}
                       <Input
                         id={`question-${index}`}
@@ -130,19 +118,14 @@ export function CreateProjectStep4({ formData, updateFormData, nextStep, prevSte
                 ))}
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAddQuestion}
-                className="gap-2"
-              >
+              <Button type="button" variant="outline" onClick={handleAddQuestion} className="gap-2">
                 Add Question
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
+            */}
           </div>
 
-          {/* Navigation Buttons */}
           <div className="flex items-center justify-between">
             <Button type="button" variant="outline" onClick={handleSkip}>
               Skip
@@ -163,4 +146,3 @@ export function CreateProjectStep4({ formData, updateFormData, nextStep, prevSte
     </div>
   );
 }
-

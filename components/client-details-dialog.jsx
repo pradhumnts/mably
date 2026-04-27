@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -73,7 +74,13 @@ const getPlatformIcon = (url, label) => {
   return <LinkIcon className="h-5 w-5" />;
 };
 
-export function ClientDetailsDialog({ client, projects, open, onOpenChange }) {
+export function ClientDetailsDialog({
+  client,
+  projects,
+  projectsLoading = false,
+  open,
+  onOpenChange,
+}) {
   if (!client) return null;
 
   // Convert old socials format to new links format if needed
@@ -100,9 +107,9 @@ export function ClientDetailsDialog({ client, projects, open, onOpenChange }) {
             {/* Avatar, Name, Email */}
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={client.avatar} alt={client.name} />
+                <AvatarImage src={client.avatar || undefined} alt={client.name} />
                 <AvatarFallback className="text-xl">
-                  {client.name.charAt(0)}
+                  {(client.name || "?").charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -120,7 +127,9 @@ export function ClientDetailsDialog({ client, projects, open, onOpenChange }) {
                   <Phone className="h-4 w-4" />
                   <span>Phone</span>
                 </div>
-                <p className="font-medium break-words">{client.phone}</p>
+                <p className="font-medium break-words">
+                  {client.phone?.trim() ? client.phone : "—"}
+                </p>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -134,7 +143,9 @@ export function ClientDetailsDialog({ client, projects, open, onOpenChange }) {
                   <MapPin className="h-4 w-4" />
                   <span>Location</span>
                 </div>
-                <p className="font-medium break-words">{client.location}</p>
+                <p className="font-medium break-words">
+                  {client.location?.trim() ? client.location : "—"}
+                </p>
               </div>
             </div>
             <Separator />
@@ -174,29 +185,53 @@ export function ClientDetailsDialog({ client, projects, open, onOpenChange }) {
               <div>
                 <h3 className="text-xl font-semibold">Projects</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  List of all the projects you have with {client.name.split(" ")[0]}.
+                  List of all the projects you have with{" "}
+                  {(client.name || "").trim().split(/\s+/)[0] || "this client"}.
                 </p>
               </div>
-              <Button className="ml-auto flex items-center gap-1 mb-[2px] font-semibold rounded-lg">
-              <Plus className="h-5 w-5 stroke-2" />
-              <span className="hidden sm:inline">Start Project</span>
-            </Button>
+              <Button
+                className="ml-auto flex items-center gap-1 mb-[2px] font-semibold rounded-lg"
+                asChild
+              >
+                <Link
+                  href={`/projects/new?clientId=${encodeURIComponent(client.id)}`}
+                >
+                  <Plus className="h-5 w-5 stroke-2" />
+                  <span className="hidden sm:inline">Start Project</span>
+                </Link>
+              </Button>
             </div>
 
             {/* Projects List */}
             <div className="space-y-3">
-              {projects && projects.length > 0 ? (
+              {projectsLoading ? (
+                <div className="rounded-lg border border-zinc-200 bg-white py-10 text-center text-sm text-muted-foreground">
+                  Loading projects…
+                </div>
+              ) : projects && projects.length > 0 ? (
                 projects.map((project) => (
                   <div
                     key={project.id}
                     className="bg-white rounded-lg p-[16px] border border-zinc-200 space-y-3 hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1 flex-1">
-                        <h4 className="font-semibold">{project.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {project.description}
-                        </p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <Avatar className="h-11 w-11 shrink-0 rounded-md border border-zinc-200 bg-muted">
+                          <AvatarImage
+                            src={project.logo || undefined}
+                            alt=""
+                            className="object-cover"
+                          />
+                          <AvatarFallback className="rounded-md text-sm font-medium">
+                            {(project.name || "?").charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <h4 className="font-semibold truncate">{project.name}</h4>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {project.description}
+                          </p>
+                        </div>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -209,8 +244,15 @@ export function ClientDetailsDialog({ client, projects, open, onOpenChange }) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>View Project</DropdownMenuItem>
-                          <DropdownMenuItem>Edit Project</DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link
+                              href={`/project/${project.id}/dashboard`}
+                              className="cursor-pointer"
+                            >
+                              View project
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem disabled>Edit project</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive focus:text-destructive">
                             Remove from Client
@@ -224,7 +266,7 @@ export function ClientDetailsDialog({ client, projects, open, onOpenChange }) {
                     <div className="flex items-center gap-4 text-sm">
                       <div className="flex items-center gap-1.5 font-medium">
                         <span>$</span>
-                        <span>{project.budget.toLocaleString()}</span>
+                        <span>{Number(project.budget ?? 0).toLocaleString()}</span>
                       </div>
                       <Separator orientation="vertical" className="h-4" />
                       <div className="flex items-center gap-2 font-medium">

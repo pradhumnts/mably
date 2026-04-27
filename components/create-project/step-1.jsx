@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,41 +24,15 @@ import { ChevronRight, ChevronDown, CalendarIcon, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AddClientDialog } from "@/components/add-client-dialog";
 
-// Dummy clients data with avatars
-const dummyClients = [
-  { 
-    id: 1, 
-    name: "Sophie James", 
-    company: "Arc Metals Co.",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"
-  },
-  { 
-    id: 2, 
-    name: "Michael Chen", 
-    company: "Tech Innovations",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150"
-  },
-  { 
-    id: 3, 
-    name: "Emma Wilson", 
-    company: "Creative Studio",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150"
-  },
-  { 
-    id: 4, 
-    name: "James Rodriguez", 
-    company: "Digital Agency",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150"
-  },
-  { 
-    id: 5, 
-    name: "Sarah Thompson", 
-    company: "Marketing Pro",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
-  },
-];
-
-export function CreateProjectStep1({ formData, updateFormData, nextStep, className, ...props }) {
+export function CreateProjectStep1({
+  formData,
+  updateFormData,
+  nextStep,
+  clients = [],
+  className,
+  ...props
+}) {
+  const router = useRouter();
   const [projectName, setProjectName] = useState(formData.projectName || "");
   const [startDate, setStartDate] = useState(formData.startDate || undefined);
   const [dueDate, setDueDate] = useState(formData.dueDate || undefined);
@@ -67,7 +42,7 @@ export function CreateProjectStep1({ formData, updateFormData, nextStep, classNa
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
 
-  const selectedClient = dummyClients.find(c => c.id.toString() === clientId);
+  const selectedClient = clients.find((c) => c.id === clientId);
 
   const handleNext = (e) => {
     e.preventDefault();
@@ -89,11 +64,11 @@ export function CreateProjectStep1({ formData, updateFormData, nextStep, classNa
     }
   };
 
-  const handleAddClient = (newClientData) => {
-    // In a real app, this would create the client and return the ID
-    console.log("New client added:", newClientData);
-    // For now, just close the dialog
-    setAddClientDialogOpen(false);
+  const handleClientSaved = (payload) => {
+    if (payload?.id) {
+      setClientId(String(payload.id));
+    }
+    router.refresh();
   };
 
   return (
@@ -245,28 +220,42 @@ export function CreateProjectStep1({ formData, updateFormData, nextStep, classNa
                     {selectedClient && (
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
-                          <AvatarImage src={selectedClient.avatar} alt={selectedClient.name} />
-                          <AvatarFallback>{selectedClient.name.charAt(0)}</AvatarFallback>
+                          <AvatarImage
+                            src={selectedClient.avatar || undefined}
+                            alt={selectedClient.name}
+                          />
+                          <AvatarFallback>
+                            {(selectedClient.name || "?").charAt(0).toUpperCase()}
+                          </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col items-start text-left">
                           <span className="font-medium text-sm">{selectedClient.name}</span>
-                          <span className="text-xs text-muted-foreground">{selectedClient.company}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {selectedClient.email}
+                          </span>
                         </div>
                       </div>
                     )}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {dummyClients.map((client) => (
-                    <SelectItem key={client.id} value={client.id.toString()}>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={client.avatar} alt={client.name} />
-                          <AvatarFallback>{client.name.charAt(0)}</AvatarFallback>
+                          <AvatarImage
+                            src={client.avatar || undefined}
+                            alt={client.name}
+                          />
+                          <AvatarFallback>
+                            {(client.name || "?").charAt(0).toUpperCase()}
+                          </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col items-start">
                           <span className="font-medium text-sm">{client.name}</span>
-                          <span className="text-xs text-muted-foreground">{client.company}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {client.email}
+                          </span>
                         </div>
                       </div>
                     </SelectItem>
@@ -298,7 +287,7 @@ export function CreateProjectStep1({ formData, updateFormData, nextStep, classNa
       <AddClientDialog
         open={addClientDialogOpen}
         onOpenChange={setAddClientDialogOpen}
-        onAddClient={handleAddClient}
+        onSaved={handleClientSaved}
       />
     </div>
   );

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Calendar, Folder, CreditCard } from "lucide-react";
-import { ProjectLayoutWrapper } from "../project-layout-wrapper";
+import { usePortalProject } from "../project-portal-shell";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -46,21 +46,14 @@ const dashboardCards = [
 export default function ProjectDashboard() {
   const params = useParams();
   const projectId = params.projectId;
-
-  // In the future, fetch project data and last visit time from database
-  const projectData = {
-    projectName: "Sophie & Co.",
-    planType: "Enterprise",
-    clientName: "Sophie James",
-    clientEmail: "shophie@arcmetals.co",
-    clientAvatar: "https://plus.unsplash.com/premium_photo-1690034979551-65a363a0e4a6?q=80&w=1287&auto=format&fit=crop",
-  };
+  const { sidebar, dashboard, meta } = usePortalProject();
+  const showBookCall = !meta?.isFreelancer;
 
   const lastVisit = "Yesterday 2:41 PM";
-  const clientName = "Sophie";
+  const clientName = sidebar.clientName?.split(/\s+/)[0] || "there";
 
   return (
-    <ProjectLayoutWrapper projectData={projectData}>
+    <>
       <div className="relative flex flex-col min-h-screen overflow-hidden">
         {/* Background Image - Only on dashboard */}
         <div className="absolute inset-0 z-0">
@@ -72,14 +65,16 @@ export default function ProjectDashboard() {
           />
         </div>
 
-        {/* Book a Call Card - Top Right */}
-        <div className="absolute top-8 right-8 z-20 [animation-fill-mode:backwards] animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
-          <BookCallCard 
-            freelancerName="Emma"
-            freelancerAvatar="https://plus.unsplash.com/premium_photo-1675710868549-3c9d54a40219?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            calendarLink="https://calendly.com/"
-          />
-        </div>
+        {/* Book a Call — clients only (freelancers manage calendar in main app) */}
+        {showBookCall ? (
+          <div className="absolute top-8 right-8 z-20 [animation-fill-mode:backwards] animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
+            <BookCallCard
+              freelancerName={dashboard.freelancerName}
+              freelancerAvatar={dashboard.freelancerAvatar || undefined}
+              calendarLink={dashboard.calendarLink?.trim() || "https://calendly.com/"}
+            />
+          </div>
+        ) : null}
 
         {/* Content */}
         <div className="relative z-10 flex-1 align-center items-center justify-center h-full px-[100px] pb-[100px]">
@@ -132,7 +127,7 @@ export default function ProjectDashboard() {
           <ProjectDock projectId={projectId} />
         </div> */}
       </div>
-    </ProjectLayoutWrapper>
+    </>
   );
 }
 

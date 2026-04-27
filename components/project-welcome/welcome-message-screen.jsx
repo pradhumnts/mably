@@ -6,7 +6,7 @@ import { TextAnimate } from "@/components/ui/text-animate";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
-export function WelcomeMessageScreen({ clientName, onContinue }) {
+export function WelcomeMessageScreen({ clientName, welcomeMessage: customMessage, onContinue }) {
   const [showButton, setShowButton] = useState(false);
 
   // "Welcome" slides in over 1s, then message fades in with 1s delay + 2s duration = 3s total
@@ -15,7 +15,10 @@ export function WelcomeMessageScreen({ clientName, onContinue }) {
     return () => clearTimeout(timer);
   }, []);
 
-  const welcomeMessage = `Hey ${clientName}, welcome to your project portal. We'll use this space to share updates, files, and feedback throughout the project.`;
+  const welcomeMessage =
+    typeof customMessage === "string" && customMessage.trim()
+      ? customMessage.trim()
+      : `Hey ${clientName}, welcome to your project portal. We'll use this space to share updates, files, and feedback throughout the project.`;
 
   return (
     <div className={cn("w-full max-w-2xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8")}>

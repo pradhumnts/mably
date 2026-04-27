@@ -12,16 +12,18 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { addLibraryLink } from "@/lib/actions/project-library";
+import { toast } from "sonner";
 
-export function AddLinkDialog({ open, onOpenChange }) {
+/**
+ * @param {{ open: boolean; onOpenChange: (open: boolean) => void; projectId: string; onSaved?: () => void }}
+ */
+export function AddLinkDialog({ open, onOpenChange, projectId, onSaved }) {
   const [formData, setFormData] = useState({
     linkName: "",
     linkUrl: "",
-    description: "",
-    needsApproval: false,
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -31,20 +33,25 @@ export function AddLinkDialog({ open, onOpenChange }) {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // In the future, this will save to the database
-    console.log("Link data:", formData);
+    setSubmitting(true);
+    const res = await addLibraryLink(projectId, {
+      title: formData.linkName.trim(),
+      url: formData.linkUrl.trim(),
+    });
+    setSubmitting(false);
+    if (!res.ok) {
+      toast.error(res.error || "Could not add link");
+      return;
+    }
+    toast.success("Link added");
     onOpenChange(false);
-    
-    // Reset form
     setFormData({
       linkName: "",
       linkUrl: "",
-      description: "",
-      needsApproval: false,
     });
+    onSaved?.();
   };
 
   return (
@@ -57,9 +64,8 @@ export function AddLinkDialog({ open, onOpenChange }) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => void handleSubmit(e)}>
           <div className="grid gap-4 py-4">
-            {/* Link Name */}
             <div className="grid gap-2">
               <Label htmlFor="linkName">Link Name</Label>
               <Input
@@ -69,10 +75,10 @@ export function AddLinkDialog({ open, onOpenChange }) {
                 value={formData.linkName}
                 onChange={handleInputChange}
                 required
+                disabled={submitting}
               />
             </div>
 
-            {/* Link URL */}
             <div className="grid gap-2">
               <Label htmlFor="linkUrl">Link URL</Label>
               <Input
@@ -83,52 +89,18 @@ export function AddLinkDialog({ open, onOpenChange }) {
                 value={formData.linkUrl}
                 onChange={handleInputChange}
                 required
+                disabled={submitting}
               />
             </div>
 
-            {/* Description/Comment */}
-            <div className="grid gap-2">
-              <Label htmlFor="description">
-                Comment/Description <span className="text-muted-foreground text-sm">(Optional)</span>
-              </Label>
-              <Textarea
-                id="description"
-                name="description"
-                placeholder="Add any notes or comments about this link..."
-                value={formData.description}
-                onChange={handleInputChange}
-                rows={4}
-              />
-            </div>
-
-            {/* Needs Approval Checkbox */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="needsApproval"
-                checked={formData.needsApproval}
-                onCheckedChange={(checked) => 
-                  setFormData((prev) => ({ ...prev, needsApproval: checked }))
-                }
-              />
-              <Label
-                htmlFor="needsApproval"
-                className="text-sm font-normal cursor-pointer"
-              >
-                This link needs client approval
-              </Label>
-            </div>
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
               Cancel
             </Button>
-            <Button type="submit">
-              Add Link
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Saving…" : "Add Link"}
             </Button>
           </DialogFooter>
         </form>
@@ -136,4 +108,3 @@ export function AddLinkDialog({ open, onOpenChange }) {
     </Dialog>
   );
 }
-
