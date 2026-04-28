@@ -65,6 +65,33 @@ export function LoginForm({ className, next = null, intent = null, ...props }) {
     // If successful, verifyOtp will redirect to dashboard
   };
 
+  const handleGoogleAuth = async () => {
+    setIsLoading(true);
+    setMessage("");
+
+    const { signInWithOAuth } = await import("@/lib/auth/actions");
+    const fromUrl =
+      typeof window !== "undefined"
+        ? sanitizeNextPath(new URLSearchParams(window.location.search).get("next"))
+        : null;
+    const nextForOAuth = next ?? fromUrl ?? undefined;
+    const result = await signInWithOAuth("google", nextForOAuth);
+
+    if (result?.error) {
+      setMessage(result.error);
+      setIsLoading(false);
+      return;
+    }
+
+    if (result?.url && typeof window !== "undefined") {
+      window.location.assign(result.url);
+      return;
+    }
+
+    setMessage("Could not start Google sign-in. Please try again.");
+    setIsLoading(false);
+  };
+
   const signupQs = new URLSearchParams();
   if (next) signupQs.set("next", next);
   if (intent) signupQs.set("intent", intent);
@@ -183,7 +210,7 @@ export function LoginForm({ className, next = null, intent = null, ...props }) {
           </div>
           <FieldSeparator className="uppercase text-xs">Or continue with</FieldSeparator>
           <Field>
-            <Button variant="outline" type="button" disabled={isLoading} className="w-full">
+            <Button variant="outline" type="button" disabled={isLoading} className="w-full" onClick={handleGoogleAuth}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="size-4">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
