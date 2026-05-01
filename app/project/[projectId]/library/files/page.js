@@ -447,6 +447,10 @@ export default function LibraryFiles() {
                         projectId={String(projectId)}
                         fileId={String(file.fileId)}
                         fileName={file.name}
+                        fileLogo={file.logo}
+                        uploadedByName={file.uploadedBy}
+                        uploadedByAvatar={file.uploadedByAvatar}
+                        uploadedAt={file.uploadedAt}
                         open={discussionFileId === file.fileId}
                         onOpenChange={(nextOpen) => {
                           if (nextOpen) {

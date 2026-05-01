@@ -15,12 +15,12 @@ import { cn } from "@/lib/utils";
 
 const STORAGE_PREFIX = "mably-portal-onboarding";
 
-/** Set paths under `public/` when you add screenshots (e.g. `"/images/portal/activity.png"`). */
-const PORTAL_ONBOARD_IMAGES = {
-  welcome: null,
-  activity: null,
-  library: null,
-  chat: null,
+/** Set paths under `public/` for tour media. */
+const PORTAL_ONBOARD_MEDIA = {
+  welcomeVideo: "/welcome-tour/Welcome%20Tour%20-%20Step%201.mp4",
+  activityVideo: "/welcome-tour/Welcome%20Tour%20-%20Step%202%20-%20Activity.mp4",
+  libraryImage: null,
+  chatImage: null,
 };
 
 function completionStorageKey(projectId, isFreelancer) {
@@ -28,7 +28,7 @@ function completionStorageKey(projectId, isFreelancer) {
 }
 
 /**
- * @typedef {{ title: string; description: string; imageSrc?: string | null; imageAlt?: string }} PortalOnboardStep
+ * @typedef {{ title: string; description: string; imageSrc?: string | null; imageAlt?: string; videoSrc?: string | null }} PortalOnboardStep
  */
 
 /** @param {{ isFreelancer: boolean; projectName: string }} p */
@@ -39,20 +39,20 @@ function buildSteps({ isFreelancer, projectName }) {
       description: isFreelancer
         ? `${projectName}: the same space your client sees—Activity, Library, and chat, aligned with you.`
         : `${projectName} lives here. Jump between sections from the left—everything stays in one place.`,
-      imageSrc: PORTAL_ONBOARD_IMAGES.welcome,
+      videoSrc: PORTAL_ONBOARD_MEDIA.welcomeVideo,
       imageAlt: "Portal overview",
     },
     {
       title: "Activity",
       description:
         "Updates, comments, and milestones in order—scan what changed without digging through email.",
-      imageSrc: PORTAL_ONBOARD_IMAGES.activity,
+      videoSrc: PORTAL_ONBOARD_MEDIA.activityVideo,
       imageAlt: "Activity",
     },
     {
       title: "Library",
       description: "Files and links together—uploads, approvals, and references next to the work.",
-      imageSrc: PORTAL_ONBOARD_IMAGES.library,
+      imageSrc: PORTAL_ONBOARD_MEDIA.libraryImage,
       imageAlt: "Library",
     },
     {
@@ -60,13 +60,34 @@ function buildSteps({ isFreelancer, projectName }) {
       description: isFreelancer
         ? "The floating bubble is for quick back-and-forth with your client—no need to leave the portal."
         : "Use the floating chat to ask your freelancer anything short—context stays with the project.",
-      imageSrc: PORTAL_ONBOARD_IMAGES.chat,
+      imageSrc: PORTAL_ONBOARD_MEDIA.chatImage,
       imageAlt: "Chat",
     },
   ];
 }
 
-function StepMedia({ imageSrc, imageAlt, className }) {
+function StepMedia({ imageSrc, imageAlt, videoSrc, className }) {
+  if (videoSrc) {
+    return (
+      <div
+        className={cn(
+          "relative aspect-video w-full overflow-hidden rounded-lg border border-border/80 bg-muted/40",
+          className
+        )}
+      >
+        <video
+          src={videoSrc}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          className="h-full w-full object-cover object-center"
+        />
+      </div>
+    );
+  }
+
   if (imageSrc) {
     return (
       <div
@@ -183,7 +204,7 @@ export function PortalOnboardingDialog({ projectId, isFreelancer, projectName })
           </DialogHeader>
 
           <div className="mt-5">
-            <StepMedia imageSrc={step.imageSrc} imageAlt={step.imageAlt} />
+            <StepMedia imageSrc={step.imageSrc} imageAlt={step.imageAlt} videoSrc={step.videoSrc} />
           </div>
 
           <div className="mt-5 flex justify-center gap-1.5" aria-hidden>

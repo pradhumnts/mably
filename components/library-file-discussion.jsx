@@ -7,7 +7,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -32,11 +31,25 @@ function formatCommentTime(iso) {
  *   projectId: string;
  *   fileId: string;
  *   fileName?: string;
+ *   fileLogo?: string | null;
+ *   uploadedByName?: string | null;
+ *   uploadedByAvatar?: string | null;
+ *   uploadedAt?: string | null;
  *   open: boolean;
  *   onOpenChange: (open: boolean) => void;
  * }}
  */
-export function LibraryFileDiscussion({ projectId, fileId, fileName, open, onOpenChange }) {
+export function LibraryFileDiscussion({
+  projectId,
+  fileId,
+  fileName,
+  fileLogo = null,
+  uploadedByName = null,
+  uploadedByAvatar = null,
+  uploadedAt = null,
+  open,
+  onOpenChange,
+}) {
   const [comments, setComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [draft, setDraft] = useState("");
@@ -185,21 +198,54 @@ export function LibraryFileDiscussion({ projectId, fileId, fileName, open, onOpe
         showCloseButton
         className="flex max-h-[min(560px,85vh)] w-full max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
       >
-        <DialogHeader className="border-b border-border px-6 py-4 text-left">
-          <DialogTitle className="text-base">
-            {fileName?.trim() ? `Discussion — ${fileName.trim()}` : "File discussion"}
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            Comments are visible to everyone on this project with portal access.
-          </DialogDescription>
-        </DialogHeader>
+        <div className="relative shrink-0 overflow-visible border-b border-orange-200/30 bg-gradient-to-br from-orange-50/90 via-background to-violet-50/40 px-6 py-4 dark:from-orange-950/30 dark:via-background dark:to-violet-950/20">
+          <div
+            className="pointer-events-none absolute -right-10 top-0 h-28 w-28 rounded-full bg-orange-400/20 blur-2xl"
+            aria-hidden
+          />
+          <DialogHeader className="relative space-y-0 text-left">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background/85 p-2">
+                {fileLogo ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- file kind logo path is local/public
+                  <img src={fileLogo} alt="" className="h-full w-full object-contain" />
+                ) : (
+                  <div className="h-5 w-5 rounded bg-muted" aria-hidden />
+                )}
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="truncate pr-8 text-base font-semibold">
+                  {fileName?.trim() || "File discussion"}
+                </DialogTitle>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={uploadedByAvatar || undefined} alt={uploadedByName || "Uploader"} />
+                    <AvatarFallback className="text-[10px]">
+                      {(uploadedByName || "M").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span>
+                    Uploaded by{" "}
+                    <span className="font-medium text-foreground">{uploadedByName || "Member"}</span>
+                    {uploadedAt ? (
+                      <>
+                        <span className="mx-1.5 text-border">·</span>
+                        {uploadedAt}
+                      </>
+                    ) : null}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </DialogHeader>
+        </div>
 
         <div ref={listRef} className="min-h-[200px] flex-1 overflow-y-auto px-6 py-4">
           {loadingComments ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : comments.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No comments yet. Say something below — it appears right away while it saves.
+              No comments yet.
             </p>
           ) : (
             <ul className="space-y-3">
@@ -228,7 +274,7 @@ export function LibraryFileDiscussion({ projectId, fileId, fileName, open, onOpe
           )}
         </div>
 
-        <div className="border-t border-border bg-background px-6 py-4">
+        <div className="shrink-0 border-t border-border bg-background px-6 py-4">
           <div className="space-y-2">
             <Textarea
               ref={textareaRef}
