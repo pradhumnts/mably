@@ -7,6 +7,7 @@ import {
   getPolarProductGrowth,
   getPolarProductStarter,
 } from "@/lib/billing/polar-env";
+import { reconcilePolarSubscriptionForUser } from "@/lib/billing/reconcile-polar-subscription";
 
 export const metadata = {
   title: "Billing · Mably",
@@ -21,15 +22,21 @@ export default async function BillingPage() {
     redirect("/projects");
   }
 
-  const subscription = await getFreelancerSubscriptionForUser();
   const token = getPolarAccessToken();
   const starter = getPolarProductStarter();
   const growth = getPolarProductGrowth();
+
+  if (token) {
+    await reconcilePolarSubscriptionForUser(profile.id);
+  }
+
+  const subscription = await getFreelancerSubscriptionForUser();
 
   return (
     <BillingPageClient
       polarConfigured={Boolean(token && starter && growth)}
       initialSubscription={subscription}
+      canReconcile={Boolean(token)}
     />
   );
 }

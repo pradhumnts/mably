@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Check, CreditCard } from "lucide-react";
+import { Check, CreditCard, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 const starterFeatures = [
@@ -37,9 +37,15 @@ const growthFeatures = [
   "Priority support",
 ];
 
-export function BillingPageClient({ polarConfigured, initialSubscription }) {
+export function BillingPageClient({ polarConfigured, initialSubscription, canReconcile = false }) {
   const [checkoutLoading, setCheckoutLoading] = useState(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [subscription, setSubscription] = useState(initialSubscription);
+  const [reconcileLoading, setReconcileLoading] = useState(false);
+
+  useEffect(() => {
+    setSubscription(initialSubscription);
+  }, [initialSubscription]);
 
   const startCheckout = useCallback(
     async (plan) => {
@@ -77,7 +83,22 @@ export function BillingPageClient({ polarConfigured, initialSubscription }) {
     }
   };
 
-  const canManage = Boolean(initialSubscription?.polar_customer_id);
+  const refreshFromPolar = async () => {
+    setReconcileLoading(true);
+    try {
+      const res = await fetch("/api/billing/reconcile", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Could not refresh");
+      setSubscription(json.subscription ?? null);
+      toast.success(json.synced ? "Subscription synced from Polar." : "No active subscription found in Polar.");
+    } catch (e) {
+      toast.error(e?.message ?? "Refresh failed");
+    } finally {
+      setReconcileLoading(false);
+    }
+  };
+
+  const canManage = Boolean(subscription?.polar_customer_id);
 
   return (
     <>
@@ -124,7 +145,7 @@ export function BillingPageClient({ polarConfigured, initialSubscription }) {
             </Card>
           ) : null}
 
-          {initialSubscription ? (
+          {subscription ? (
             <Card>
               <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
                 <div>
@@ -132,30 +153,65 @@ export function BillingPageClient({ polarConfigured, initialSubscription }) {
                   <CardDescription>
                     Plan:{" "}
                     <span className="font-medium text-foreground">
-                      {initialSubscription.plan_key ?? "—"}
+                      {subscription.plan_key ?? "—"}
                     </span>{" "}
                     · Status:{" "}
-                    <span className="font-medium text-foreground">{initialSubscription.status}</span>
+                    <span className="font-medium text-foreground">{subscription.status}</span>
                   </CardDescription>
                 </div>
-                {canManage ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => void openPortal()}
-                    disabled={portalLoading}
-                  >
-                    <CreditCard className="h-4 w-4" />
-                    {portalLoading ? "Opening…" : "Manage subscription"}
-                  </Button>
-                ) : null}
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {canReconcile ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => void refreshFromPolar()}
+                      disabled={reconcileLoading}
+                    >
+                      <RefreshCw className={`h-4 w-4 ${reconcileLoading ? "animate-spin" : ""}`} />
+                      {reconcileLoading ? "Syncing…" : "Refresh from Polar"}
+                    </Button>
+                  ) : null}
+                  {canManage ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => void openPortal()}
+                      disabled={portalLoading}
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      {portalLoading ? "Opening…" : "Manage subscription"}
+                    </Button>
+                  ) : null}
+                </div>
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground">
-                {initialSubscription.current_period_end
-                  ? `Current period ends (UTC): ${initialSubscription.current_period_end}`
+                {subscription.current_period_end
+                  ? `Current period ends (UTC): ${subscription.current_period_end}`
                   : null}
               </CardContent>
+            </Card>
+          ) : canReconcile ? (
+            <Card>
+              <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
+                <div>
+                  <CardTitle className="text-base">No subscription in Mably yet</CardTitle>
+                  <CardDescription>
+                    If you already paid in Polar, sync your status here (webhooks may be off or delayed).
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => void refreshFromPolar()}
+                  disabled={reconcileLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 ${reconcileLoading ? "animate-spin" : ""}`} />
+                  {reconcileLoading ? "Syncing…" : "Pull from Polar"}
+                </Button>
+              </CardHeader>
             </Card>
           ) : null}
 
