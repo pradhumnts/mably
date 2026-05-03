@@ -3,10 +3,10 @@ import { getCurrentUserProfile } from "@/lib/data/profile";
 import { getFreelancerSubscriptionForUser } from "@/lib/data/billing";
 import { BillingPageClient } from "@/components/billing/billing-page-client";
 import {
-  getPaddleEnvironment,
-  getPaddlePriceGrowth,
-  getPaddlePriceStarter,
-} from "@/lib/billing/paddle-env";
+  getPolarAccessToken,
+  getPolarProductGrowth,
+  getPolarProductStarter,
+} from "@/lib/billing/polar-env";
 
 export const metadata = {
   title: "Billing · Mably",
@@ -22,14 +22,13 @@ export default async function BillingPage() {
   }
 
   const subscription = await getFreelancerSubscriptionForUser();
+  const token = getPolarAccessToken();
+  const starter = getPolarProductStarter();
+  const growth = getPolarProductGrowth();
 
   return (
     <BillingPageClient
-      userId={profile.id}
-      email={profile.email}
-      paddleEnvironment={getPaddleEnvironment()}
-      starterPriceId={getPaddlePriceStarter()}
-      growthPriceId={getPaddlePriceGrowth()}
+      polarConfigured={Boolean(token && starter && growth)}
       initialSubscription={subscription}
     />
   );

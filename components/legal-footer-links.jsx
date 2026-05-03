@@ -5,7 +5,7 @@ const linkClass =
   "text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline";
 
 /**
- * Minimal Terms · Privacy · Refund row for Paddle domain approval on app host.
+ * Minimal Terms · Privacy · Refund row for app host legal links.
  */
 export function LegalFooterLinks({ className }) {
   return (

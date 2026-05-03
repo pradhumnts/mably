@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { initializePaddle } from "@paddle/paddle-js";
+import { useCallback, useState } from "react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -38,60 +37,30 @@ const growthFeatures = [
   "Priority support",
 ];
 
-export function BillingPageClient({
-  userId,
-  email,
-  paddleEnvironment,
-  starterPriceId,
-  growthPriceId,
-  initialSubscription,
-}) {
-  const [paddle, setPaddle] = useState(null);
+export function BillingPageClient({ polarConfigured, initialSubscription }) {
+  const [checkoutLoading, setCheckoutLoading] = useState(null);
   const [portalLoading, setPortalLoading] = useState(false);
 
-  useEffect(() => {
-    const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN?.trim();
-    if (!token) return;
-
-    const env = paddleEnvironment === "production" ? "production" : "sandbox";
-
-    initializePaddle({
-      token,
-      environment: env,
-    })
-      .then((instance) => {
-        if (instance) setPaddle(instance);
-      })
-      .catch((err) => {
-        console.error(err);
-        toast.error("Could not initialize Paddle checkout.");
-      });
-  }, [paddleEnvironment]);
-
-  const openCheckout = useCallback(
-    (priceId) => {
-      if (!priceId) {
-        toast.error("Missing price ID — set NEXT_PUBLIC_PADDLE_PRICE_* in env.");
-        return;
+  const startCheckout = useCallback(
+    async (plan) => {
+      setCheckoutLoading(plan);
+      try {
+        const res = await fetch("/api/billing/polar-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error ?? "Could not start checkout");
+        if (!json.url) throw new Error("No checkout URL returned");
+        window.location.href = json.url;
+      } catch (e) {
+        toast.error(e?.message ?? "Checkout failed");
+      } finally {
+        setCheckoutLoading(null);
       }
-      if (!paddle?.Checkout?.open) {
-        toast.error("Checkout is still loading. Try again in a moment.");
-        return;
-      }
-
-      const origin =
-        typeof window !== "undefined" ? window.location.origin : "";
-      paddle.Checkout.open({
-        items: [{ priceId, quantity: 1 }],
-        customer: { email },
-        customData: { supabase_user_id: String(userId) },
-        settings: {
-          displayMode: "overlay",
-          ...(origin ? { successUrl: `${origin}/billing` } : {}),
-        },
-      });
     },
-    [paddle, email, userId]
+    []
   );
 
   const openPortal = async () => {
@@ -108,8 +77,7 @@ export function BillingPageClient({
     }
   };
 
-  const hasToken = Boolean(process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN?.trim());
-  const canManage = Boolean(initialSubscription?.paddle_customer_id);
+  const canManage = Boolean(initialSubscription?.polar_customer_id);
 
   return (
     <>
@@ -136,18 +104,21 @@ export function BillingPageClient({
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Subscribe with Paddle. Status updates after checkout via webhooks (may take a few
+              Subscribe with Polar. Status updates after checkout via webhooks (may take a few
               seconds).
             </p>
           </div>
 
-          {!hasToken ? (
+          {!polarConfigured ? (
             <Card className="border-amber-500/40 bg-amber-500/5">
               <CardHeader>
-                <CardTitle className="text-base">Configure Paddle</CardTitle>
+                <CardTitle className="text-base">Configure Polar</CardTitle>
                 <CardDescription>
-                  Add <code className="text-xs">NEXT_PUBLIC_PADDLE_CLIENT_TOKEN</code> and price
-                  IDs to your environment, then redeploy.
+                  Set server env <code className="text-xs">POLAR_ACCESS_TOKEN</code>,{" "}
+                  <code className="text-xs">POLAR_WEBHOOK_SECRET</code>,{" "}
+                  <code className="text-xs">POLAR_PRODUCT_ID_STARTER</code>, and{" "}
+                  <code className="text-xs">POLAR_PRODUCT_ID_GROWTH</code> (and{" "}
+                  <code className="text-xs">POLAR_SERVER=sandbox|production</code>), then redeploy.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -206,16 +177,15 @@ export function BillingPageClient({
                 </ul>
                 <Button
                   className="mt-auto w-full"
-                  onClick={() => openCheckout(starterPriceId)}
-                  disabled={!hasToken}
+                  onClick={() => void startCheckout("starter")}
+                  disabled={!polarConfigured || checkoutLoading !== null}
                 >
-                  Subscribe — Starter
+                  {checkoutLoading === "starter" ? "Redirecting…" : "Subscribe — Starter"}
                 </Button>
               </CardContent>
             </Card>
 
             <Card className="relative flex flex-col border-orange-500/50 bg-gradient-to-b from-orange-50/80 via-card to-card shadow-md dark:from-orange-950/25 dark:via-card dark:to-card">
-             
               <CardHeader>
                 <CardTitle>Growth</CardTitle>
                 <CardDescription>$19/mo · full workspace</CardDescription>
@@ -232,10 +202,10 @@ export function BillingPageClient({
                 </ul>
                 <Button
                   className="mt-auto w-full"
-                  onClick={() => openCheckout(growthPriceId)}
-                  disabled={!hasToken}
+                  onClick={() => void startCheckout("growth")}
+                  disabled={!polarConfigured || checkoutLoading !== null}
                 >
-                  Subscribe — Growth
+                  {checkoutLoading === "growth" ? "Redirecting…" : "Subscribe — Growth"}
                 </Button>
               </CardContent>
             </Card>

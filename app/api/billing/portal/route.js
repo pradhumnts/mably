@@ -1,67 +1,59 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getPaddleApiKey } from "@/lib/billing/paddle-env";
+import { getPolarAccessToken, getPolarApiBase } from "@/lib/billing/polar-env";
 
 export const runtime = "nodejs";
 
-/** Open Paddle customer portal (manage subscription / payment method). */
+/** Open Polar customer portal (manage subscription / payment method). */
 export async function POST() {
-  const apiKey = getPaddleApiKey();
-  if (!apiKey) {
-    return NextResponse.json({ error: "Billing not configured" }, { status: 500 });
+  const token = getPolarAccessToken();
+  if (!token) {
+    return NextResponse.json({ error: "POLAR_ACCESS_TOKEN is not set" }, { status: 500 });
   }
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const admin = createAdminClient();
-  if (!admin) {
-    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
-  }
-
-  const { data: row } = await admin
+  const { data: row, error } = await supabase
     .from("freelancer_subscriptions")
-    .select("paddle_customer_id, paddle_subscription_id")
+    .select("polar_customer_id")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!row?.paddle_customer_id) {
-    return NextResponse.json({ error: "No Paddle customer yet. Subscribe first." }, { status: 400 });
+  if (error) {
+    console.error("[polar] portal load subscription:", error.message);
+    return NextResponse.json({ error: "Could not load subscription" }, { status: 500 });
   }
 
-  const body =
-    row.paddle_subscription_id != null
-      ? JSON.stringify({ subscription_ids: [row.paddle_subscription_id] })
-      : "{}";
+  if (!row?.polar_customer_id) {
+    return NextResponse.json({ error: "No Polar customer yet. Subscribe first." }, { status: 400 });
+  }
 
-  const res = await fetch(`https://api.paddle.com/customers/${row.paddle_customer_id}/portal-sessions`, {
+  const res = await fetch(`${getPolarApiBase()}/customer-sessions/`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body,
+    body: JSON.stringify({ customer_id: row.polar_customer_id }),
   });
 
   const json = await res.json().catch(() => ({}));
-
   if (!res.ok) {
-    console.error("[paddle] portal session:", res.status, json);
+    console.error("[polar] customer session:", res.status, json);
     return NextResponse.json(
-      { error: json?.error?.detail ?? json?.error ?? "Portal session failed" },
-      { status: res.status >= 400 ? res.status : 502 }
+      { error: json.detail ?? json.message ?? json.error ?? "Portal session failed" },
+      { status: 502 }
     );
   }
 
-  const url = json?.data?.urls?.general?.overview ?? null;
-  if (!url || typeof url !== "string") {
+  const url = json.customer_portal_url ?? json.url;
+  if (!url) {
     return NextResponse.json({ error: "No portal URL returned" }, { status: 502 });
   }
 
