@@ -21,30 +21,61 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Upload } from "lucide-react";
 import { toast } from "sonner";
+import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
+import {
+  completeLibraryFileUpload,
+  prepareLibraryFileUpload,
+} from "@/lib/actions/project-library";
 
 /**
- * @param {FormData} formData
- * @param {number} fileSize
- * @param {{ onProgress?: (s: { phase: 'sending' | 'finishing'; percent: number; loaded: number; total: number }) => void; getXhr?: (xhr: XMLHttpRequest) => void }} opts
+ * Upload bytes directly to Supabase Storage to avoid Vercel request body limits.
+ * @param {{
+ *   file: File;
+ *   objectPath: string;
+ *   accessToken: string;
+ *   onProgress?: (s: { phase: 'sending' | 'finishing'; percent: number; loaded: number; total: number }) => void;
+ *   getXhr?: (xhr: XMLHttpRequest) => void;
+ * }} args
  * @returns {Promise<{ ok: boolean; error?: string }>}
  */
-function postLibraryUploadWithProgress(formData, fileSize, { onProgress, getXhr } = {}) {
+function uploadFileDirectToSupabaseWithProgress({
+  file,
+  objectPath,
+  accessToken,
+  onProgress,
+  getXhr,
+}) {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
     getXhr?.(xhr);
-    xhr.open("POST", "/api/project-library/upload");
-    xhr.withCredentials = true;
+
+    const baseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "");
+    const anonKey = String(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
+    if (!baseUrl || !anonKey || !accessToken) {
+      resolve({ ok: false, error: "Supabase client configuration is missing." });
+      return;
+    }
+
+    const encodedPath = objectPath
+      .split("/")
+      .map((p) => encodeURIComponent(p))
+      .join("/");
+
+    xhr.open("POST", `${baseUrl}/storage/v1/object/project-library/${encodedPath}`);
     xhr.responseType = "json";
+    xhr.setRequestHeader("apikey", anonKey);
+    xhr.setRequestHeader("authorization", `Bearer ${accessToken}`);
+    xhr.setRequestHeader("x-upsert", "false");
+    xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
 
     let maxRealPercent = 0;
     let uploadBodyDone = false;
     let requestDone = false;
     let rafId = 0;
     const t0 = performance.now();
-    /** Conservative ETA so the bar moves even when `upload.progress` never fires (common in dev / some proxies). */
     const estDurationMs = Math.max(
       1200,
-      Math.min(120_000, (Math.max(fileSize, 1) / (128 * 1024)) * 1000)
+      Math.min(120_000, (Math.max(file.size, 1) / (128 * 1024)) * 1000)
     );
 
     const emitSending = () => {
@@ -53,12 +84,12 @@ function postLibraryUploadWithProgress(formData, fileSize, { onProgress, getXhr 
       const t = Math.min(1, elapsed / estDurationMs);
       const simulated = Math.min(93, Math.round((1 - (1 - t) ** 2) * 93));
       const percent = Math.min(99, Math.max(simulated, maxRealPercent));
-      const loaded = Math.round((percent / 100) * Math.max(fileSize, 1));
+      const loaded = Math.round((percent / 100) * Math.max(file.size, 1));
       onProgress({
         phase: "sending",
         percent,
         loaded,
-        total: Math.max(fileSize, 1),
+        total: Math.max(file.size, 1),
       });
     };
 
@@ -78,7 +109,7 @@ function postLibraryUploadWithProgress(formData, fileSize, { onProgress, getXhr 
 
     xhr.upload.onprogress = (e) => {
       if (!onProgress || uploadBodyDone) return;
-      const baseTotal = e.lengthComputable && e.total > 0 ? e.total : Math.max(fileSize, 1);
+      const baseTotal = e.lengthComputable && e.total > 0 ? e.total : Math.max(file.size, 1);
       const denom = Math.max(baseTotal, e.loaded, 1);
       const p = Math.min(99, Math.round((e.loaded / denom) * 100));
       maxRealPercent = Math.max(maxRealPercent, p);
@@ -92,7 +123,7 @@ function postLibraryUploadWithProgress(formData, fileSize, { onProgress, getXhr 
     xhr.upload.onload = () => {
       uploadBodyDone = true;
       stopPulse();
-      onProgress?.({ phase: "finishing", percent: 100, loaded: fileSize, total: fileSize });
+      onProgress?.({ phase: "finishing", percent: 100, loaded: file.size, total: file.size });
     };
 
     const finish = (result) => {
@@ -108,11 +139,15 @@ function postLibraryUploadWithProgress(formData, fileSize, { onProgress, getXhr 
         try {
           body = JSON.parse(body);
         } catch {
-          body = { ok: false, error: "Invalid response from server" };
+          body = { ok: false, error: "Invalid response from Supabase Storage" };
         }
       }
-      if (body && typeof body === "object" && "ok" in body) {
-        finish(body);
+      if (xhr.status >= 200 && xhr.status < 300) {
+        finish({ ok: true });
+        return;
+      }
+      if (body && typeof body === "object" && "message" in body) {
+        finish({ ok: false, error: String(body.message || "Upload failed") });
         return;
       }
       finish({ ok: false, error: `Upload failed (${xhr.status})` });
@@ -127,7 +162,7 @@ function postLibraryUploadWithProgress(formData, fileSize, { onProgress, getXhr 
     });
 
     rafId = requestAnimationFrame(pulse);
-    xhr.send(formData);
+    xhr.send(file);
   });
 }
 
@@ -247,17 +282,42 @@ export function UploadFileDialog({
       return;
     }
 
-    const fd = new FormData();
-    fd.set("projectId", projectId);
-    fd.set("file", file);
-    fd.set("displayName", formData.fileName.trim());
-    fd.set("description", formData.comment);
-    fd.set("needsApproval", formData.needsApproval ? "1" : "0");
-
     setSubmitting(true);
     setProgress({ phase: "sending", percent: 0, loaded: 0, total: file.size });
 
-    const res = await postLibraryUploadWithProgress(fd, file.size, {
+    const prepared = await prepareLibraryFileUpload({
+      projectId,
+      displayName: formData.fileName.trim(),
+      originalFilename: file.name,
+      mimeType: file.type || null,
+      sizeBytes: file.size,
+    });
+    if (!prepared.ok || !prepared.objectPath) {
+      setSubmitting(false);
+      setProgress(null);
+      toast.error("Upload failed", {
+        description: prepared.error || "Could not prepare upload.",
+      });
+      return;
+    }
+
+    const supabase = createBrowserSupabaseClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setSubmitting(false);
+      setProgress(null);
+      toast.error("Upload failed", {
+        description: "Your session expired. Please refresh and sign in again.",
+      });
+      return;
+    }
+
+    const uploadRes = await uploadFileDirectToSupabaseWithProgress({
+      file,
+      objectPath: prepared.objectPath,
+      accessToken: session.access_token,
       onProgress: (next) => {
         flushSync(() => setProgress(next));
       },
@@ -270,14 +330,32 @@ export function UploadFileDialog({
     setSubmitting(false);
     setProgress(null);
 
-    if (!res.ok) {
-      const msg = res.error || "Something went wrong. Please try again.";
+    if (!uploadRes.ok) {
+      const msg = uploadRes.error || "Something went wrong. Please try again.";
       if (msg === "Upload cancelled.") {
         return;
       }
       const sizeRelated = /too large|maximum upload|body exceeded|limit/i.test(msg);
       toast.error(sizeRelated ? "File too large" : "Upload failed", {
         description: msg,
+      });
+      return;
+    }
+
+    const completed = await completeLibraryFileUpload({
+      projectId,
+      objectPath: prepared.objectPath,
+      displayName: formData.fileName.trim(),
+      description: formData.comment,
+      needsApproval: formData.needsApproval,
+      originalFilename: prepared.normalizedOriginalFilename || file.name,
+      mimeType: prepared.mimeType || file.type || null,
+      sizeBytes: prepared.sizeBytes || file.size,
+    });
+    if (!completed.ok) {
+      void supabase.storage.from("project-library").remove([prepared.objectPath]);
+      toast.error("Upload failed", {
+        description: completed.error || "Could not save file metadata.",
       });
       return;
     }
