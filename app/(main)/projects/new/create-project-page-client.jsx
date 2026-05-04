@@ -42,7 +42,11 @@ const steps = [
   },
 ];
 
-export function CreateProjectPageClient({ initialClients, initialClientId = "" }) {
+export function CreateProjectPageClient({
+  initialClients,
+  initialClientId = "",
+  createProjectBlockReason = null,
+}) {
   const [currentStep, setCurrentStep] = useState(1);
   const [step5DialogOpen, setStep5DialogOpen] = useState(false);
   /** Once set, step 5 updates this project instead of inserting another row (same wizard session). */
@@ -274,6 +278,7 @@ export function CreateProjectPageClient({ initialClients, initialClientId = "" }
         clients={initialClients}
         wizardProjectId={wizardProjectId}
         onWizardProjectCreated={setWizardProjectId}
+        createProjectBlockReason={createProjectBlockReason}
       />
     </div>
   );

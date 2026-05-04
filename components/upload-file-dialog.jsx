@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import {
-  LIBRARY_MAX_UPLOAD_BYTES,
-  LIBRARY_MAX_UPLOAD_LABEL,
-} from "@/lib/constants/library-upload";
+  STARTER_LIBRARY_MAX_FILE_BYTES,
+  STARTER_LIBRARY_MAX_FILE_LABEL,
+} from "@/lib/billing/library-storage-policy";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +29,8 @@ import { toast } from "sonner";
  *   projectId: string;
  *   onUploaded?: () => void;
  *   isFreelancer?: boolean;
+ *   maxFileBytes?: number;
+ *   maxFileLabel?: string;
  * }}
  */
 export function UploadFileDialog({
@@ -37,7 +39,11 @@ export function UploadFileDialog({
   projectId,
   onUploaded,
   isFreelancer = true,
+  maxFileBytes: maxFileBytesProp,
+  maxFileLabel: maxFileLabelProp,
 }) {
+  const maxFileBytes = maxFileBytesProp ?? STARTER_LIBRARY_MAX_FILE_BYTES;
+  const maxFileLabel = maxFileLabelProp ?? STARTER_LIBRARY_MAX_FILE_LABEL;
   const [formData, setFormData] = useState({
     fileName: "",
     file: null,
@@ -63,13 +69,13 @@ export function UploadFileDialog({
       setSelectedFileName("");
       return;
     }
-    if (file.size > LIBRARY_MAX_UPLOAD_BYTES) {
+    if (file.size > maxFileBytes) {
       const mb = (file.size / (1024 * 1024)).toFixed(1);
       setFormData((prev) => ({ ...prev, file: null }));
       setSelectedFileName("");
       input.value = "";
       toast.error("File too large", {
-        description: `This file is about ${mb} MB. The maximum upload size is ${LIBRARY_MAX_UPLOAD_LABEL}. Choose a smaller file or compress it first.`,
+        description: `This file is about ${mb} MB. The maximum upload size is ${maxFileLabel}. Choose a smaller file or compress it first.`,
       });
       return;
     }
@@ -89,9 +95,9 @@ export function UploadFileDialog({
       });
       return;
     }
-    if (file.size > LIBRARY_MAX_UPLOAD_BYTES) {
+    if (file.size > maxFileBytes) {
       toast.error("File too large", {
-        description: `This file exceeds the ${LIBRARY_MAX_UPLOAD_LABEL} limit. Pick a smaller file.`,
+        description: `This file exceeds the ${maxFileLabel} limit. Pick a smaller file.`,
       });
       return;
     }
@@ -137,7 +143,7 @@ export function UploadFileDialog({
           <DialogTitle className="text-2xl font-bold">Upload File</DialogTitle>
           <DialogDescription>
             Upload a file for everyone on this project with portal access. Maximum file size:{" "}
-            {LIBRARY_MAX_UPLOAD_LABEL}.
+            {maxFileLabel}.
           </DialogDescription>
         </DialogHeader>
 

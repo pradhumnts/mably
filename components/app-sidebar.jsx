@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ClipboardList, Users, Settings, CreditCard } from "lucide-react";
+import { ClipboardList, Users, Settings } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { NavUser } from "@/components/nav-user";
@@ -31,12 +31,6 @@ const navData = {
     },
   ],
   navOther: [
-    {
-      title: "Billing",
-      url: "/billing",
-      icon: CreditCard,
-      isActive: false,
-    },
     {
       title: "Settings",
       url: "/settings",

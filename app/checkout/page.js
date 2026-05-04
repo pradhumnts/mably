@@ -4,7 +4,7 @@ import Link from "next/link";
 import { LegalFooterLinks } from "@/components/legal-footer-links";
 
 /**
- * Public checkout landing. Subscriptions are created from /billing when signed in.
+ * Public checkout landing. Subscriptions are created from Settings → Subscription when signed in.
  */
 export default function CheckoutHostPage() {
   return (
@@ -12,7 +12,7 @@ export default function CheckoutHostPage() {
       <div className="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-sm">
         <h1 className="text-xl font-semibold tracking-tight">Mably checkout</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Billing is powered by Polar. Sign in and open Billing to choose Starter or Growth.
+          Billing is powered by Polar. Sign in and open Settings → Subscription to choose Starter or Growth.
         </p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Link
@@ -22,10 +22,10 @@ export default function CheckoutHostPage() {
             Sign in to Mably
           </Link>
           <Link
-            href="/billing"
+            href="/settings?tab=subscription"
             className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-background px-5 text-sm font-medium"
           >
-            Billing (signed in)
+            Subscription (signed in)
           </Link>
         </div>
       </div>

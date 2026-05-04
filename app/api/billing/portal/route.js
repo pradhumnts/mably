@@ -38,7 +38,7 @@ export async function POST() {
   }
 
   const site = process.env.NEXT_PUBLIC_SITE_URL?.trim()?.replace(/\/$/, "") ?? "";
-  const returnUrl = site ? `${site}/billing` : undefined;
+  const returnUrl = site ? `${site}/settings?tab=subscription` : undefined;
 
   /** Same external id as checkout — Polar maps this to the customer. */
   const res = await fetch(`${getPolarApiBase()}/customer-sessions/`, {

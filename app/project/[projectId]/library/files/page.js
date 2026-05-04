@@ -30,9 +30,11 @@ import { DeleteLibraryItemDialog } from "@/components/delete-library-item-dialog
 import { usePortalProject } from "../../project-portal-shell";
 import {
   getLibraryFileDownloadUrl,
+  getLibraryStorageUsageForProject,
   listLibraryFiles,
   setLibraryFileApprovalStatus,
 } from "@/lib/actions/project-library";
+import { formatStorageShort } from "@/lib/billing/library-storage-policy";
 import { LibraryFileDiscussion } from "@/components/library-file-discussion";
 import { fileLogoForKind, inferFileKindFromMime } from "@/lib/library/infer-types";
 import { toast } from "sonner";
@@ -101,18 +103,42 @@ export default function LibraryFiles() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [discussionFileId, setDiscussionFileId] = useState(null);
   const [approvalBusyKey, setApprovalBusyKey] = useState(null);
+  /**
+   * Library quota: per-file limits for everyone; usage banner only when `showBanner`.
+   * @type {[null | { showBanner: boolean; usedBytes: number; totalBytes: number; maxFileBytes: number; maxFileLabel: string; planKey: string | null; percentUsed: number }, import('react').Dispatch<any>]}
+   */
+  const [libraryQuota, setLibraryQuota] = useState(null);
 
   const load = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
-    const res = await listLibraryFiles(String(projectId));
+    const [filesRes, usageRes] = await Promise.all([
+      listLibraryFiles(String(projectId)),
+      getLibraryStorageUsageForProject(String(projectId)),
+    ]);
     setLoading(false);
-    if (!res.ok) {
-      toast.error(res.error || "Could not load files");
+    if (!filesRes.ok) {
+      toast.error(filesRes.error || "Could not load files");
       setItems([]);
+      setLibraryQuota(null);
       return;
     }
-    setItems(res.items || []);
+    setItems(filesRes.items || []);
+
+    if (usageRes.ok) {
+      setLibraryQuota({
+        showBanner: !usageRes.hidden,
+        usedBytes: usageRes.usedBytes,
+        totalBytes: usageRes.totalBytes,
+        maxFileBytes: usageRes.maxFileBytes,
+        maxFileLabel: usageRes.maxFileLabel,
+        planKey: usageRes.planKey,
+        percentUsed: usageRes.percentUsed,
+      });
+    } else {
+      setLibraryQuota(null);
+      toast.error(usageRes.error || "Could not load library upload limits");
+    }
   }, [projectId]);
 
   useEffect(() => {
@@ -245,6 +271,51 @@ export default function LibraryFiles() {
 
       <div className="flex-1">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          {libraryQuota?.showBanner ? (
+            <div className="mb-6 rounded-xl border border-border/80 bg-gradient-to-br from-muted/50 via-muted/25 to-background px-4 py-3.5 sm:px-5 sm:py-4 shadow-sm">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Library storage
+                  </p>
+                  <p className="text-sm font-semibold leading-snug text-foreground sm:text-base">
+                    <span className="tabular-nums">
+                      {formatStorageShort(libraryQuota.usedBytes)}
+                    </span>
+                    <span className="font-normal text-muted-foreground"> of </span>
+                    <span className="tabular-nums">
+                      {formatStorageShort(libraryQuota.totalBytes)}
+                    </span>
+                    <span className="font-normal text-muted-foreground"> used</span>
+                    <span className="text-muted-foreground"> · </span>
+                    <span className="capitalize">{libraryQuota.planKey || "starter"}</span>
+                    <span className="font-normal text-muted-foreground"> plan</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Counts every library file across all projects you own, not only this project.
+                  </p>
+                </div>
+                <div className="w-full shrink-0 lg:max-w-sm">
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        libraryQuota.percentUsed >= 90
+                          ? "bg-destructive"
+                          : libraryQuota.percentUsed >= 75
+                            ? "bg-amber-500"
+                            : "bg-primary"
+                      }`}
+                      style={{ width: `${Math.min(100, libraryQuota.percentUsed)}%` }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-right text-xs tabular-nums text-muted-foreground">
+                    {libraryQuota.percentUsed.toFixed(0)}% full
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex items-center justify-between gap-4 mb-6">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -512,6 +583,8 @@ export default function LibraryFiles() {
         onOpenChange={setUploadFileDialogOpen}
         projectId={String(projectId)}
         isFreelancer={isFreelancer}
+        maxFileBytes={libraryQuota?.maxFileBytes}
+        maxFileLabel={libraryQuota?.maxFileLabel}
         onUploaded={() => void load()}
       />
 

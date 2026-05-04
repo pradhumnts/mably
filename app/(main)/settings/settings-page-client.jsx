@@ -35,8 +35,10 @@ import {
 } from "@/components/ui/select";
 import { Upload } from "lucide-react";
 import { toast } from "sonner";
+import { BillingPageClient } from "@/components/billing/billing-page-client";
+import { cn } from "@/lib/utils";
 
-export function SettingsPageClient({ initialProfile }) {
+export function SettingsPageClient({ initialProfile, initialTab = "profile", billing = null }) {
   const isFreelancer = (initialProfile?.role ?? "freelancer") !== "client";
   const router = useRouter();
 
@@ -193,9 +195,17 @@ export function SettingsPageClient({ initialProfile }) {
         <div className="flex-1">
           <div className="max-w-[1600px] w-[60%] px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
             {/* Tabs */}
-            <Tabs defaultValue="profile" className="w-full">
-              <TabsList className="grid w-fit grid-cols-2 lg:grid-cols-5 mb-6">
+            <Tabs defaultValue={initialTab} className="w-full">
+              <TabsList
+                className={cn(
+                  "mb-6 grid w-fit",
+                  billing
+                    ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
+                    : "grid-cols-2 lg:grid-cols-5"
+                )}
+              >
                 <TabsTrigger value="profile">Profile</TabsTrigger>
+                {billing ? <TabsTrigger value="subscription">Subscription</TabsTrigger> : null}
                 <TabsTrigger value="branding">Branding</TabsTrigger>
                 <TabsTrigger value="notifications">Notifications</TabsTrigger>
                 <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -325,6 +335,28 @@ export function SettingsPageClient({ initialProfile }) {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              {billing ? (
+                <TabsContent value="subscription">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Subscription</CardTitle>
+                      <CardDescription>
+                        Your Mably plan and Polar-powered checkout. Status may take a few seconds after
+                        payment while webhooks sync.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <BillingPageClient
+                        polarConfigured={billing.polarConfigured}
+                        initialSubscription={billing.initialSubscription}
+                        canReconcile={billing.canReconcile}
+                        onSubscriptionSynced={() => router.refresh()}
+                      />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              ) : null}
 
               {/* Branding & Customization Tab */}
               <TabsContent value="branding">
