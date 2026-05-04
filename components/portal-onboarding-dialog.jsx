@@ -15,12 +15,15 @@ import { cn } from "@/lib/utils";
 
 const STORAGE_PREFIX = "mably-portal-onboarding";
 
+/** Taller than 16:9 by ~20% height at the same width (fits portrait / UI-capture videos better). */
+const TOUR_MEDIA_ASPECT = "aspect-[40/27]";
+
 /** Set paths under `public/` for tour media. */
 const PORTAL_ONBOARD_MEDIA = {
   welcomeVideo: "/welcome-tour/Welcome%20Tour%20-%20Step%201.mp4",
   activityVideo: "/welcome-tour/Welcome%20Tour%20-%20Step%202%20-%20Activity.mp4",
-  libraryImage: null,
-  chatImage: null,
+  libraryImage: "/welcome-tour/Welcome Tour - Step 3 - Library Video.webm",
+  chatImage: "/welcome-tour/Welcome Tour - Step 4 - Chat Video.webm",
 };
 
 function completionStorageKey(projectId, isFreelancer) {
@@ -52,7 +55,7 @@ function buildSteps({ isFreelancer, projectName }) {
     {
       title: "Library",
       description: "Files and links together—uploads, approvals, and references next to the work.",
-      imageSrc: PORTAL_ONBOARD_MEDIA.libraryImage,
+      videoSrc: PORTAL_ONBOARD_MEDIA.libraryImage,
       imageAlt: "Library",
     },
     {
@@ -60,7 +63,7 @@ function buildSteps({ isFreelancer, projectName }) {
       description: isFreelancer
         ? "The floating bubble is for quick back-and-forth with your client—no need to leave the portal."
         : "Use the floating chat to ask your freelancer anything short—context stays with the project.",
-      imageSrc: PORTAL_ONBOARD_MEDIA.chatImage,
+        videoSrc: PORTAL_ONBOARD_MEDIA.chatImage,
       imageAlt: "Chat",
     },
   ];
@@ -71,7 +74,8 @@ function StepMedia({ imageSrc, imageAlt, videoSrc, className }) {
     return (
       <div
         className={cn(
-          "relative aspect-video w-full overflow-hidden rounded-lg border border-border/80 bg-muted/40",
+          "relative w-full overflow-hidden rounded-lg border border-border/80 bg-muted/40",
+          TOUR_MEDIA_ASPECT,
           className
         )}
       >
@@ -92,7 +96,8 @@ function StepMedia({ imageSrc, imageAlt, videoSrc, className }) {
     return (
       <div
         className={cn(
-          "relative aspect-video w-full overflow-hidden rounded-lg border border-border/80 bg-muted/40",
+          "relative w-full overflow-hidden rounded-lg border border-border/80 bg-muted/40",
+          TOUR_MEDIA_ASPECT,
           className
         )}
       >
@@ -109,7 +114,8 @@ function StepMedia({ imageSrc, imageAlt, videoSrc, className }) {
   return (
     <div
       className={cn(
-        "flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/80 bg-muted/30 text-muted-foreground",
+        "flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/80 bg-muted/30 text-muted-foreground",
+        TOUR_MEDIA_ASPECT,
         className
       )}
       aria-hidden

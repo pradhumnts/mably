@@ -4,7 +4,8 @@ const nextConfig = {
   // Top-level `serverActions` is ignored — default 1 MB caused large library uploads to fail.
   experimental: {
     serverActions: {
-      bodySizeLimit: "10mb",
+      /** Must cover largest library file (Growth) plus multipart overhead. */
+      bodySizeLimit: "2200mb",
     },
   },
 };
