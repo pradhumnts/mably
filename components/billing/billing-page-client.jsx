@@ -11,6 +11,13 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Check, CreditCard, RefreshCw } from "lucide-react";
@@ -37,11 +44,58 @@ const growthFeatures = [
   "Priority support",
 ];
 
+function formatUtcDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  // Fixed locale avoids SSR/client hydration mismatch (undefined uses different defaults per runtime).
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+function PlanCard({ title, description, price, features, cta, disabled, onClick, highlighted = false }) {
+  return (
+    <Card
+      className={
+        highlighted
+          ? "relative flex flex-col border-orange-500/50 bg-gradient-to-b from-orange-50/80 via-card to-card shadow-md dark:from-orange-950/25 dark:via-card dark:to-card"
+          : "flex flex-col border-border/80"
+      }
+    >
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+        <p className="pt-2 text-3xl font-bold tracking-tight">{price}</p>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-4">
+        <ul className="space-y-2 text-sm">
+          {features.map((f) => (
+            <li key={f} className="flex gap-2">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
+              {f}
+            </li>
+          ))}
+        </ul>
+        <Button className="mt-auto w-full" onClick={onClick} disabled={disabled}>
+          {cta}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function BillingPageClient({ polarConfigured, initialSubscription, canReconcile = false }) {
   const [checkoutLoading, setCheckoutLoading] = useState(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [subscription, setSubscription] = useState(initialSubscription);
   const [reconcileLoading, setReconcileLoading] = useState(false);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [portalScopeHelpOpen, setPortalScopeHelpOpen] = useState(false);
+  const [portalScopeHelp, setPortalScopeHelp] = useState({ docsUrl: "", requiredScope: "" });
 
   useEffect(() => {
     setSubscription(initialSubscription);
@@ -74,7 +128,19 @@ export function BillingPageClient({ polarConfigured, initialSubscription, canRec
     try {
       const res = await fetch("/api/billing/portal", { method: "POST" });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Could not open portal");
+      if (!res.ok) {
+        if (json.code === "insufficient_scope") {
+          setPortalScopeHelp({
+            docsUrl: json.docs_url ?? "https://polar.sh/docs/integrate/oat",
+            requiredScope: json.required_scope ?? "customer_sessions:write",
+          });
+          setPortalScopeHelpOpen(true);
+          throw new Error(
+            "Your Polar token needs the customer_sessions:write scope to open the customer portal."
+          );
+        }
+        throw new Error(json.error ?? "Could not open portal");
+      }
       window.location.href = json.url;
     } catch (e) {
       toast.error(e?.message ?? "Portal session failed");
@@ -98,7 +164,13 @@ export function BillingPageClient({ polarConfigured, initialSubscription, canRec
     }
   };
 
-  const canManage = Boolean(subscription?.polar_customer_id);
+  const canManage = Boolean(subscription);
+  const currentPlan = subscription?.plan_key ?? null;
+  const isSubscribed = Boolean(subscription);
+  const starterIsCurrent = currentPlan === "starter";
+  const growthIsCurrent = currentPlan === "growth";
+  const formattedPeriodEnd = formatUtcDate(subscription?.current_period_end);
+  const checkoutInFlight = checkoutLoading !== null;
 
   return (
     <>
@@ -140,6 +212,11 @@ export function BillingPageClient({ polarConfigured, initialSubscription, canRec
                   <code className="text-xs">POLAR_PRODUCT_ID_STARTER</code>, and{" "}
                   <code className="text-xs">POLAR_PRODUCT_ID_GROWTH</code> (and{" "}
                   <code className="text-xs">POLAR_SERVER=sandbox|production</code>), then redeploy.
+                  When creating the Organization Access Token in Polar, include the{" "}
+                  <code className="text-xs">customer_sessions:write</code> scope so “Manage
+                  subscription” can open the customer portal. Optionally set{" "}
+                  <code className="text-xs">POLAR_CUSTOMER_SESSIONS_TOKEN</code> to a token that has
+                  only that scope if you split tokens.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -153,11 +230,14 @@ export function BillingPageClient({ polarConfigured, initialSubscription, canRec
                   <CardDescription>
                     Plan:{" "}
                     <span className="font-medium text-foreground">
-                      {subscription.plan_key ?? "—"}
+                      {subscription.plan_key ? subscription.plan_key.charAt(0).toUpperCase() + subscription.plan_key.slice(1) : "—"}
                     </span>{" "}
                     · Status:{" "}
-                    <span className="font-medium text-foreground">{subscription.status}</span>
+                    <span className="font-medium text-foreground">
+                      {subscription.status ? subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1) : ""}
+                    </span>
                   </CardDescription>
+             
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
                   {canReconcile ? (
@@ -184,12 +264,13 @@ export function BillingPageClient({ polarConfigured, initialSubscription, canRec
                       {portalLoading ? "Opening…" : "Manage subscription"}
                     </Button>
                   ) : null}
+                  <Button size="sm" onClick={() => setUpgradeModalOpen(true)} disabled={!polarConfigured}>
+                    {isSubscribed ? "Upgrade" : "Choose a plan"}
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground">
-                {subscription.current_period_end
-                  ? `Current period ends (UTC): ${subscription.current_period_end}`
-                  : null}
+                {formattedPeriodEnd ? `Current period ends: ${formattedPeriodEnd}` : null}
               </CardContent>
             </Card>
           ) : canReconcile ? (
@@ -215,59 +296,105 @@ export function BillingPageClient({ polarConfigured, initialSubscription, canRec
             </Card>
           ) : null}
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="flex flex-col border-border/80">
-              <CardHeader>
-                <CardTitle>Starter</CardTitle>
-                <CardDescription>$9/mo · try the workflow</CardDescription>
-                <p className="pt-2 text-3xl font-bold tracking-tight">$9</p>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col gap-4">
-                <ul className="space-y-2 text-sm">
-                  {starterFeatures.map((f) => (
-                    <li key={f} className="flex gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="mt-auto w-full"
-                  onClick={() => void startCheckout("starter")}
-                  disabled={!polarConfigured || checkoutLoading !== null}
-                >
-                  {checkoutLoading === "starter" ? "Redirecting…" : "Subscribe — Starter"}
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="relative flex flex-col border-orange-500/50 bg-gradient-to-b from-orange-50/80 via-card to-card shadow-md dark:from-orange-950/25 dark:via-card dark:to-card">
-              <CardHeader>
-                <CardTitle>Growth</CardTitle>
-                <CardDescription>$19/mo · full workspace</CardDescription>
-                <p className="pt-2 text-3xl font-bold tracking-tight">$19</p>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col gap-4">
-                <ul className="space-y-2 text-sm">
-                  {growthFeatures.map((f) => (
-                    <li key={f} className="flex gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="mt-auto w-full"
-                  onClick={() => void startCheckout("growth")}
-                  disabled={!polarConfigured || checkoutLoading !== null}
-                >
-                  {checkoutLoading === "growth" ? "Redirecting…" : "Subscribe — Growth"}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+          {!isSubscribed ? (
+            <div className="grid gap-6 md:grid-cols-2">
+              <PlanCard
+                title="Starter"
+                description="$9/mo · try the workflow"
+                price="$9"
+                features={starterFeatures}
+                cta={checkoutLoading === "starter" ? "Redirecting…" : "Subscribe — Starter"}
+                onClick={() => void startCheckout("starter")}
+                disabled={!polarConfigured || checkoutInFlight}
+              />
+              <PlanCard
+                title="Growth"
+                description="$19/mo · full workspace"
+                price="$19"
+                features={growthFeatures}
+                cta={checkoutLoading === "growth" ? "Redirecting…" : "Subscribe — Growth"}
+                onClick={() => void startCheckout("growth")}
+                disabled={!polarConfigured || checkoutInFlight}
+                highlighted
+              />
+            </div>
+          ) : null}
         </div>
       </div>
+
+      <Dialog open={portalScopeHelpOpen} onOpenChange={setPortalScopeHelpOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enable Polar customer portal</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3 text-left">
+                <p>
+                  Polar returned <strong>insufficient_scope</strong>. The token your server uses must
+                  include <code className="text-xs">{portalScopeHelp.requiredScope}</code> to create a
+                  customer session.
+                </p>
+                <ol className="list-decimal space-y-2 pl-4 text-muted-foreground">
+                  <li>Open Polar → your organization → Settings → Developers.</li>
+                  <li>Create a new Organization Access Token (or replace the old one).</li>
+                  <li>
+                    Enable scope <code className="text-xs">{portalScopeHelp.requiredScope}</code>{" "}
+                    (and keep scopes needed for checkout, e.g. checkouts).
+                  </li>
+                  <li>
+                    Set <code className="text-xs">POLAR_ACCESS_TOKEN</code> to the new value (or set{" "}
+                    <code className="text-xs">POLAR_CUSTOMER_SESSIONS_TOKEN</code> for portal only) and
+                    redeploy.
+                  </li>
+                </ol>
+                <p>
+                  <a
+                    href={portalScopeHelp.docsUrl || "https://polar.sh/docs/integrate/oat"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-foreground underline underline-offset-4"
+                  >
+                    Polar docs: Organization Access Tokens
+                  </a>
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Upgrade your plan</DialogTitle>
+            <DialogDescription>
+              {currentPlan
+                ? `You are currently on the ${currentPlan} plan.`
+                : "Choose the plan that fits your workload."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-6 md:grid-cols-2">
+            <PlanCard
+              title="Starter"
+              description="$9/mo · try the workflow"
+              price="$9"
+              features={starterFeatures}
+              cta={starterIsCurrent ? "Current plan" : "Upgrade to Starter"}
+              onClick={() => void startCheckout("starter")}
+              disabled={!polarConfigured || checkoutInFlight || starterIsCurrent}
+            />
+            <PlanCard
+              title="Growth"
+              description="$19/mo · full workspace"
+              price="$19"
+              features={growthFeatures}
+              cta={growthIsCurrent ? "Current plan" : "Upgrade to Growth"}
+              onClick={() => void startCheckout("growth")}
+              disabled={!polarConfigured || checkoutInFlight || growthIsCurrent}
+              highlighted
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
