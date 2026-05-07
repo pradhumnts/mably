@@ -26,7 +26,7 @@ import {
 import { updateProfile, uploadProfileAvatar } from "@/lib/actions/profile";
 import { completeFreelancerOnboarding } from "@/lib/actions/onboarding";
 import { toast } from "sonner";
-import { LegalFooterLinks } from "@/components/legal-footer-links";
+// import { LegalFooterLinks } from "@/components/legal-footer-links"; // hidden until legal pages are live
 
 const STEP1_BULLETS = [
   {
@@ -437,9 +437,9 @@ export function FreelancerOnboardingClient({ initialProfile }) {
         )}
       </div>
       </div>
-      <footer className="shrink-0 border-t border-border/50 bg-background/95 py-2 backdrop-blur-sm supports-[backdrop-filter]:bg-background/90">
+      {/* <footer className="shrink-0 border-t border-border/50 bg-background/95 py-2 backdrop-blur-sm supports-[backdrop-filter]:bg-background/90">
         <LegalFooterLinks />
-      </footer>
+      </footer> */}
     </div>
   );
 }

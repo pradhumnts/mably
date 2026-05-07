@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LegalFooterLinks } from "@/components/legal-footer-links";
+// import { LegalFooterLinks } from "@/components/legal-footer-links"; // hidden until legal pages are live
 
 /**
  * Public checkout landing. Subscriptions are created from Settings → Subscription when signed in.
@@ -29,7 +29,7 @@ export default function CheckoutHostPage() {
           </Link>
         </div>
       </div>
-      <LegalFooterLinks className="mt-6 text-[11px]" />
+      {/* <LegalFooterLinks className="mt-6 text-[11px]" /> */}
     </div>
   );
 }

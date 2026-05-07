@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import { FloatingChatWidget } from "@/components/floating-chat-widget";
 import { PortalOnboardingDialog } from "@/components/portal-onboarding-dialog";
-import { LegalFooterLinks } from "@/components/legal-footer-links";
+// import { LegalFooterLinks } from "@/components/legal-footer-links"; // hidden until legal pages are live
 
 const PortalProjectContext = createContext(null);
 
@@ -48,9 +48,9 @@ export function ProjectPortalShell({ bundle, children }) {
         <ProjectAppSidebar projectData={bundle.sidebar} isFreelancer={Boolean(bundle.meta?.isFreelancer)} />
         <SidebarInset className="flex min-h-screen flex-col">
           <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-          <footer className="shrink-0 border-t border-border/60 bg-background/95 px-4 py-3 backdrop-blur-sm supports-[backdrop-filter]:bg-background/70">
+          {/* <footer className="shrink-0 border-t border-border/60 bg-background/95 px-4 py-3 backdrop-blur-sm supports-[backdrop-filter]:bg-background/70">
             <LegalFooterLinks />
-          </footer>
+          </footer> */}
         </SidebarInset>
         <FloatingChatWidget
           projectId={projectId}
