@@ -10,7 +10,7 @@ export default async function OnboardingPage() {
     redirect("/");
   }
   if (profile.role === "client") {
-    redirect("/projects");
+    redirect("/portal");
   }
   if (profile.onboardingCompletedAt) {
     redirect("/projects");

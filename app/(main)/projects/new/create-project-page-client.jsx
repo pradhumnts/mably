@@ -48,6 +48,7 @@ export function CreateProjectPageClient({
   createProjectBlockReason = null,
 }) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [clients, setClients] = useState(initialClients ?? []);
   const [step5DialogOpen, setStep5DialogOpen] = useState(false);
   /** Once set, step 5 updates this project instead of inserting another row (same wizard session). */
   const [wizardProjectId, setWizardProjectId] = useState(null);
@@ -74,7 +75,28 @@ export function CreateProjectPageClient({
   });
 
   const updateFormData = (data) => {
-    setFormData({ ...formData, ...data });
+    setFormData((prev) => ({ ...prev, ...data }));
+  };
+
+  const handleClientCreated = (client) => {
+    if (!client?.id) return;
+    const nextClient = {
+      id: String(client.id),
+      name: client.name || client.fullName || client.email || "Client",
+      email: client.email || "",
+      avatar: client.avatar || null,
+    };
+    setClients((prev) => {
+      const exists = prev.some((item) => String(item.id) === nextClient.id);
+      return exists
+        ? prev.map((item) => (String(item.id) === nextClient.id ? { ...item, ...nextClient } : item))
+        : [...prev, nextClient];
+    });
+    setFormData((prev) => ({
+      ...prev,
+      clientId: nextClient.id,
+      clientEmail: nextClient.email,
+    }));
   };
 
   const nextStep = () => {
@@ -102,7 +124,8 @@ export function CreateProjectPageClient({
             formData={formData}
             updateFormData={updateFormData}
             nextStep={nextStep}
-            clients={initialClients}
+            clients={clients}
+            onClientCreated={handleClientCreated}
           />
         );
       case 2:
@@ -275,7 +298,7 @@ export function CreateProjectPageClient({
         onOpenChange={setStep5DialogOpen}
         formData={formData}
         updateFormData={updateFormData}
-        clients={initialClients}
+        clients={clients}
         wizardProjectId={wizardProjectId}
         onWizardProjectCreated={setWizardProjectId}
         createProjectBlockReason={createProjectBlockReason}

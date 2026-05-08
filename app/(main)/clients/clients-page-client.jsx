@@ -31,7 +31,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ClientDetailsDialog } from "@/components/client-details-dialog";
 import { AddClientDialog } from "@/components/add-client-dialog";
-import { deleteClient, getProjectsForClient } from "@/lib/actions/clients";
+import { DeleteClientDialog } from "@/components/delete-client-dialog";
+import { getProjectsForClient } from "@/lib/actions/clients";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -47,6 +48,8 @@ export function ClientsPageClient({ initialClients }) {
   const [clientProjectsLoading, setClientProjectsLoading] = useState(false);
   const [clientFormOpen, setClientFormOpen] = useState(false);
   const [clientBeingEdited, setClientBeingEdited] = useState(null);
+  const [clientPendingDeletion, setClientPendingDeletion] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -121,24 +124,17 @@ export function ClientsPageClient({ initialClients }) {
     setClientFormOpen(true);
   };
 
-  const handleDeleteClient = async (client) => {
-    if (
-      !window.confirm(
-        `Delete ${client.name}? This cannot be undone.`
-      )
-    ) {
-      return;
-    }
-    const result = await deleteClient(client.id);
-    if (!result.ok) {
-      toast.error(result.error || "Could not delete client");
-      return;
-    }
-    toast.success("Client removed");
-    if (selectedClient?.id === client.id) {
+  const requestDeleteClient = (client) => {
+    setClientPendingDeletion(client);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleClientDeleted = () => {
+    if (clientPendingDeletion && selectedClient?.id === clientPendingDeletion.id) {
       setDialogOpen(false);
       setSelectedClient(null);
     }
+    setClientPendingDeletion(null);
     router.refresh();
   };
 
@@ -291,7 +287,7 @@ export function ClientsPageClient({ initialClients }) {
                                 className="text-destructive focus:text-destructive"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleDeleteClient(client);
+                                  requestDeleteClient(client);
                                 }}
                               >
                                 Delete Client
@@ -364,6 +360,17 @@ export function ClientsPageClient({ initialClients }) {
         }}
         client={clientBeingEdited}
         onSaved={() => router.refresh()}
+        existingClients={initialClients}
+      />
+
+      <DeleteClientDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) setClientPendingDeletion(null);
+        }}
+        client={clientPendingDeletion}
+        onDeleted={handleClientDeleted}
       />
     </>
   );

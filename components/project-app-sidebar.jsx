@@ -51,7 +51,7 @@ function SidebarLogo({ projectName, planType, logoUrl }) {
   );
 }
 
-export function ProjectAppSidebar({ projectData, isFreelancer = false, ...props }) {
+export function ProjectAppSidebar({ projectData, freelancerData, isFreelancer = false, ...props }) {
   const pathname = usePathname();
   const params = useParams();
   const projectId = params.projectId;
@@ -131,11 +131,17 @@ export function ProjectAppSidebar({ projectData, isFreelancer = false, ...props 
     isActive: pathname === item.url || pathname.startsWith(item.url + '/')
   }));
   
-  const user = {
-    name: projectData?.clientName || "User",
-    email: projectData?.clientEmail || "user@example.com",
-    avatar: projectData?.clientAvatar || null,
-  };
+  const user = isFreelancer
+    ? {
+        name: freelancerData?.name || "Freelancer",
+        email: freelancerData?.email || "",
+        avatar: freelancerData?.avatar || null,
+      }
+    : {
+        name: projectData?.clientName || "User",
+        email: projectData?.clientEmail || "user@example.com",
+        avatar: projectData?.clientAvatar || null,
+      };
   
   return (
     <Sidebar collapsible="icon" {...props}>

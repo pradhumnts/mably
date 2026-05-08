@@ -3,6 +3,7 @@
 import { ChevronsUpDown, LogOut, User } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import {
   Avatar,
   AvatarFallback,
@@ -26,8 +27,9 @@ import {
 import { signOut } from "@/lib/auth/actions";
 
 /**
- * Portal sidebar footer: clients get Profile + Logout; freelancers see read-only identity
- * (they use the main app sidebar for account / settings — unchanged there).
+ * Portal sidebar footer.
+ * - Client: Profile + Log out.
+ * - Freelancer: Exit portal (back to /projects) + Log out.
  *
  * @param {{
  *   user: { name?: string; email?: string; avatar?: string | null };
@@ -51,27 +53,6 @@ export function ProjectNavUser({ user, projectId, isFreelancer }) {
 
   const pid = typeof projectId === "string" ? projectId : String(projectId ?? "");
   const portalSettingsHref = pid ? `/project/${pid}/settings` : "/settings";
-
-  if (isFreelancer) {
-    return (
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <SidebarMenuButton size="lg" className="hover:bg-transparent cursor-default">
-            <Avatar className="h-8 w-8 rounded-lg">
-              <AvatarImage src={user.avatar || undefined} alt={user.name || "User"} />
-              <AvatarFallback className="rounded-lg">
-                {(user.name || "CN").slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">{user.name}</span>
-              <span className="truncate text-xs">{user.email}</span>
-            </div>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-    );
-  }
 
   return (
     <SidebarMenu>
@@ -117,12 +98,35 @@ export function ProjectNavUser({ user, projectId, isFreelancer }) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link href={portalSettingsHref} className="cursor-pointer">
-                  <User className="size-4" />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
+              {isFreelancer ? (
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/projects"
+                    className={cn(
+                      "cursor-pointer",
+                      "bg-sky-500/[0.06] dark:bg-sky-500/10",
+                      "hover:bg-sky-500/10 dark:hover:bg-sky-500/15",
+                      "data-[highlighted]:bg-sky-500/10 dark:data-[highlighted]:bg-sky-500/15"
+                    )}
+                  >
+                    <LogOut
+                      className="size-4 shrink-0"
+                      aria-hidden
+                    />
+                    <span>Exit portal</span>
+                    <span className="ml-auto text-[10px] uppercase tracking-wider text-sky-700/70 dark:text-sky-300/70">
+                      All projects
+                    </span>
+                  </Link>
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem asChild>
+                  <Link href={portalSettingsHref} className="cursor-pointer">
+                    <User className="size-4" />
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => void handleLogout()} disabled={isLoggingOut}>

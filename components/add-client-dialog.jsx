@@ -69,7 +69,13 @@ const getLinkIcon = (url, label) => {
   return <LinkIcon className="h-5 w-5" />;
 };
 
-export function AddClientDialog({ open, onOpenChange, client = null, onSaved }) {
+export function AddClientDialog({
+  open,
+  onOpenChange,
+  client = null,
+  onSaved,
+  existingClients = [],
+}) {
   const isEdit = Boolean(client);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -115,6 +121,20 @@ export function AddClientDialog({ open, onOpenChange, client = null, onSaved }) 
       [name]: value,
     }));
   };
+
+  const trimmedEmail = formData.email.trim().toLowerCase();
+  const duplicateClient =
+    trimmedEmail && Array.isArray(existingClients)
+      ? existingClients.find(
+          (c) =>
+            (c?.email || "").trim().toLowerCase() === trimmedEmail &&
+            (!isEdit || String(c?.id) !== String(client?.id))
+        )
+      : null;
+  // Suppress while submitting or while the dialog is closing — otherwise a
+  // freshly-created client gets added to `existingClients` in the same render
+  // as `open=false`, and the helper would briefly flash during the exit anim.
+  const hasDuplicateEmail = open && !isLoading && Boolean(duplicateClient);
 
   const handleAddLink = () => {
     setCurrentLink({ label: "", url: "" });
@@ -168,6 +188,10 @@ export function AddClientDialog({ open, onOpenChange, client = null, onSaved }) 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (hasDuplicateEmail) {
+      toast.error("A client with this email already exists.");
+      return;
+    }
     setIsLoading(true);
 
     const linksPayload = links.map(({ label, url }) => ({ label, url }));
@@ -199,7 +223,15 @@ export function AddClientDialog({ open, onOpenChange, client = null, onSaved }) 
 
     onOpenChange(false);
     if (!isEdit && result.id) {
-      onSaved?.({ id: result.id });
+      onSaved?.({
+        id: result.id,
+        name: formData.name,
+        email: formData.email,
+        avatar: null,
+        phone: formData.phone,
+        location: formData.location,
+        links: linksPayload,
+      });
     } else {
       onSaved?.();
     }
@@ -255,12 +287,21 @@ export function AddClientDialog({ open, onOpenChange, client = null, onSaved }) 
                   onChange={handleChange}
                   required
                   disabled={isLoading}
+                  aria-invalid={hasDuplicateEmail || undefined}
+                  aria-describedby={hasDuplicateEmail ? "email-duplicate-help" : undefined}
+                  className={hasDuplicateEmail ? "border-destructive focus-visible:ring-destructive/20" : undefined}
                 />
+                {hasDuplicateEmail ? (
+                  <p id="email-duplicate-help" className="text-xs text-destructive">
+                    A client with this email already exists
+                    {duplicateClient?.name ? ` (${duplicateClient.name})` : ""}.
+                  </p>
+                ) : null}
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="phone">
-                  Phone Number <span className="text-destructive">*</span>
+                  Phone Number
                 </FieldLabel>
                 <Input
                   id="phone"
@@ -269,7 +310,6 @@ export function AddClientDialog({ open, onOpenChange, client = null, onSaved }) 
                   placeholder="+1234567890"
                   value={formData.phone}
                   onChange={handleChange}
-                  required
                   disabled={isLoading}
                 />
               </Field>
@@ -366,7 +406,7 @@ export function AddClientDialog({ open, onOpenChange, client = null, onSaved }) 
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isLoading}>
+                <Button type="submit" disabled={isLoading || hasDuplicateEmail}>
                   {isLoading
                     ? isEdit
                       ? "Saving..."

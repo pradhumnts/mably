@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { DescriptionClamp } from "@/components/description-clamp";
 
 const linkActionClass =
   "inline-flex items-center gap-1 text-xs font-medium text-foreground underline-offset-2 hover:underline";
@@ -61,7 +62,10 @@ export function ProjectActivityTimeline({ project }) {
         ) : (
           <h2 className="text-2xl font-semibold text-foreground mb-2">{project.title}</h2>
         )}
-        <p className="text-sm text-muted-foreground mb-4">{project.description}</p>
+        <DescriptionClamp
+          text={project.description}
+          className="text-sm text-muted-foreground mb-4"
+        />
         <div className="flex items-center gap-3 text-sm mt-[16px]">
           <div className="flex items-center gap-1.5 font-medium">
             <span className="w-2 h-2 rounded-full bg-orange-500" />

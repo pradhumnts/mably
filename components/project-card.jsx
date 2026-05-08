@@ -14,6 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar, MoreVertical, Pencil, Trash2, Eye } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { DescriptionClamp } from "@/components/description-clamp";
 
 export function ProjectCard({ project, onRequestDelete }) {
   return (
@@ -84,9 +85,10 @@ export function ProjectCard({ project, onRequestDelete }) {
           <h3 className="font-semibold text-base leading-tight">
             {project.name}
           </h3>
-          <p className="text-sm text-muted-foreground">
-            {project.description}
-          </p>
+          <DescriptionClamp
+            text={project.description}
+            className="text-sm text-muted-foreground"
+          />
         </div>
 
         {/* Separator */}

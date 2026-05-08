@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -92,10 +91,6 @@ export function LoginForm({ className, next = null, intent = null, ...props }) {
     setIsLoading(false);
   };
 
-  const signupQs = new URLSearchParams();
-  if (next) signupQs.set("next", next);
-  if (intent) signupQs.set("intent", intent);
-  const signupHref = signupQs.toString() ? `/signup?${signupQs.toString()}` : "/signup";
   const portalFlow =
     intent === "portal" || (typeof next === "string" && next.startsWith("/project/"));
 
@@ -233,13 +228,6 @@ export function LoginForm({ className, next = null, intent = null, ...props }) {
             </Button>
           </Field>
           </div>
-          <FieldDescription className="text-center">
-            Don&apos;t have an account?{" "}
-            <Link href={signupHref} className="text-zinc-900 font-semibold no-underline transition duration-200">
-              Sign up
-            </Link>
-          </FieldDescription>
-      
         </FieldGroup>
       </form>
     </div>

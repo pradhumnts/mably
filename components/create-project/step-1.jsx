@@ -29,6 +29,7 @@ export function CreateProjectStep1({
   updateFormData,
   nextStep,
   clients = [],
+  onClientCreated,
   className,
   ...props
 }) {
@@ -37,12 +38,12 @@ export function CreateProjectStep1({
   const [startDate, setStartDate] = useState(formData.startDate || undefined);
   const [dueDate, setDueDate] = useState(formData.dueDate || undefined);
   const [projectScope, setProjectScope] = useState(formData.projectScope || "");
-  const [clientId, setClientId] = useState(formData.clientId || "");
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
 
-  const selectedClient = clients.find((c) => c.id === clientId);
+  const clientId = formData.clientId || "";
+  const selectedClient = clients.find((c) => String(c.id) === String(clientId));
 
   const handleNext = (e) => {
     e.preventDefault();
@@ -60,13 +61,18 @@ export function CreateProjectStep1({
     if (value === "new") {
       setAddClientDialogOpen(true);
     } else {
-      setClientId(value);
+      updateFormData({ clientId: value });
     }
   };
 
   const handleClientSaved = (payload) => {
     if (payload?.id) {
-      setClientId(String(payload.id));
+      onClientCreated?.({
+        id: payload.id,
+        name: payload.name,
+        email: payload.email,
+        avatar: payload.avatar || null,
+      });
     }
     router.refresh();
   };
@@ -288,6 +294,7 @@ export function CreateProjectStep1({
         open={addClientDialogOpen}
         onOpenChange={setAddClientDialogOpen}
         onSaved={handleClientSaved}
+        existingClients={clients}
       />
     </div>
   );

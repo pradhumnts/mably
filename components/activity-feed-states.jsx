@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { DescriptionClamp } from "@/components/description-clamp";
 
 export function ActivityFeedSkeleton() {
   return (
@@ -115,7 +116,10 @@ export function ActivityEmptyFeedCard({ project, projectId }) {
     <Card className="p-6 mb-6 gap-[16px] overflow-hidden">
       <div>
         <h2 className="text-2xl font-semibold text-foreground mb-2">{title}</h2>
-        <p className="text-sm text-muted-foreground mb-4">{description}</p>
+        <DescriptionClamp
+          text={description}
+          className="text-sm text-muted-foreground mb-4"
+        />
         <div className="flex flex-wrap items-center gap-3 text-sm mt-[16px]">
           <div className="flex items-center gap-1.5 font-medium">
             <span className="w-2 h-2 rounded-full bg-orange-500" />
@@ -197,7 +201,10 @@ export function ActivityEmptyFilteredCard({
       <div>
         <h2 className="text-2xl font-semibold text-foreground mb-2">{title}</h2>
         {description ? (
-          <p className="text-sm text-muted-foreground mb-4">{description}</p>
+          <DescriptionClamp
+            text={description}
+            className="text-sm text-muted-foreground mb-4"
+          />
         ) : null}
         <div className="flex flex-wrap items-center gap-3 text-sm mt-2">
           <div className="flex items-center gap-1.5 font-medium">

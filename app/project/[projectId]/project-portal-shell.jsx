@@ -42,10 +42,20 @@ export function ProjectPortalShell({ bundle, children }) {
     freelancerAvatar: bundle.dashboard?.freelancerAvatar ?? null,
   };
 
+  const freelancerData = {
+    name: bundle.dashboard?.freelancerName || "Freelancer",
+    email: bundle.dashboard?.freelancerEmail || "",
+    avatar: bundle.dashboard?.freelancerAvatar || null,
+  };
+
   return (
     <PortalProjectContext.Provider value={bundle}>
       <SidebarProvider>
-        <ProjectAppSidebar projectData={bundle.sidebar} isFreelancer={Boolean(bundle.meta?.isFreelancer)} />
+        <ProjectAppSidebar
+          projectData={bundle.sidebar}
+          freelancerData={freelancerData}
+          isFreelancer={Boolean(bundle.meta?.isFreelancer)}
+        />
         <SidebarInset className="flex min-h-screen flex-col">
           <div className="flex min-h-0 flex-1 flex-col">{children}</div>
           {/* <footer className="shrink-0 border-t border-border/60 bg-background/95 px-4 py-3 backdrop-blur-sm supports-[backdrop-filter]:bg-background/70">
