@@ -69,7 +69,13 @@ export function CreateInvoiceDialog({ open, onOpenChange, projectId, projectData
     });
     setInvoiceDate(new Date());
     setDueDate(undefined);
-  }, [open, projectData]);
+  }, [
+    open,
+    projectData?.projectName,
+    projectData?.clientName,
+    projectData?.clientEmail,
+    projectData?.clientAvatar,
+  ]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -189,15 +195,13 @@ export function CreateInvoiceDialog({ open, onOpenChange, projectId, projectData
                         !invoiceDate && "text-muted-foreground"
                       )}
                     >
-                      {invoiceDate ? (
-                        invoiceDate.toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      ) : (
-                        "Select a date"
-                      )}
+                      {invoiceDate
+                        ? invoiceDate.toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : "Select a date"}
                       <CalendarIcon className="h-4 w-4 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -228,15 +232,13 @@ export function CreateInvoiceDialog({ open, onOpenChange, projectId, projectData
                         !dueDate && "text-muted-foreground"
                       )}
                     >
-                      {dueDate ? (
-                        dueDate.toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      ) : (
-                        "Select a date"
-                      )}
+                      {dueDate
+                        ? dueDate.toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : "Select a date"}
                       <CalendarIcon className="h-4 w-4 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -248,6 +250,9 @@ export function CreateInvoiceDialog({ open, onOpenChange, projectId, projectData
                         setDueDate(date);
                         setDueDateOpen(false);
                       }}
+                      disabled={(date) =>
+                        invoiceDate ? date < new Date(invoiceDate.getFullYear(), invoiceDate.getMonth(), invoiceDate.getDate()) : false
+                      }
                       initialFocus
                     />
                   </PopoverContent>
