@@ -18,12 +18,12 @@ const STORAGE_PREFIX = "mably-portal-onboarding";
 /** Taller than 16:9 by ~20% height at the same width (fits portrait / UI-capture videos better). */
 const TOUR_MEDIA_ASPECT = "aspect-[40/27]";
 
-/** Set paths under `public/` for tour media. */
+/** Set paths under `public/` for tour media. Filenames must match files in `public/welcome-tour/`. */
 const PORTAL_ONBOARD_MEDIA = {
-  welcomeVideo: "/welcome-tour/Welcome%20Tour%20-%20Step%201.mp4",
+  welcomeVideo: "/welcome-tour/Welcome%20Tour%20-%20Step%201.webm",
   activityVideo: "/welcome-tour/Welcome%20Tour%20-%20Step%202%20-%20Activity.mp4",
-  libraryImage: "/welcome-tour/Welcome Tour - Step 3 - Library Video.webm",
-  chatImage: "/welcome-tour/Welcome Tour - Step 4 - Chat Video.webm",
+  libraryImage: "/welcome-tour/Welcome%20Tour%20-%20Step%203%20-%20Library%20Video.webm",
+  chatImage: "/welcome-tour/Welcome%20Tour%20-%20Step%204%20-%20Chat%20Video.webm",
 };
 
 function completionStorageKey(projectId, isFreelancer) {

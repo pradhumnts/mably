@@ -125,12 +125,18 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - api routes
+     * - _next/static, _next/image (Next internals)
+     * - favicon.ico, icon.svg
+     * - api/ routes
+     * - any path ending in a common static asset extension served from /public
+     *   (images, video, audio, fonts, web manifests, etc.)
+     *
+     * Critically, this exclusion list MUST cover everything in /public — when a
+     * static asset slips through the matcher, middleware runs auth/role checks
+     * and can return a 307 redirect for the asset URL (breaking videos, fonts,
+     * etc.). Browsers also issue byte-range requests for <video>, so each chunk
+     * would otherwise pay for two DB roundtrips.
      */
-    '/((?!_next/static|_next/image|favicon.ico|icon.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|icon.svg|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|webm|mp4|mov|ogg|ogv|m4v|mp3|wav|woff|woff2|ttf|otf|eot|css|js|map|json|txt|xml|webmanifest|pdf)$).*)',
   ],
 }
