@@ -32,6 +32,7 @@ import {
   getLibraryFileDownloadUrl,
   getLibraryStorageUsageForProject,
   listLibraryFiles,
+  markLibraryFileCommentsRead,
   setLibraryFileApprovalStatus,
 } from "@/lib/actions/project-library";
 import { formatStorageShort } from "@/lib/billing/library-storage-policy";
@@ -39,6 +40,7 @@ import { LibraryFileDiscussion } from "@/components/library-file-discussion";
 import { fileLogoForKind, inferFileKindFromMime } from "@/lib/library/infer-types";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 function formatUploadedAt(iso) {
   try {
@@ -103,6 +105,7 @@ export default function LibraryFiles() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [discussionFileId, setDiscussionFileId] = useState(null);
   const [approvalBusyKey, setApprovalBusyKey] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   /**
    * Library quota: per-file limits for everyone; usage banner only when `showBanner`.
    * @type {[null | { showBanner: boolean; usedBytes: number; totalBytes: number; maxFileBytes: number; maxFileLabel: string; planKey: string | null; percentUsed: number }, import('react').Dispatch<any>]}
@@ -146,6 +149,22 @@ export default function LibraryFiles() {
   }, [load]);
 
   useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    let cancelled = false;
+
+    void (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!cancelled) setCurrentUserId(user?.id ?? null);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const fromQuery = searchParams.get("discussion");
     if (!fromQuery) return;
     setDiscussionFileId(fromQuery);
@@ -155,6 +174,77 @@ export default function LibraryFiles() {
         ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
   }, [searchParams]);
+
+  const clearUnreadForFile = useCallback((fileId) => {
+    setItems((prev) =>
+      prev.map((row) =>
+        String(row.id) === String(fileId)
+          ? { ...row, unread_comment_count: 0 }
+          : row
+      )
+    );
+  }, []);
+
+  const markDiscussionRead = useCallback(
+    async (fileId) => {
+      if (!projectId || !fileId) return;
+      clearUnreadForFile(fileId);
+      const res = await markLibraryFileCommentsRead(String(projectId), String(fileId));
+      if (!res.ok) {
+        // Keep the UI calm; the next list load will correct the count if this fails.
+        console.warn("[library] mark file discussion read:", res.error);
+      }
+    },
+    [clearUnreadForFile, projectId]
+  );
+
+  useEffect(() => {
+    if (!discussionFileId) return;
+    void markDiscussionRead(discussionFileId);
+  }, [discussionFileId, markDiscussionRead]);
+
+  useEffect(() => {
+    if (!projectId || !currentUserId) return;
+
+    const supabase = createBrowserSupabaseClient();
+    const channel = supabase
+      .channel(`library-file-unread:${projectId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "project_library_file_comments",
+          filter: `project_id=eq.${projectId}`,
+        },
+        (payload) => {
+          const row = payload.new;
+          if (!row?.file_id || row.author_id === currentUserId) return;
+
+          if (String(row.file_id) === String(discussionFileId)) {
+            void markDiscussionRead(row.file_id);
+            return;
+          }
+
+          setItems((prev) =>
+            prev.map((item) =>
+              String(item.id) === String(row.file_id)
+                ? {
+                    ...item,
+                    unread_comment_count:
+                      Number(item.unread_comment_count || 0) + 1,
+                  }
+                : item
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [currentUserId, discussionFileId, markDiscussionRead, projectId]);
 
   const toggleExpanded = (fileId) => {
     setExpandedFiles((prev) => ({
@@ -179,6 +269,12 @@ export default function LibraryFiles() {
       fileId: row.id,
       needsApproval,
       approvalStatus,
+      unreadCommentCount: Number(row.unread_comment_count || 0),
+      sizeBytes: Number.isFinite(Number(row.size_bytes)) ? Number(row.size_bytes) : null,
+      sizeLabel:
+        Number.isFinite(Number(row.size_bytes)) && Number(row.size_bytes) > 0
+          ? formatStorageShort(Number(row.size_bytes))
+          : null,
     };
   });
 
@@ -205,6 +301,15 @@ export default function LibraryFiles() {
     );
   } else if (sortBy === "name") {
     filteredFiles = [...filteredFiles].sort((a, b) => a.name.localeCompare(b.name));
+  } else if (sortBy === "largest" || sortBy === "smallest") {
+    const direction = sortBy === "largest" ? -1 : 1;
+    filteredFiles = [...filteredFiles].sort((a, b) => {
+      const sizeA = Number(a.sizeBytes ?? 0);
+      const sizeB = Number(b.sizeBytes ?? 0);
+      if (sizeA !== sizeB) return (sizeA - sizeB) * direction;
+      // Tie-breaker: keep newest first so identical sizes have a stable order.
+      return (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0);
+    });
   }
 
   const handleDownload = async (fileId) => {
@@ -352,9 +457,11 @@ export default function LibraryFiles() {
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="newest">Newest First</SelectItem>
-                  <SelectItem value="oldest">Oldest First</SelectItem>
+                  <SelectItem value="newest">Newest first</SelectItem>
+                  <SelectItem value="oldest">Oldest first</SelectItem>
                   <SelectItem value="name">Name (A-Z)</SelectItem>
+                  <SelectItem value="largest">Largest</SelectItem>
+                  <SelectItem value="smallest">Smallest</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -391,7 +498,7 @@ export default function LibraryFiles() {
                             ) : null}
                           </div>
 
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
                             <Avatar className="h-5 w-5">
                               <AvatarImage src={file.uploadedByAvatar || undefined} alt={file.uploadedBy} />
                               <AvatarFallback className="text-xs">
@@ -401,6 +508,14 @@ export default function LibraryFiles() {
                             <span className="text-sm text-muted-foreground">{file.uploadedBy}</span>
                             <span className="text-sm text-muted-foreground">•</span>
                             <span className="text-sm text-muted-foreground">{file.uploadedAt}</span>
+                            {file.sizeLabel ? (
+                              <>
+                                <span className="text-sm text-muted-foreground">•</span>
+                                <span className="text-sm font-medium tabular-nums text-muted-foreground">
+                                  {file.sizeLabel}
+                                </span>
+                              </>
+                            ) : null}
                           </div>
 
                           {expandedFiles[file.id] ? (
@@ -457,14 +572,36 @@ export default function LibraryFiles() {
                                 type="button"
                                 variant="outline"
                                 size="icon"
-                                className="border border-slate-200 shrink-0"
-                                aria-label="Open file discussion"
+                                className="relative border border-slate-200 shrink-0"
+                                aria-label={
+                                  file.unreadCommentCount > 0
+                                    ? `Open file discussion, ${file.unreadCommentCount} unread`
+                                    : "Open file discussion"
+                                }
                                 onClick={() => setDiscussionFileId(file.fileId)}
                               >
                                 <MessageCircle className="h-4 w-4" />
+                                {file.unreadCommentCount > 0 ? (
+                                  <Badge
+                                    variant="destructive"
+                                    className="absolute -right-1.5 -top-1.5 h-4 min-w-4 rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white shadow-sm ring-2 ring-background animate-in zoom-in duration-200"
+                                  >
+                                    {file.unreadCommentCount > 99
+                                      ? "99+"
+                                      : file.unreadCommentCount}
+                                  </Badge>
+                                ) : null}
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent side="bottom">Open discussion</TooltipContent>
+                            <TooltipContent side="bottom">
+                              {file.unreadCommentCount > 0
+                                ? `${file.unreadCommentCount} unread ${
+                                    file.unreadCommentCount === 1
+                                      ? "comment"
+                                      : "comments"
+                                  }`
+                                : "Open discussion"}
+                            </TooltipContent>
                           </Tooltip>
                           {isFreelancer ? (
                             <Tooltip>
