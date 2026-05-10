@@ -44,9 +44,25 @@ import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/clie
 
 function formatUploadedAt(iso) {
   try {
-    return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(
-      new Date(iso)
-    );
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+    }).format(new Date(iso));
+  } catch {
+    return "";
+  }
+}
+
+function formatUploadedAtFull(iso) {
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(new Date(iso));
   } catch {
     return "";
   }
@@ -265,6 +281,7 @@ export default function LibraryFiles() {
       uploadedBy: row.created_by_display_name || "Member",
       uploadedByAvatar: row.created_by_avatar_url || null,
       uploadedAt: formatUploadedAt(row.created_at),
+      uploadedAtFull: formatUploadedAtFull(row.created_at),
       description: row.description || "",
       fileId: row.id,
       needsApproval,
@@ -658,7 +675,7 @@ export default function LibraryFiles() {
                         fileLogo={file.logo}
                         uploadedByName={file.uploadedBy}
                         uploadedByAvatar={file.uploadedByAvatar}
-                        uploadedAt={file.uploadedAt}
+                        uploadedAt={file.uploadedAtFull}
                         open={discussionFileId === file.fileId}
                         onOpenChange={(nextOpen) => {
                           if (nextOpen) {
