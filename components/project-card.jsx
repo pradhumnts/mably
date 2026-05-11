@@ -12,11 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar, MoreVertical, Pencil, Trash2, Eye } from "lucide-react";
+import { Calendar, MoreVertical, Pencil, Trash2, Eye, Sparkles } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { DescriptionClamp } from "@/components/description-clamp";
 
 export function ProjectCard({ project, onRequestDelete }) {
+  const isDemo = Boolean(project?.isDemo);
+
   return (
     <Link href={`/project/${project.id}/dashboard`}>
     <Card className="overflow-hidden hover:shadow-lg shadow-sm transition-shadow p-[16px] duration-200 cursor-pointer">
@@ -38,43 +40,52 @@ export function ProjectCard({ project, onRequestDelete }) {
             </Avatar>
           </div>
 
-          {/* Three-dot Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild className="border border-slate-200">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 p-0"
-                aria-label="Open project menu"
-                onClick={(e) => e.preventDefault()}
-              >
-                <MoreVertical className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="border border-slate-200">
-              <DropdownMenuItem asChild>
-                <Link href={`/project/${project.id}/dashboard`}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => e.preventDefault()}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onRequestDelete?.(project);
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isDemo ? (
+            <Badge
+              variant="outline"
+              className="gap-1 py-3 border-orange-200/60 bg-gradient-to-br from-orange-50/80 via-background to-violet-50/40 text-orange-700 dark:border-orange-900/30 dark:from-orange-950/30 dark:via-background dark:to-violet-950/20 dark:text-orange-200"
+            >
+              <Sparkles className="h-3 w-3 text-orange-500" aria-hidden />
+              Demo project
+            </Badge>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild className="border border-slate-200">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 p-0"
+                  aria-label="Open project menu"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="border border-slate-200">
+                <DropdownMenuItem asChild>
+                  <Link href={`/project/${project.id}/dashboard`}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    View
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => e.preventDefault()}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onRequestDelete?.(project);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
         </div>
       </CardHeader>

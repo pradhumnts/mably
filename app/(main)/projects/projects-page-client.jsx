@@ -14,41 +14,9 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ProjectCard } from "@/components/project-card";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Activity,
-  CreditCard,
-  FolderKanban,
-  Library,
-  Plus,
-  Sparkles,
-} from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { DeleteProjectDialog } from "@/components/delete-project-dialog";
-
-const emptyHighlights = [
-  {
-    icon: Activity,
-    title: "Client-ready timeline",
-    description: "Keep milestones and updates visible in one Activity feed.",
-  },
-  {
-    icon: Library,
-    title: "Files & links",
-    description: "Share deliverables and references without messy email threads.",
-  },
-  {
-    icon: CreditCard,
-    title: "Clear payments",
-    description: "Drop in your invoice link so clients always know where to pay.",
-  },
-];
 
 function ProjectsEmptyState() {
   return (
@@ -132,17 +100,45 @@ export function ProjectsPageClient({ initialProjects }) {
           {initialProjects.length === 0 ? (
             <ProjectsEmptyState />
           ) : (
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-              {initialProjects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  onRequestDelete={(p) =>
-                    setDeleteTarget({ id: p.id, name: p.name ?? "" })
-                  }
-                />
-              ))}
-            </div>
+            <>
+              {initialProjects.length === 1 && initialProjects[0]?.isDemo ? (
+                <div className="relative mb-6 overflow-hidden rounded-xl border border-orange-200/50 bg-gradient-to-br from-orange-50/80 via-background to-violet-50/40 px-4 py-3 dark:border-orange-900/30 dark:from-orange-950/30 dark:via-background dark:to-violet-950/20">
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-orange-300/20 blur-2xl dark:bg-orange-500/10"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute -bottom-12 -left-8 h-28 w-28 rounded-full bg-violet-300/15 blur-2xl dark:bg-violet-500/10"
+                  />
+                  <div className="relative flex items-start gap-3">
+                    <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" aria-hidden />
+                    <div className="text-sm leading-relaxed text-foreground/80 font-medium">
+                      <span className="font-medium text-foreground">Welcome to Mably.</span>{" "}
+                      Open the demo project below to see what a fully-loaded client portal feels like.
+                      <Link
+                        href="/projects/new"
+                        className="ml-1 font-semibold text-orange-600 underline-offset-4 transition-colors hover:text-orange-700 hover:underline dark:text-orange-300 dark:hover:text-orange-200"
+                      >
+                        Create your first real project
+                      </Link>{" "}
+                      anytime.
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+                {initialProjects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    onRequestDelete={(p) =>
+                      setDeleteTarget({ id: p.id, name: p.name ?? "" })
+                    }
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
