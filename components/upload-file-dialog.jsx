@@ -26,6 +26,9 @@ import {
   completeLibraryFileUpload,
   prepareLibraryFileUpload,
 } from "@/lib/actions/project-library";
+import { uploadProjectLibraryBlobWithProgress } from "@/lib/client/upload-project-library-blob";
+import { postLibraryVoiceComment } from "@/lib/client/post-library-voice-comment";
+import { useLibraryVoiceComposerState } from "@/components/library-voice-composer";
 
 /**
  * Upload bytes directly to Supabase Storage to avoid Vercel request body limits.
@@ -200,8 +203,18 @@ export function UploadFileDialog({
     comment: "",
     needsApproval: false,
   });
+  /** @type {[null | { blob: Blob; waveform: number[] | null; durationMs: number }, React.Dispatch<any>]} */
+  const [pendingVoice, setPendingVoice] = useState(null);
   const [selectedFileName, setSelectedFileName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const voiceComposer = useLibraryVoiceComposerState({
+    disabled: submitting,
+    previewDisabled: false,
+    pendingVoice,
+    onRecorded: setPendingVoice,
+    onClear: () => setPendingVoice(null),
+  });
   /** @type {React.MutableRefObject<XMLHttpRequest | null>} */
   const xhrRef = useRef(null);
   /** @type {[null | { phase: 'sending' | 'finishing'; percent: number; loaded: number; total: number }, React.Dispatch<any>]} */
@@ -213,6 +226,7 @@ export function UploadFileDialog({
       xhrRef.current = null;
       setSubmitting(false);
       setProgress(null);
+      setPendingVoice(null);
     }
   }, [open]);
 
@@ -285,12 +299,13 @@ export function UploadFileDialog({
     setSubmitting(true);
     setProgress({ phase: "sending", percent: 0, loaded: 0, total: file.size });
 
+    const voiceExtra = pendingVoice?.blob?.size ? pendingVoice.blob.size : 0;
     const prepared = await prepareLibraryFileUpload({
       projectId,
       displayName: formData.fileName.trim(),
       originalFilename: file.name,
       mimeType: file.type || null,
-      sizeBytes: file.size,
+      sizeBytes: file.size + voiceExtra,
     });
     if (!prepared.ok || !prepared.objectPath) {
       setSubmitting(false);
@@ -350,7 +365,7 @@ export function UploadFileDialog({
       needsApproval: formData.needsApproval,
       originalFilename: prepared.normalizedOriginalFilename || file.name,
       mimeType: prepared.mimeType || file.type || null,
-      sizeBytes: prepared.sizeBytes || file.size,
+      sizeBytes: file.size,
     });
     if (!completed.ok) {
       void supabase.storage.from("project-library").remove([prepared.objectPath]);
@@ -360,8 +375,30 @@ export function UploadFileDialog({
       return;
     }
 
+    const fileId = completed.fileId;
+    const discussionBody = formData.comment.trim();
+    if (pendingVoice?.blob && fileId) {
+      const pv = pendingVoice;
+      const postV = await postLibraryVoiceComment({
+        projectId,
+        fileId: String(fileId),
+        body: discussionBody,
+        blob: pv.blob,
+        waveform: pv.waveform,
+        durationMs: pv.durationMs,
+        mimeType: pv.blob.type,
+      });
+      if (!postV.ok) {
+        toast.error("Could not attach voice note", {
+          description: postV.error || "Try again from the file discussion.",
+        });
+      }
+    }
+
     toast.success("File uploaded", {
-      description: "It is now available in the project library.",
+      description: pendingVoice?.blob
+        ? "It’s in the library with your voice note in the discussion."
+        : "It is now available in the project library.",
     });
     onOpenChange(false);
     setFormData({
@@ -371,6 +408,7 @@ export function UploadFileDialog({
       needsApproval: false,
     });
     setSelectedFileName("");
+    setPendingVoice(null);
     onUploaded?.();
   };
 
@@ -463,9 +501,14 @@ export function UploadFileDialog({
             ) : null}
 
             <div className="grid gap-2">
-              <Label htmlFor="comment">
-                Comment / description <span className="text-muted-foreground text-sm">(optional)</span>
-              </Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="comment">
+                  Comment / description{" "}
+                  <span className="text-muted-foreground text-sm font-normal">(optional)</span>
+                </Label>
+                {!pendingVoice?.blob && !voiceComposer.recording ? voiceComposer.micButton : null}
+              </div>
+              {voiceComposer.panel}
               <Textarea
                 id="comment"
                 name="comment"
@@ -473,7 +516,7 @@ export function UploadFileDialog({
                 value={formData.comment}
                 onChange={handleInputChange}
                 rows={4}
-                disabled={submitting}
+                disabled={submitting || voiceComposer.recording || voiceComposer.processing}
               />
             </div>
 

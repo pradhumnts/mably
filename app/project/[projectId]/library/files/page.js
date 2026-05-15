@@ -676,6 +676,7 @@ export default function LibraryFiles() {
                         uploadedByName={file.uploadedBy}
                         uploadedByAvatar={file.uploadedByAvatar}
                         uploadedAt={file.uploadedAtFull}
+                        isFreelancer={isFreelancer}
                         open={discussionFileId === file.fileId}
                         onOpenChange={(nextOpen) => {
                           if (nextOpen) {

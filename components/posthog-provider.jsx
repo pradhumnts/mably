@@ -3,38 +3,67 @@
 import posthog from "posthog-js";
 import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, Suspense } from "react";
+import { useEffect, useRef, Suspense } from "react";
 
-// Tracks every client-side route change as a $pageview
+const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim() || "";
+const posthogHost =
+  process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() || "https://us.i.posthog.com";
+
 function PostHogPageView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const ph = usePostHog();
 
   useEffect(() => {
-    if (pathname && ph) {
+    if (!pathname || !ph) return;
+    try {
       let url = window.origin + pathname;
       const search = searchParams.toString();
       if (search) url += `?${search}`;
       ph.capture("$pageview", { $current_url: url });
+    } catch {
+      /* analytics must never break the app */
     }
   }, [pathname, searchParams, ph]);
 
   return null;
 }
 
-// Init PostHog once on the client
-if (typeof window !== "undefined") {
-  posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
-    defaults: "2025-05-24",
-    person_profiles: "always",
-    capture_pageview: false, // we handle this manually above
-    capture_pageleave: true,
-  });
+function initPostHogOnce() {
+  if (!posthogKey || typeof window === "undefined") return false;
+  if (posthog.__loaded) return true;
+
+  try {
+    posthog.init(posthogKey, {
+      api_host: posthogHost,
+      defaults: "2025-05-24",
+      person_profiles: "always",
+      capture_pageview: false,
+      capture_pageleave: true,
+      capture_exceptions: false,
+      on_request_error: () => {
+        /* ad blockers / privacy extensions often block us.i.posthog.com */
+      },
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function PostHogProvider({ children }) {
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    initPostHogOnce();
+  }, []);
+
+  if (!posthogKey) {
+    return children;
+  }
+
   return (
     <PHProvider client={posthog}>
       <Suspense fallback={null}>
