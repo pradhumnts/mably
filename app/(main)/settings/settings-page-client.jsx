@@ -342,8 +342,9 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
                     <CardHeader>
                       <CardTitle>Subscription</CardTitle>
                       <CardDescription>
-                        Your Mably plan and Polar-powered checkout. Status may take a few seconds after
-                        payment while webhooks sync.
+                        {billing.preferFoundingCheckout && billing.foundingPricing?.available
+                          ? "You came from early pricing — choose a plan below to lock in 75% off forever while founding spots last."
+                          : "Your Mably plan and Polar-powered checkout. Status may take a few seconds after payment while webhooks sync."}
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -351,6 +352,9 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
                         polarConfigured={billing.polarConfigured}
                         initialSubscription={billing.initialSubscription}
                         canReconcile={billing.canReconcile}
+                        foundingPricing={billing.foundingPricing}
+                        preferFoundingCheckout={billing.preferFoundingCheckout}
+                        checkoutPlan={billing.checkoutPlan}
                         onSubscriptionSynced={() => router.refresh()}
                       />
                     </CardContent>

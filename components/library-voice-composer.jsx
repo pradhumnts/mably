@@ -2,6 +2,7 @@
 
 import { Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { LibraryVoiceRecordingBar } from "@/components/library-voice-recording-bar";
 import { LibraryVoicePreviewPlayer } from "@/components/library-voice-preview-player";
@@ -73,19 +74,29 @@ export function LibraryVoiceMicTrigger({
   onStart,
   className,
 }) {
+  const recordDisabled = disabled || !canRecord;
+
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="icon"
-      className={cn("h-8 w-8 shrink-0", className)}
-      disabled={disabled || !canRecord}
-      onClick={() => void onStart()}
-      aria-label="Record voice note"
-      title="Record voice note"
-    >
-      <Mic className="h-4 w-4" aria-hidden />
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className={cn("h-8 w-8 shrink-0", className)}
+            disabled={recordDisabled}
+            onClick={() => void onStart()}
+            aria-label="Record voice note"
+          >
+            <Mic className="h-4 w-4" aria-hidden />
+          </Button>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        {recordDisabled ? "Voice note unavailable" : "Record voice note"}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

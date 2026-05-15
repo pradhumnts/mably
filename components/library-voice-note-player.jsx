@@ -10,6 +10,8 @@ import {
   getLibraryCommentVoiceSignedUrl,
   markLibraryCommentVoiceListened,
 } from "@/lib/actions/project-library";
+import { DEMO_VOICE_PLAYBACK_MESSAGE } from "@/lib/library/demo-voice-note";
+import { toast } from "sonner";
 
 function formatClock(seconds) {
   const s = Math.max(0, Math.floor(seconds || 0));
@@ -35,6 +37,7 @@ const RATES = [1, 1.5, 2];
  *   uploadState?: { phase: "preparing" | "uploading" | "saving"; percent: number } | null;
  *   canDelete?: boolean;
  *   onRequestDelete?: () => void;
+ *   demoPreview?: boolean;
  * }} props
  */
 export function LibraryVoiceNotePlayer({
@@ -49,6 +52,7 @@ export function LibraryVoiceNotePlayer({
   uploadState = null,
   canDelete = false,
   onRequestDelete,
+  demoPreview = false,
 }) {
   const audioRef = useRef(/** @type {HTMLAudioElement | null} */ (null));
   const markedRef = useRef(false);
@@ -78,7 +82,7 @@ export function LibraryVoiceNotePlayer({
       : 0;
 
   const loadUrl = useCallback(async () => {
-    if (localBlob) return;
+    if (localBlob || demoPreview) return;
     setLoading(true);
     setLoadErr(null);
     const r = await getLibraryCommentVoiceSignedUrl(
@@ -92,9 +96,15 @@ export function LibraryVoiceNotePlayer({
       return;
     }
     setSrc(r.url);
-  }, [projectId, fileId, commentId, localBlob]);
+  }, [projectId, fileId, commentId, localBlob, demoPreview]);
 
   useEffect(() => {
+    if (demoPreview) {
+      setLoading(false);
+      setLoadErr(null);
+      setSrc(null);
+      return undefined;
+    }
     if (!localBlob) {
       void loadUrl();
       return undefined;
@@ -104,7 +114,7 @@ export function LibraryVoiceNotePlayer({
     setLoading(false);
     setLoadErr(null);
     return () => URL.revokeObjectURL(url);
-  }, [localBlob, loadUrl]);
+  }, [localBlob, loadUrl, demoPreview]);
 
   useEffect(() => {
     const a = audioRef.current;
@@ -148,6 +158,12 @@ export function LibraryVoiceNotePlayer({
   }, [rateIdx, src]);
 
   const togglePlay = () => {
+    if (demoPreview) {
+      toast.message("Demo voice note", {
+        description: DEMO_VOICE_PLAYBACK_MESSAGE,
+      });
+      return;
+    }
     const a = audioRef.current;
     if (!a || !src) return;
     if (playing) a.pause();
@@ -204,7 +220,7 @@ export function LibraryVoiceNotePlayer({
             type="button"
             size="icon"
             className="h-9 w-9 shrink-0 rounded-full bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
-            disabled={loading || !src}
+            disabled={demoPreview ? loading : loading || !src}
             onClick={() => togglePlay()}
             aria-label={playing ? "Pause" : "Play"}
           >

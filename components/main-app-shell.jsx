@@ -7,13 +7,15 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { EarlyPricingOfferHost } from "@/components/billing/early-pricing-offer-host";
 // import { LegalFooterLinks } from "@/components/legal-footer-links"; // hidden until legal pages are live
 
 /**
  * Shared shell for authenticated freelancer routes under (main).
  * @param {{ name: string, email: string, avatar: string | null }} user
+ * @param {boolean} [hasSubscription]
  */
-export function MainAppShell({ user, children }) {
+export function MainAppShell({ user, children, hasSubscription = false }) {
   const pathname = usePathname();
   const isCreateProjectWizard = pathname.startsWith("/projects/new");
 
@@ -31,6 +33,7 @@ export function MainAppShell({ user, children }) {
   return (
     <SidebarProvider>
       <Toaster />
+      <EarlyPricingOfferHost hasSubscription={hasSubscription} />
       <AppSidebar user={user} />
       <SidebarInset className="flex min-h-screen flex-col">
         <div className="flex min-h-0 flex-1 flex-col">{children}</div>

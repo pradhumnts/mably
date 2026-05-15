@@ -20,6 +20,7 @@ import { LibraryVoiceNotePlayer } from "@/components/library-voice-note-player";
 import { useLibraryVoiceComposerState } from "@/components/library-voice-composer";
 import { DeleteLibraryVoiceNoteConfirm } from "@/components/delete-library-voice-note-dialog";
 import { LibraryVoiceMessageDeleted } from "@/components/library-voice-message-deleted";
+import { isDemoVoiceNoteStoragePath } from "@/lib/library/demo-voice-note";
 
 /** @param {object} comment */
 function mapCommentAfterVoiceRemoval(comment) {
@@ -424,6 +425,7 @@ export function LibraryFileDiscussion({
                           canDelete={
                             Boolean(
                               viewer &&
+                                !isDemoVoiceNoteStoragePath(c.voice_note_storage_path) &&
                                 c.voice_note_storage_path !== "pending" &&
                                 !c.optimistic &&
                                 (c.author_id === viewer.id || isFreelancer)
@@ -436,6 +438,7 @@ export function LibraryFileDiscussion({
                               hasCommentText: Boolean(c.body?.trim()),
                             })
                           }
+                          demoPreview={isDemoVoiceNoteStoragePath(c.voice_note_storage_path)}
                         />
                       ) : null}
                       {c.body?.trim() ? (

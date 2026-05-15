@@ -10,8 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Check } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import {
+  EARLY_OFFER_COPY,
+  EARLY_OFFER_DISCOUNT_PERCENT,
+  EARLY_OFFER_PLANS,
+  earlyOfferPrice,
+} from "@/lib/billing/early-offer";
+import { startPolarCheckout } from "@/lib/client/start-polar-checkout";
+import { cn } from "@/lib/utils";
 
 export const POLAR_PLAN_STARTER_FEATURES = [
   "1 active project",
@@ -34,19 +42,85 @@ export const POLAR_PLAN_GROWTH_FEATURES = [
   "Priority support",
 ];
 
-function PlanCard({ title, description, price, features, cta, disabled, onClick, highlighted = false }) {
+function planPricing(planKey, useFounding) {
+  const plan = EARLY_OFFER_PLANS.find((p) => p.key === planKey) ?? EARLY_OFFER_PLANS[0];
+  const founding = earlyOfferPrice(plan.listPriceMonthly);
+  return {
+    listPrice: founding.listPrice,
+    displayPrice: useFounding ? founding.display : String(founding.listPrice),
+  };
+}
+
+/**
+ * @param {{
+ *   title: string;
+ *   description: string;
+ *   listPrice: number;
+ *   displayPrice: string;
+ *   founding?: boolean;
+ *   features: string[];
+ *   cta: string;
+ *   disabled: boolean;
+ *   onClick: () => void;
+ *   highlighted?: boolean;
+ * }} props
+ */
+function PlanCard({
+  title,
+  description,
+  listPrice,
+  displayPrice,
+  founding = false,
+  features,
+  cta,
+  disabled,
+  onClick,
+  highlighted = false,
+}) {
   return (
     <Card
-      className={
+      className={cn(
+        "flex flex-col",
+        founding && "overflow-visible",
         highlighted
-          ? "relative flex flex-col border-orange-500/50 bg-gradient-to-b from-orange-50/80 via-card to-card shadow-md dark:from-orange-950/25 dark:via-card dark:to-card"
-          : "flex flex-col border-border/80"
-      }
+          ? "relative border-orange-500/50 bg-gradient-to-b from-orange-50/80 via-card to-card shadow-md dark:from-orange-950/25 dark:via-card dark:to-card"
+          : "border-border/80"
+      )}
     >
-      <CardHeader>
+      <CardHeader className={founding ? "gap-2.5" : undefined}>
+        {founding ? (
+          <div className="flex justify-center md:justify-start">
+            <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+              <Sparkles className="h-3 w-3 shrink-0" aria-hidden />
+              Early pricing
+            </span>
+          </div>
+        ) : null}
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
-        <p className="pt-2 text-3xl font-bold tracking-tight">{price}</p>
+        <div className="pt-2">
+          {founding ? (
+            <div className="flex flex-wrap items-baseline gap-2">
+              <span className="text-lg text-muted-foreground line-through decoration-muted-foreground/50">
+                ${listPrice}/mo
+              </span>
+              <span className="text-3xl font-bold tracking-tight text-foreground">
+                ${displayPrice}
+                <span className="text-base font-semibold text-muted-foreground">/mo</span>
+              </span>
+            </div>
+          ) : (
+            <p className="text-3xl font-bold tracking-tight">
+              ${displayPrice}
+              <span className="text-base font-semibold text-muted-foreground">/mo</span>
+            </p>
+          )}
+          {founding ? (
+            <p className="mt-1 text-xs font-medium text-orange-600 dark:text-orange-400">
+              {EARLY_OFFER_DISCOUNT_PERCENT}% off locked in forever
+            </p>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4">
         <ul className="space-y-2 text-sm">
@@ -66,39 +140,59 @@ function PlanCard({ title, description, price, features, cta, disabled, onClick,
 }
 
 /**
- * Starter / Growth grid + Polar checkout (no outer Dialog). Embed in another surface or use via {@link PolarPlanPickerDialog}.
+ * @typedef {{
+ *   configured: boolean;
+ *   available: boolean;
+ *   claimed: number;
+ *   remaining: number;
+ *   limit: number;
+ * }} FoundingPricingState
+ */
+
+/**
+ * @param {{
+ *   polarConfigured: boolean;
+ *   currentPlanKey?: string | null;
+ *   className?: string;
+ *   useUpgradeCtas?: boolean;
+ *   foundingPricing?: FoundingPricingState | null;
+ *   preferFoundingCheckout?: boolean;
+ *   defaultPlan?: "starter" | "growth" | null;
+ * }} props
  */
 export function PolarPlanPickerContent({
   polarConfigured,
   currentPlanKey = null,
   className = "",
-  /** When true, non-current plans use “Upgrade to …” (subscribed user). Otherwise “Subscribe — …”. */
   useUpgradeCtas = false,
+  foundingPricing = null,
+  preferFoundingCheckout = false,
+  defaultPlan = null,
 }) {
   const [checkoutLoading, setCheckoutLoading] = useState(null);
 
-  const startCheckout = useCallback(async (plan) => {
-    setCheckoutLoading(plan);
-    try {
-      const res = await fetch("/api/billing/polar-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error ?? "Could not start checkout");
-      if (!json.url) throw new Error("No checkout URL returned");
-      window.location.href = json.url;
-    } catch (e) {
-      toast.error(e?.message ?? "Checkout failed");
-    } finally {
-      setCheckoutLoading(null);
-    }
-  }, []);
+  const useFounding =
+    Boolean(foundingPricing?.configured && foundingPricing?.available) && !useUpgradeCtas;
+
+  const startCheckout = useCallback(
+    async (plan) => {
+      setCheckoutLoading(plan);
+      try {
+        await startPolarCheckout({ plan, founding: useFounding });
+      } catch (e) {
+        toast.error(e?.message ?? "Checkout failed");
+      } finally {
+        setCheckoutLoading(null);
+      }
+    },
+    [useFounding]
+  );
 
   const starterIsCurrent = currentPlanKey === "starter";
   const growthIsCurrent = currentPlanKey === "growth";
   const checkoutInFlight = checkoutLoading !== null;
+
+  const foundingCtaSuffix = useFounding ? " (early pricing)" : "";
 
   const starterCta =
     checkoutLoading === "starter"
@@ -107,7 +201,7 @@ export function PolarPlanPickerContent({
         ? "Current plan"
         : useUpgradeCtas
           ? "Upgrade to Starter"
-          : "Subscribe — Starter";
+          : `Subscribe — Starter${foundingCtaSuffix}`;
   const growthCta =
     checkoutLoading === "growth"
       ? "Redirecting…"
@@ -115,42 +209,68 @@ export function PolarPlanPickerContent({
         ? "Current plan"
         : useUpgradeCtas
           ? "Upgrade to Growth"
-          : "Subscribe — Growth";
+          : `Subscribe — Growth${foundingCtaSuffix}`;
+
+  const starterPrices = planPricing("starter", useFounding);
+  const growthPrices = planPricing("growth", useFounding);
 
   return (
-    <div className={`grid gap-6 md:grid-cols-2 ${className}`.trim()}>
-      <PlanCard
-        title="Starter"
-        description="$9/mo · try the workflow"
-        price="$9"
-        features={POLAR_PLAN_STARTER_FEATURES}
-        cta={starterCta}
-        onClick={() => void startCheckout("starter")}
-        disabled={!polarConfigured || checkoutInFlight || starterIsCurrent}
-      />
-      <PlanCard
-        title="Growth"
-        description="$19/mo · full workspace"
-        price="$19"
-        features={POLAR_PLAN_GROWTH_FEATURES}
-        cta={growthCta}
-        onClick={() => void startCheckout("growth")}
-        disabled={!polarConfigured || checkoutInFlight || growthIsCurrent}
-        highlighted
-      />
+    <div className={cn("space-y-4", className)}>
+      {useFounding && foundingPricing ? (
+        <div className="rounded-lg border border-orange-200/80 bg-gradient-to-r from-orange-50/90 via-white to-violet-50/50 px-4 py-3 dark:border-orange-500/25 dark:from-orange-950/30 dark:via-card dark:to-violet-950/20">
+          <p className="text-sm font-medium text-foreground">{EARLY_OFFER_COPY.settingsFoundingBanner}</p>
+        </div>
+      ) : foundingPricing?.configured && !foundingPricing.available ? (
+        <div className="rounded-lg border border-border/80 bg-muted/40 px-4 py-3">
+          <p className="text-sm text-muted-foreground">{EARLY_OFFER_COPY.settingsCohortFull}</p>
+        </div>
+      ) : null}
+
+      <div
+        className={cn(
+          "grid gap-6 md:grid-cols-2",
+          useFounding && "pt-1",
+          defaultPlan === "growth" && "md:[&>*:last-child]:ring-2 md:[&>*:last-child]:ring-orange-500/40",
+          defaultPlan === "starter" && "md:[&>*:first-child]:ring-2 md:[&>*:first-child]:ring-orange-500/40"
+        )}
+      >
+        <PlanCard
+          title="Starter"
+          description={useFounding ? "Early pricing · 1 active project" : "$9/mo · try the workflow"}
+          listPrice={starterPrices.listPrice}
+          displayPrice={starterPrices.displayPrice}
+          founding={useFounding}
+          features={POLAR_PLAN_STARTER_FEATURES}
+          cta={starterCta}
+          onClick={() => void startCheckout("starter")}
+          disabled={!polarConfigured || checkoutInFlight || starterIsCurrent}
+        />
+        <PlanCard
+          title="Growth"
+          description={useFounding ? "Early pricing · unlimited projects" : "$19/mo · full workspace"}
+          listPrice={growthPrices.listPrice}
+          displayPrice={growthPrices.displayPrice}
+          founding={useFounding}
+          features={POLAR_PLAN_GROWTH_FEATURES}
+          cta={growthCta}
+          onClick={() => void startCheckout("growth")}
+          disabled={!polarConfigured || checkoutInFlight || growthIsCurrent}
+          highlighted
+        />
+      </div>
     </div>
   );
 }
 
-/**
- * Same plan picker as Settings → Subscription “Upgrade” (standalone Dialog).
- */
 export function PolarPlanPickerDialog({
   open,
   onOpenChange,
   polarConfigured,
   currentPlanKey = null,
   useUpgradeCtas = false,
+  foundingPricing = null,
+  preferFoundingCheckout = false,
+  defaultPlan = null,
   title = "Choose your plan",
   description,
 }) {
@@ -171,6 +291,9 @@ export function PolarPlanPickerDialog({
           polarConfigured={polarConfigured}
           currentPlanKey={currentPlanKey}
           useUpgradeCtas={useUpgradeCtas}
+          foundingPricing={foundingPricing}
+          preferFoundingCheckout={preferFoundingCheckout}
+          defaultPlan={defaultPlan}
         />
       </DialogContent>
     </Dialog>

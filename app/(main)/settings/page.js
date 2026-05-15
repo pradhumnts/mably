@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUserProfile } from "@/lib/data/profile";
 import { getFreelancerSubscriptionForUser } from "@/lib/data/billing";
 import { SettingsPageClient } from "./settings-page-client";
+import { getFoundingPricingState } from "@/lib/billing/founding-pricing";
 import {
   getPolarAccessToken,
   getPolarProductGrowth,
@@ -42,6 +43,12 @@ export default async function SettingsPage({ searchParams }) {
   const initialTab =
     isFreelancer && sp?.tab === "subscription" ? "subscription" : "profile";
 
+  const foundingPricing = isFreelancer ? await getFoundingPricingState() : null;
+  const preferFoundingCheckout =
+    isFreelancer && (sp?.early === "1" || sp?.early === "true");
+  const checkoutPlan =
+    sp?.plan === "starter" || sp?.plan === "growth" ? sp.plan : null;
+
   return (
     <SettingsPageClient
       initialProfile={{
@@ -62,6 +69,9 @@ export default async function SettingsPage({ searchParams }) {
               polarConfigured,
               initialSubscription: subscription,
               canReconcile,
+              foundingPricing,
+              preferFoundingCheckout,
+              checkoutPlan,
             }
           : null
       }

@@ -31,13 +31,24 @@ function formatUtcDate(value) {
 
 /**
  * Subscription / Polar billing UI (used from Settings → Subscription).
- * @param {{ polarConfigured: boolean; initialSubscription: object | null; canReconcile?: boolean; onSubscriptionSynced?: () => void }} props
+ * @param {{
+ *   polarConfigured: boolean;
+ *   initialSubscription: object | null;
+ *   canReconcile?: boolean;
+ *   onSubscriptionSynced?: () => void;
+ *   foundingPricing?: { configured: boolean; available: boolean; claimed: number; remaining: number; limit: number } | null;
+ *   preferFoundingCheckout?: boolean;
+ *   checkoutPlan?: "starter" | "growth" | null;
+ * }} props
  */
 export function BillingPageClient({
   polarConfigured,
   initialSubscription,
   canReconcile = false,
   onSubscriptionSynced,
+  foundingPricing = null,
+  preferFoundingCheckout = false,
+  checkoutPlan = null,
 }) {
   const [portalLoading, setPortalLoading] = useState(false);
   const [subscription, setSubscription] = useState(initialSubscription);
@@ -107,8 +118,10 @@ export function BillingPageClient({
               <CardDescription>
                 Set server env <code className="text-xs">POLAR_ACCESS_TOKEN</code>,{" "}
                 <code className="text-xs">POLAR_WEBHOOK_SECRET</code>,{" "}
-                <code className="text-xs">POLAR_PRODUCT_ID_STARTER</code>, and{" "}
-                <code className="text-xs">POLAR_PRODUCT_ID_GROWTH</code> (and{" "}
+                <code className="text-xs">POLAR_PRODUCT_ID_STARTER</code>,{" "}
+                <code className="text-xs">POLAR_PRODUCT_ID_GROWTH</code>,{" "}
+                <code className="text-xs">POLAR_PRODUCT_ID_STARTER_FOUNDING</code>, and{" "}
+                <code className="text-xs">POLAR_PRODUCT_ID_GROWTH_FOUNDING</code> (and{" "}
                 <code className="text-xs">POLAR_SERVER=sandbox|production</code>), then redeploy.
                 When creating the Organization Access Token in Polar, include the{" "}
                 <code className="text-xs">customer_sessions:write</code> scope so “Manage
@@ -168,12 +181,7 @@ export function BillingPageClient({
           </div>
         ) : canReconcile ? (
           <div className="flex flex-row flex-wrap items-start justify-between gap-4">
-            <div className="space-y-1">
-              <h3 className="text-base font-medium leading-none">No subscription in Mably yet</h3>
-              <p className="text-sm text-muted-foreground">
-                If you already paid in Polar, sync your status here (webhooks may be off or delayed).
-              </p>
-            </div>
+
             <Button
               variant="outline"
               size="sm"
@@ -182,13 +190,22 @@ export function BillingPageClient({
               disabled={reconcileLoading}
             >
               <RefreshCw className={`h-4 w-4 ${reconcileLoading ? "animate-spin" : ""}`} />
-              {reconcileLoading ? "Syncing…" : "Pull from Polar"}
+              {reconcileLoading ? "Syncing…" : "Refresh billing status"}
             </Button>
           </div>
         ) : null}
 
         {!isSubscribed && polarConfigured ? (
-          <PolarPlanPickerContent polarConfigured={polarConfigured} currentPlanKey={null} useUpgradeCtas={false} />
+          <div className="overflow-visible">
+          <PolarPlanPickerContent
+            polarConfigured={polarConfigured}
+            currentPlanKey={null}
+            useUpgradeCtas={false}
+            foundingPricing={foundingPricing}
+            preferFoundingCheckout={preferFoundingCheckout}
+            defaultPlan={checkoutPlan}
+          />
+          </div>
         ) : null}
       </div>
 
@@ -238,6 +255,9 @@ export function BillingPageClient({
         polarConfigured={polarConfigured}
         currentPlanKey={currentPlan}
         useUpgradeCtas={isSubscribed}
+        foundingPricing={foundingPricing}
+        preferFoundingCheckout={false}
+        defaultPlan={checkoutPlan}
         title="Upgrade your plan"
         description={
           currentPlan
