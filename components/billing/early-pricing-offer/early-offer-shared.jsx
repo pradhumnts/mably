@@ -17,6 +17,7 @@ import {
   earlyOfferPrice,
 } from "@/lib/billing/early-offer";
 import { getEarlyOfferTheme } from "@/lib/billing/early-offer-theme";
+import { NumberOdometer } from "@/components/number-odometer";
 
 /**
  * @param {{ theme?: import("@/lib/billing/early-offer-theme").EarlyOfferTheme; className?: string; horizontal?: boolean }} props
@@ -147,8 +148,9 @@ function PlanSelectIndicator({ active, theme = "dark" }) {
 }
 
 /** @param {{ theme?: import("@/lib/billing/early-offer-theme").EarlyOfferTheme; className?: string }} props */
-export function DiscountHeroCard({ theme = "dark", className }) {
+export function DiscountHeroCard({ theme = "dark", className, animateActive = false, animateDelay = 0 }) {
   const t = getEarlyOfferTheme(theme);
+  const discountLabel = `${EARLY_OFFER_DISCOUNT_PERCENT}% OFF`;
   return (
     <div
       className={cn(
@@ -158,7 +160,18 @@ export function DiscountHeroCard({ theme = "dark", className }) {
       )}
     >
       <p className="text-[2.35rem] font-bold leading-none tracking-tight lg:text-[2.75rem]">
-        {EARLY_OFFER_DISCOUNT_PERCENT}% OFF
+        {animateActive ? (
+          <NumberOdometer
+            active={animateActive}
+            delay={animateDelay}
+            value={discountLabel}
+            startValue={0}
+            duration={1.75}
+            className="inline-flex"
+          />
+        ) : (
+          discountLabel
+        )}
       </p>
       <p className={cn("mt-2 text-sm font-semibold tracking-[0.2em]", t.discountForever)}>FOREVER</p>
     </div>
@@ -272,12 +285,23 @@ export function EarlyOfferPlanPicker({
   );
 }
 
-/** @param {{ theme?: import("@/lib/billing/early-offer-theme").EarlyOfferTheme; cardClassName?: string; className?: string }} props */
-export function DiscountHeroWithSparkles({ theme = "dark", cardClassName, className }) {
+/** @param {{ theme?: import("@/lib/billing/early-offer-theme").EarlyOfferTheme; cardClassName?: string; className?: string; animateActive?: boolean; animateDelay?: number }} props */
+export function DiscountHeroWithSparkles({
+  theme = "dark",
+  cardClassName,
+  className,
+  animateActive = false,
+  animateDelay = 0,
+}) {
   return (
     <div className={cn("flex items-center justify-center gap-2 sm:gap-3", className)}>
       <OfferSparkles theme={theme} />
-      <DiscountHeroCard theme={theme} className={cardClassName} />
+      <DiscountHeroCard
+        theme={theme}
+        className={cardClassName}
+        animateActive={animateActive}
+        animateDelay={animateDelay}
+      />
       <OfferSparkles theme={theme} />
     </div>
   );
@@ -450,8 +474,8 @@ export function EarlyOfferFooterLinks({ onNeverShow, onDismiss, theme = "dark" }
   const t = getEarlyOfferTheme(theme);
   return (
     <>
-      <p className={cn("text-xs", t.footer)}>{EARLY_OFFER_COPY.footerNote}</p>
-      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs lg:justify-start">
+      <p className={cn("text-center text-xs", t.footer)}>{EARLY_OFFER_COPY.footerNote}</p>
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs">
         <Link
           href={EARLY_OFFER_DEMO_PORTAL_HREF}
           onClick={() => onDismiss?.()}

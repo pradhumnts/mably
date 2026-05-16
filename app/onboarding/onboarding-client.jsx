@@ -176,7 +176,7 @@ export function FreelancerOnboardingClient({ initialProfile }) {
     <div className="flex min-h-screen flex-col overflow-hidden bg-background">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
       <div className="flex flex-col w-full lg:w-[48%] min-h-0 px-8 py-10 sm:px-12 sm:py-14 lg:px-20 lg:py-20 justify-between overflow-y-auto">
-        <div className="mb-10">
+        <div className="mb-0">
           <img
             src="/images/Logo-SVG.svg"
             alt="Mably"
@@ -240,10 +240,7 @@ export function FreelancerOnboardingClient({ initialProfile }) {
               <h1 className="text-3xl sm:text-4xl font-bold leading-tight tracking-tight text-foreground">
                 How should clients see you?
               </h1>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Update anything now, you can always change it later
-                in Settings.
-              </p>
+             
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 max-w-md pb-2">
                 <Avatar className="h-20 w-20 shrink-0 rounded-full border border-border bg-muted">
@@ -302,6 +299,10 @@ export function FreelancerOnboardingClient({ initialProfile }) {
                     placeholder="e.g. Brand designer"
                   />
                 </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                Update anything now, you can always change it later
+                in Settings.
+              </p>
               </div>
             </>
           ) : null}
