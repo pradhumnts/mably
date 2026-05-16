@@ -112,7 +112,7 @@ export function ChatMessageItem({
               className={cn(
                 "w-full min-w-0 overflow-hidden",
                 isOwnMessage &&
-                  "rounded-xl bg-background/95 p-1.5 text-foreground shadow-sm ring-1 ring-black/5"
+                  "rounded-xl bg-background/95 text-foreground shadow-sm ring-1 ring-black/5"
               )}
             >
               <LibraryVoiceNotePlayer
