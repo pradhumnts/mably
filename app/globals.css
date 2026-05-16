@@ -364,6 +364,7 @@
 [data-odometer-element] {
   display: inline-flex;
   align-items: center;
+  gap: 0.04em;
   font-variant-numeric: tabular-nums;
   color: inherit;
 }

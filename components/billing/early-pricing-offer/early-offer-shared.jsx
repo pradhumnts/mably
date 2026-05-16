@@ -222,7 +222,7 @@ export function EarlyOfferPlanPicker({
               type="button"
               onClick={() => onSelectPlan(plan.key)}
               className={cn(
-                "w-full rounded-xl p-[1px] text-left transition-transform active:scale-[0.99]",
+                "w-full rounded-xl p-[1px] text-left transition-transform active:scale-[0.99] cursor-pointer",
                 active ? t.planBorderActive : t.planBorderIdle
               )}
             >
