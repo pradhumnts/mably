@@ -28,7 +28,11 @@ import { AddLinkDialog } from "@/components/add-link-dialog";
 import { DeleteLibraryItemDialog } from "@/components/delete-library-item-dialog";
 import { usePortalProject } from "../../project-portal-shell";
 import { listLibraryLinks } from "@/lib/actions/project-library";
-import { inferLinkKindFromUrl, linkLogoForKind } from "@/lib/library/infer-types";
+import {
+  inferLinkKindFromUrl,
+  linkLogoForKind,
+  resolveLibraryLinkHref,
+} from "@/lib/library/infer-types";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -53,6 +57,20 @@ const getLinkIcon = (logo) => {
     </div>
   );
 };
+
+function isLibraryLinkActionTarget(target) {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest("[data-library-link-action]"));
+}
+
+function openLinkInNewTab(rawUrl) {
+  const href = resolveLibraryLinkHref(rawUrl);
+  if (!href) {
+    toast.error("Invalid link");
+    return;
+  }
+  window.open(href, "_blank", "noopener,noreferrer");
+}
 
 export default function LibraryLinks() {
   const params = useParams();
@@ -149,6 +167,15 @@ export default function LibraryLinks() {
     setDeleteTarget({ id: linkId, label });
   };
 
+  const handleLinkOpen = (link) => {
+    openLinkInNewTab(link.linkUrl);
+  };
+
+  const handleCardActivate = (link, event) => {
+    if (isLibraryLinkActionTarget(event.target)) return;
+    handleLinkOpen(link);
+  };
+
   return (
     <>
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
@@ -232,15 +259,43 @@ export default function LibraryLinks() {
                   <Card
                     key={link.id}
                     id={`library-link-${link.id}`}
-                    className="overflow-hidden p-[16px] hover:shadow-lg shadow-sm transition-shadow duration-200"
+                    role="button"
+                    tabIndex={0}
+                    className="cursor-pointer overflow-hidden p-[16px] shadow-sm transition-shadow duration-200 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`Open ${link.name} in new tab`}
+                    onClick={(event) => handleCardActivate(link, event)}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" && event.key !== " ") return;
+                      event.preventDefault();
+                      handleLinkOpen(link);
+                    }}
                   >
                     <CardContent className="p-0">
                       <div className="flex items-start gap-4">
-                        {getLinkIcon(link.logo)}
+                        <button
+                          type="button"
+                          className="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          aria-label={`Open ${link.name} in new tab`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleLinkOpen(link);
+                          }}
+                        >
+                          {getLinkIcon(link.logo)}
+                        </button>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-base mb-1">{link.name}</h3>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="truncate text-left text-base font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleLinkOpen(link);
+                              }}
+                            >
+                              {link.name}
+                            </button>
                           </div>
 
                           <div className="flex items-center gap-2 mb-2">
@@ -261,7 +316,11 @@ export default function LibraryLinks() {
                               {link.description ? (
                                 <button
                                   type="button"
-                                  onClick={() => toggleExpanded(link.id)}
+                                  data-library-link-action
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    toggleExpanded(link.id);
+                                  }}
                                   className="text-primary hover:underline focus:outline-none inline"
                                 >
                                   Show Less
@@ -276,7 +335,11 @@ export default function LibraryLinks() {
                               {link.description && link.description.length > 80 ? (
                                 <button
                                   type="button"
-                                  onClick={() => toggleExpanded(link.id)}
+                                  data-library-link-action
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    toggleExpanded(link.id);
+                                  }}
                                   className="text-primary hover:underline focus:outline-none text-sm whitespace-nowrap flex-shrink-0"
                                 >
                                   Read More
@@ -296,10 +359,12 @@ export default function LibraryLinks() {
                                 asChild
                               >
                                 <a
-                                  href={link.linkUrl}
+                                  href={resolveLibraryLinkHref(link.linkUrl) || link.linkUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
+                                  data-library-link-action
                                   aria-label="Open link in new tab"
+                                  onClick={(event) => event.stopPropagation()}
                                 >
                                   <ExternalLink className="h-4 w-4" />
                                 </a>
@@ -316,7 +381,11 @@ export default function LibraryLinks() {
                                   size="icon"
                                   className="border border-slate-200 text-destructive hover:text-destructive"
                                   aria-label="Remove link"
-                                  onClick={() => openDeleteLink(link.id, link.name)}
+                                  data-library-link-action
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openDeleteLink(link.id, link.name);
+                                  }}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>

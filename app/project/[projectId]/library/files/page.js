@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Breadcrumb,
@@ -38,6 +38,8 @@ import {
 import { formatStorageShort } from "@/lib/billing/library-storage-policy";
 import { LibraryFileDiscussion } from "@/components/library-file-discussion";
 import { fileLogoForKind, inferFileKindFromMime } from "@/lib/library/infer-types";
+import { isLibraryFilePreviewable } from "@/lib/library/file-preview";
+import { LibraryFilePreviewDialog } from "@/components/library-file-preview-dialog";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -75,6 +77,11 @@ const getFileIcon = (logo) => {
     </div>
   );
 };
+
+function isLibraryFileActionTarget(target) {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest("[data-library-file-action]"));
+}
 
 function fileApprovalBadge(needsApproval, approvalStatus, isFreelancer) {
   if (!needsApproval) return null;
@@ -120,6 +127,7 @@ export default function LibraryFiles() {
   const [downloadingId, setDownloadingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [discussionFileId, setDiscussionFileId] = useState(null);
+  const [previewFile, setPreviewFile] = useState(null);
   const [approvalBusyKey, setApprovalBusyKey] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   /**
@@ -284,6 +292,7 @@ export default function LibraryFiles() {
       uploadedAtFull: formatUploadedAtFull(row.created_at),
       description: row.description || "",
       fileId: row.id,
+      mimeType: row.mime_type || null,
       needsApproval,
       approvalStatus,
       unreadCommentCount: Number(row.unread_comment_count || 0),
@@ -338,6 +347,20 @@ export default function LibraryFiles() {
       return;
     }
     window.open(r.url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleFilePrimaryAction = (file) => {
+    if (isLibraryFilePreviewable(file.type, file.mimeType)) {
+      setPreviewFile(file);
+      return;
+    }
+    void handleDownload(file.fileId);
+  };
+
+  const handleCardActivate = (file, event) => {
+    if (isLibraryFileActionTarget(event.target)) return;
+    if (discussionFileId === file.fileId) return;
+    handleFilePrimaryAction(file);
   };
 
   const openDeleteFile = (fileId, label) => {
@@ -496,18 +519,54 @@ export default function LibraryFiles() {
                     isFreelancer
                   );
                   return (
+                  <Fragment key={file.id}>
                   <Card
-                    key={file.id}
                     id={`library-file-${file.fileId}`}
-                    className="overflow-hidden p-[16px] hover:shadow-lg shadow-sm transition-shadow duration-200"
+                    role="button"
+                    tabIndex={0}
+                    className="cursor-pointer overflow-hidden p-[16px] shadow-sm transition-shadow duration-200 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={
+                      isLibraryFilePreviewable(file.type, file.mimeType)
+                        ? `Preview ${file.name}`
+                        : `Download ${file.name}`
+                    }
+                    onClick={(event) => handleCardActivate(file, event)}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" && event.key !== " ") return;
+                      event.preventDefault();
+                      handleFilePrimaryAction(file);
+                    }}
                   >
                     <CardContent className="p-0">
                       <div className="flex items-start gap-4">
-                        {getFileIcon(file.logo)}
+                        <button
+                          type="button"
+                          className="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          aria-label={
+                            isLibraryFilePreviewable(file.type, file.mimeType)
+                              ? `Preview ${file.name}`
+                              : `Download ${file.name}`
+                          }
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleFilePrimaryAction(file);
+                          }}
+                        >
+                          {getFileIcon(file.logo)}
+                        </button>
 
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="mb-1 flex min-w-0 flex-wrap items-center gap-2">
-                            <h3 className="min-w-0 truncate font-semibold text-base">{file.name}</h3>
+                            <button
+                              type="button"
+                              className="min-w-0 truncate text-left text-base font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleFilePrimaryAction(file);
+                              }}
+                            >
+                              {file.name}
+                            </button>
                             {approvalBadge ? (
                               <Badge variant="outline" className={approvalBadge.className}>
                                 {approvalBadge.label}
@@ -541,7 +600,11 @@ export default function LibraryFiles() {
                               {file.description ? (
                                 <button
                                   type="button"
-                                  onClick={() => toggleExpanded(file.id)}
+                                  data-library-file-action
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    toggleExpanded(file.id);
+                                  }}
                                   className="text-primary hover:underline focus:outline-none inline"
                                 >
                                   Show Less
@@ -556,7 +619,11 @@ export default function LibraryFiles() {
                               {file.description && file.description.length > 80 ? (
                                 <button
                                   type="button"
-                                  onClick={() => toggleExpanded(file.id)}
+                                  data-library-file-action
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    toggleExpanded(file.id);
+                                  }}
                                   className="text-primary hover:underline focus:outline-none text-sm whitespace-nowrap flex-shrink-0"
                                 >
                                   Read More
@@ -575,8 +642,12 @@ export default function LibraryFiles() {
                                 size="icon"
                                 className="border border-slate-200 shrink-0"
                                 disabled={downloadingId === file.fileId}
+                                data-library-file-action
                                 aria-label="Download file"
-                                onClick={() => void handleDownload(file.fileId)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void handleDownload(file.fileId);
+                                }}
                               >
                                 <Download className="h-4 w-4" />
                               </Button>
@@ -595,7 +666,11 @@ export default function LibraryFiles() {
                                     ? `Open file discussion, ${file.unreadCommentCount} unread`
                                     : "Open file discussion"
                                 }
-                                onClick={() => setDiscussionFileId(file.fileId)}
+                                data-library-file-action
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setDiscussionFileId(file.fileId);
+                                }}
                               >
                                 <MessageCircle className="h-4 w-4" />
                                 {file.unreadCommentCount > 0 ? (
@@ -629,7 +704,11 @@ export default function LibraryFiles() {
                                   size="icon"
                                   className="border border-slate-200 text-destructive hover:text-destructive shrink-0"
                                   aria-label="Delete file"
-                                  onClick={() => openDeleteFile(file.fileId, file.name)}
+                                  data-library-file-action
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openDeleteFile(file.fileId, file.name);
+                                  }}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -649,7 +728,11 @@ export default function LibraryFiles() {
                             size="sm"
                             className="inline-flex items-center gap-1.5 font-semibold"
                             disabled={approvalBusyKey !== null}
-                            onClick={() => void handleSetFileApproval(file.fileId, "approved")}
+                            data-library-file-action
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleSetFileApproval(file.fileId, "approved");
+                            }}
                           >
                             <Check className="h-4 w-4" />
                             Approve
@@ -660,45 +743,49 @@ export default function LibraryFiles() {
                             variant="outline"
                             className="inline-flex items-center gap-1.5 font-semibold border-slate-300"
                             disabled={approvalBusyKey !== null}
-                            onClick={() => void handleSetFileApproval(file.fileId, "revision_requested")}
+                            data-library-file-action
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleSetFileApproval(file.fileId, "revision_requested");
+                            }}
                           >
                             <FileWarning className="h-4 w-4" />
                             Request revision
                           </Button>
                         </div>
                       ) : null}
-
-                      <LibraryFileDiscussion
-                        projectId={String(projectId)}
-                        fileId={String(file.fileId)}
-                        fileName={file.name}
-                        fileLogo={file.logo}
-                        uploadedByName={file.uploadedBy}
-                        uploadedByAvatar={file.uploadedByAvatar}
-                        uploadedAt={file.uploadedAtFull}
-                        isFreelancer={isFreelancer}
-                        open={discussionFileId === file.fileId}
-                        onOpenChange={(nextOpen) => {
-                          if (nextOpen) {
-                            setDiscussionFileId(file.fileId);
-                          } else {
-                            setDiscussionFileId((prev) =>
-                              prev === file.fileId ? null : prev
-                            );
-                            if (
-                              String(searchParams.get("discussion") || "") ===
-                              String(file.fileId)
-                            ) {
-                              router.replace(
-                                `/project/${projectId}/library/files`,
-                                { scroll: false }
-                              );
-                            }
-                          }
-                        }}
-                      />
                     </CardContent>
                   </Card>
+                  <LibraryFileDiscussion
+                    projectId={String(projectId)}
+                    fileId={String(file.fileId)}
+                    fileName={file.name}
+                    fileLogo={file.logo}
+                    uploadedByName={file.uploadedBy}
+                    uploadedByAvatar={file.uploadedByAvatar}
+                    uploadedAt={file.uploadedAtFull}
+                    isFreelancer={isFreelancer}
+                    open={discussionFileId === file.fileId}
+                    onOpenChange={(nextOpen) => {
+                      if (nextOpen) {
+                        setDiscussionFileId(file.fileId);
+                      } else {
+                        setDiscussionFileId((prev) =>
+                          prev === file.fileId ? null : prev
+                        );
+                        if (
+                          String(searchParams.get("discussion") || "") ===
+                          String(file.fileId)
+                        ) {
+                          router.replace(
+                            `/project/${projectId}/library/files`,
+                            { scroll: false }
+                          );
+                        }
+                      }
+                    }}
+                  />
+                  </Fragment>
                   );
                 })
               ) : (
@@ -752,6 +839,16 @@ export default function LibraryFiles() {
         kind="file"
         item={deleteTarget}
         onDeleted={() => void load()}
+      />
+
+      <LibraryFilePreviewDialog
+        open={Boolean(previewFile)}
+        onOpenChange={(open) => {
+          if (!open) setPreviewFile(null);
+        }}
+        projectId={String(projectId)}
+        file={previewFile}
+        onDownload={(fileId) => void handleDownload(fileId)}
       />
     </>
   );

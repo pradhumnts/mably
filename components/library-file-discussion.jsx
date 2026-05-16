@@ -302,6 +302,8 @@ export function LibraryFileDiscussion({
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent
         showCloseButton
+        onClick={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
         className={cn(
           "flex w-full max-w-lg flex-col gap-0 overflow-hidden p-0 transition-[height] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] sm:max-w-lg",
           deleteVoiceTarget ? "h-auto" : "h-[min(560px,85vh)]"

@@ -10,7 +10,12 @@ import {
   getLibraryCommentVoiceSignedUrl,
   markLibraryCommentVoiceListened,
 } from "@/lib/actions/project-library";
+import {
+  getProjectChatVoiceSignedUrl,
+  markProjectChatVoiceListened,
+} from "@/lib/actions/project-chat";
 import { DEMO_VOICE_PLAYBACK_MESSAGE } from "@/lib/library/demo-voice-note";
+import { voiceWaveformPeaksForPlayer } from "@/lib/library/normalize-voice-waveform";
 import { toast } from "sonner";
 
 function formatClock(seconds) {
@@ -27,8 +32,9 @@ const RATES = [1, 1.5, 2];
  *
  * @param {{
  *   projectId: string;
- *   fileId: string;
- *   commentId: string;
+ *   fileId?: string;
+ *   commentId?: string;
+ *   chatMessageId?: string;
  *   durationMs: number;
  *   waveform?: number[] | null;
  *   transcript?: string | null;
@@ -38,12 +44,14 @@ const RATES = [1, 1.5, 2];
  *   canDelete?: boolean;
  *   onRequestDelete?: () => void;
  *   demoPreview?: boolean;
+ *   chatLayout?: boolean;
  * }} props
  */
 export function LibraryVoiceNotePlayer({
   projectId,
-  fileId,
-  commentId,
+  fileId = "",
+  commentId = "",
+  chatMessageId = "",
   durationMs,
   waveform = null,
   transcript = null,
@@ -53,6 +61,7 @@ export function LibraryVoiceNotePlayer({
   canDelete = false,
   onRequestDelete,
   demoPreview = false,
+  chatLayout = false,
 }) {
   const audioRef = useRef(/** @type {HTMLAudioElement | null} */ (null));
   const markedRef = useRef(false);
@@ -65,12 +74,10 @@ export function LibraryVoiceNotePlayer({
   const [rateIdx, setRateIdx] = useState(0);
   const [showTranscript, setShowTranscript] = useState(false);
 
-  const peaks = useMemo(() => {
-    if (Array.isArray(waveform) && waveform.length >= 8) {
-      return waveform.map((n) => Math.max(0, Math.min(1, Number(n) || 0)));
-    }
-    return Array.from({ length: 40 }, (_, i) => 0.15 + (Math.sin(i * 0.35) + 1) * 0.2);
-  }, [waveform]);
+  const peaks = useMemo(
+    () => voiceWaveformPeaksForPlayer(waveform, chatLayout ? 24 : 40),
+    [waveform, chatLayout]
+  );
 
   const uploading = Boolean(uploadState);
   const uploadPercent = uploadState?.percent ?? 0;
@@ -81,22 +88,26 @@ export function LibraryVoiceNotePlayer({
       ? Math.min(1, Math.max(0, currentSec / durationSec))
       : 0;
 
+  const isChat = Boolean(chatMessageId);
+
   const loadUrl = useCallback(async () => {
     if (localBlob || demoPreview) return;
     setLoading(true);
     setLoadErr(null);
-    const r = await getLibraryCommentVoiceSignedUrl(
-      String(projectId),
-      String(fileId),
-      String(commentId)
-    );
+    const r = isChat
+      ? await getProjectChatVoiceSignedUrl(String(projectId), String(chatMessageId))
+      : await getLibraryCommentVoiceSignedUrl(
+          String(projectId),
+          String(fileId),
+          String(commentId)
+        );
     setLoading(false);
     if (!r.ok || !r.url) {
       setLoadErr(r.error || "Could not load audio");
       return;
     }
     setSrc(r.url);
-  }, [projectId, fileId, commentId, localBlob, demoPreview]);
+  }, [projectId, fileId, commentId, chatMessageId, isChat, localBlob, demoPreview]);
 
   useEffect(() => {
     if (demoPreview) {
@@ -129,7 +140,11 @@ export function LibraryVoiceNotePlayer({
       const dur = a.duration || durationSec;
       if (dur > 0 && a.currentTime / dur >= 0.8 && !markedRef.current) {
         markedRef.current = true;
-        void markLibraryCommentVoiceListened(String(projectId), String(fileId), String(commentId));
+        if (isChat) {
+          void markProjectChatVoiceListened(String(projectId), String(chatMessageId));
+        } else {
+          void markLibraryCommentVoiceListened(String(projectId), String(fileId), String(commentId));
+        }
       }
     };
     const onPlay = () => setPlaying(true);
@@ -150,7 +165,7 @@ export function LibraryVoiceNotePlayer({
       a.removeEventListener("pause", onPause);
       a.removeEventListener("ended", onEnded);
     };
-  }, [src, projectId, fileId, commentId, durationSec]);
+  }, [src, projectId, fileId, commentId, chatMessageId, isChat, durationSec]);
 
   useEffect(() => {
     const a = audioRef.current;
@@ -206,7 +221,10 @@ export function LibraryVoiceNotePlayer({
       <audio ref={audioRef} src={src || undefined} preload="metadata" className="hidden" />
       <div
         className={cn(
-          "flex items-center gap-2 rounded-xl border border-border/70 bg-muted/40 px-2 py-1.5",
+          "items-center rounded-xl border border-border/70 bg-muted/40 py-1.5",
+          chatLayout
+            ? "grid w-full grid-cols-[2.25rem_minmax(0,1fr)_2.25rem_1.75rem_2rem] gap-x-0.5 overflow-hidden px-1.5"
+            : "flex gap-2 px-2",
           listened && "opacity-90"
         )}
       >
@@ -214,12 +232,16 @@ export function LibraryVoiceNotePlayer({
           <LibraryVoiceUploadProgressButton
             percent={uploadPercent}
             phase={uploadState?.phase}
+            className={chatLayout ? "col-start-1 row-start-1" : undefined}
           />
         ) : (
           <Button
             type="button"
             size="icon"
-            className="h-9 w-9 shrink-0 rounded-full bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+            className={cn(
+              "h-9 w-9 shrink-0 rounded-full bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
+              chatLayout && "col-start-1 row-start-1"
+            )}
             disabled={demoPreview ? loading : loading || !src}
             onClick={() => togglePlay()}
             aria-label={playing ? "Pause" : "Play"}
@@ -234,15 +256,29 @@ export function LibraryVoiceNotePlayer({
           </Button>
         )}
 
-        <LibraryVoiceWaveformBars
-          peaks={peaks}
-          progress={progress}
-          interactive={!uploading}
-          onSeek={onSeek}
-          className="h-9"
-        />
+        <div
+          className={cn(
+            "min-w-0 overflow-hidden",
+            chatLayout ? "col-start-2 row-start-1 px-0.5" : "contents"
+          )}
+        >
+          <LibraryVoiceWaveformBars
+            peaks={peaks}
+            progress={progress}
+            interactive={!uploading}
+            onSeek={onSeek}
+            compact={chatLayout}
+            fluid={chatLayout}
+            className="h-9"
+          />
+        </div>
 
-        <span className="shrink-0 text-xs font-medium tabular-nums text-foreground/90">
+        <span
+          className={cn(
+            "shrink-0 text-xs font-medium tabular-nums text-foreground/90",
+            chatLayout && "col-start-3 row-start-1 justify-self-center text-center"
+          )}
+        >
           {uploading
             ? uploadState?.phase === "saving"
               ? "Saving…"
@@ -252,7 +288,7 @@ export function LibraryVoiceNotePlayer({
               : formatClock(durationSec)}
         </span>
 
-        {hasTranscript ? (
+        {hasTranscript && !chatLayout ? (
           <Button
             type="button"
             variant="ghost"
@@ -274,7 +310,10 @@ export function LibraryVoiceNotePlayer({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-8 shrink-0 px-2 text-xs font-semibold tabular-nums text-muted-foreground hover:text-foreground"
+            className={cn(
+              "h-8 shrink-0 text-xs font-semibold tabular-nums text-muted-foreground hover:text-foreground",
+              chatLayout ? "col-start-4 row-start-1 w-8 justify-self-center px-0" : "px-2"
+            )}
             onClick={() => setRateIdx((i) => (i + 1) % RATES.length)}
             title="Playback speed"
           >
@@ -287,7 +326,10 @@ export function LibraryVoiceNotePlayer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            className={cn(
+              "h-8 w-8 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
+              chatLayout && "col-start-5 row-start-1 justify-self-center"
+            )}
             onClick={() => {
               audioRef.current?.pause();
               onRequestDelete?.();

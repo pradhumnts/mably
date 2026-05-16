@@ -4,10 +4,13 @@ import { cn } from "@/lib/utils";
 import { ChatMessageItem } from "@/components/chat-message";
 import { useChatScroll } from "@/hooks/use-chat-scroll";
 import { useProjectMessages } from "@/hooks/use-project-messages";
+import { useLibraryVoiceComposerState } from "@/components/library-voice-composer";
+import { DeleteChatVoiceMessageDialog } from "@/components/delete-chat-voice-message-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isDemoProjectId } from "@/lib/data/demo-project";
 
 const PORTAL_CHAT_WALLPAPER_STYLE = {
   backgroundImage: "url(/images/chat-bg.webp)",
@@ -30,18 +33,35 @@ export function RealtimeChat({
   disabled = false,
 }) {
   const { containerRef, scrollToBottom } = useChatScroll();
+  const isDemoChat = isDemoProjectId(String(projectId));
 
-  const { messages, sendMessage, isConnected } = useProjectMessages({
-    projectId,
-    conversationId,
-    currentUserId,
-    initialMessages,
-    onRemoteMessage,
-    senderDisplayName,
-    selfAvatarUrl,
-  });
+  const { messages, sendMessage, sendVoiceMessage, removeMessage, replaceMessage, isConnected } =
+    useProjectMessages({
+      projectId,
+      conversationId,
+      currentUserId,
+      initialMessages,
+      onRemoteMessage,
+      senderDisplayName,
+      selfAvatarUrl,
+    });
 
   const [newMessage, setNewMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  /** @type {[null | { blob: Blob; waveform: number[] | null; durationMs: number }, React.Dispatch<any>]} */
+  const [pendingVoice, setPendingVoice] = useState(null);
+  /** @type {[null | { messageId: string; durationMs: number; hasMessageText: boolean }, React.Dispatch<any>]} */
+  const [deleteVoiceTarget, setDeleteVoiceTarget] = useState(null);
+
+  const voiceComposer = useLibraryVoiceComposerState({
+    disabled: disabled || sending || isDemoChat,
+    pendingVoice,
+    onRecorded: setPendingVoice,
+    onClear: () => setPendingVoice(null),
+    compact: true,
+    suppressPreview: false,
+    previewDisabled: sending,
+  });
 
   const sortedMessages = useMemo(() => {
     return [...messages].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
@@ -49,7 +69,7 @@ export function RealtimeChat({
 
   useEffect(() => {
     scrollToBottom();
-  }, [sortedMessages, scrollToBottom]);
+  }, [sortedMessages, scrollToBottom, pendingVoice, voiceComposer.recording]);
 
   const avatarFor = useCallback(
     (message, isOwn) => {
@@ -62,26 +82,77 @@ export function RealtimeChat({
     [clientAvatar, freelancerAvatar, userRole]
   );
 
-  const handleSendMessage = useCallback(
-    async (e) => {
-      e.preventDefault();
-      const text = newMessage.trim();
-      if (!text || disabled || !conversationId || !isConnected) return;
-      const draft = newMessage;
-      setNewMessage("");
-      const ok = await sendMessage(text);
-      if (!ok) {
-        setNewMessage(draft);
-      }
-    },
-    [newMessage, disabled, conversationId, isConnected, sendMessage]
+  const canSend = Boolean(
+    conversationId &&
+      isConnected &&
+      !disabled &&
+      !sending &&
+      !voiceComposer.recording &&
+      !voiceComposer.processing &&
+      (newMessage.trim() || pendingVoice)
   );
 
-  const canSend = Boolean(conversationId && isConnected && !disabled);
+  const handleSend = useCallback(
+    async (e) => {
+      e?.preventDefault?.();
+      const text = newMessage.trim();
+      const voice = pendingVoice;
+      if ((!text && !voice) || !canSend) return;
+
+      setSending(true);
+      const draftText = newMessage;
+      setNewMessage("");
+      setPendingVoice(null);
+
+      let ok;
+      if (voice) {
+        ok = await sendVoiceMessage({
+          blob: voice.blob,
+          waveform: voice.waveform,
+          durationMs: voice.durationMs,
+          body: text,
+          mimeType: voice.blob.type,
+        });
+      } else {
+        ok = await sendMessage(text);
+      }
+
+      setSending(false);
+      if (!ok) {
+        setNewMessage(draftText);
+        if (voice) setPendingVoice(voice);
+      }
+    },
+    [newMessage, pendingVoice, canSend, sendMessage, sendVoiceMessage]
+  );
+
+  const showSendButton = Boolean(newMessage.trim() || pendingVoice) && canSend;
+  const inputDisabled =
+    !conversationId || !isConnected || disabled || sending || voiceComposer.recording;
+
+  const canModerateVoice = userRole === "freelancer";
 
   return (
     <div className="flex min-h-0 h-full w-full flex-col text-foreground antialiased">
-      {/* Full-bleed wallpaper under the scroll layer so p-4 gutters show texture, not Card bg or page behind */}
+      <DeleteChatVoiceMessageDialog
+        open={Boolean(deleteVoiceTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteVoiceTarget(null);
+        }}
+        projectId={String(projectId)}
+        messageId={deleteVoiceTarget?.messageId ?? ""}
+        durationMs={deleteVoiceTarget?.durationMs ?? null}
+        hasMessageText={Boolean(deleteVoiceTarget?.hasMessageText)}
+        onDeleted={(result) => {
+          if (result.deletedEntireMessage) {
+            removeMessage(result.messageId);
+          } else if (result.message) {
+            replaceMessage(result.messageId, result.message);
+          }
+          setDeleteVoiceTarget(null);
+        }}
+      />
+
       <div className="relative min-h-0 flex-1">
         <div
           aria-hidden
@@ -115,6 +186,10 @@ export function RealtimeChat({
                     isOwnMessage={isOwnMessage}
                     showHeader={showHeader}
                     avatar={avatarFor(message, isOwnMessage)}
+                    projectId={projectId}
+                    currentUserId={currentUserId}
+                    canModerateVoice={canModerateVoice}
+                    onRequestDeleteVoice={setDeleteVoiceTarget}
                   />
                 </div>
               );
@@ -124,29 +199,51 @@ export function RealtimeChat({
       </div>
 
       <form
-        onSubmit={(e) => void handleSendMessage(e)}
-        className="flex w-full gap-2 border-t bg-white/80 backdrop-blur-sm border-border p-4"
+        onSubmit={(e) => void handleSend(e)}
+        className="flex w-full flex-col gap-2 border-t bg-white/80 backdrop-blur-sm border-border p-4"
       >
-        <Input
-          className={cn(
-            "rounded-full bg-background text-sm transition-all duration-300 border-zinc-200",
-            canSend && newMessage.trim() ? "w-[calc(100%-48px)]" : "w-full"
+        {voiceComposer.panelVisible ? voiceComposer.panel : null}
+        <div className="flex w-full items-center gap-2">
+          {!isDemoChat && !pendingVoice && !voiceComposer.recording ? (
+            voiceComposer.micButton
+          ) : (
+            <span className="h-9 w-9 shrink-0" aria-hidden />
           )}
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder={canSend ? "Message" : "Connecting…"}
-          disabled={!canSend}
-        />
-        {canSend && newMessage.trim() ? (
+          <Input
+            className="min-w-0 flex-1 rounded-full border-zinc-200 bg-background text-sm"
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder={
+              isDemoChat
+                ? "Demo chat — text only"
+                : inputDisabled
+                  ? "Connecting…"
+                  : "Message"
+            }
+            disabled={inputDisabled || isDemoChat}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (canSend) void handleSend(e);
+              }
+            }}
+          />
           <Button
             variant="outline"
-            className="aspect-square rounded-full animate-in fade-in slide-in-from-right-4 duration-300"
             type="submit"
+            disabled={!showSendButton}
+            aria-hidden={!showSendButton}
+            className={cn(
+              "h-9 w-9 shrink-0 rounded-full p-0 transition-[opacity,transform] duration-200 ease-out",
+              showSendButton
+                ? "pointer-events-auto scale-100 opacity-100"
+                : "pointer-events-none scale-95 opacity-0"
+            )}
           >
             <Send className="size-4" />
           </Button>
-        ) : null}
+        </div>
       </form>
     </div>
   );
