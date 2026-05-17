@@ -18,6 +18,10 @@ import {
   EARLY_OFFER_PLANS,
   earlyOfferPrice,
 } from "@/lib/billing/early-offer";
+import {
+  GROWTH_LIBRARY_MAX_FILE_LABEL,
+  GROWTH_LIBRARY_TOTAL_LABEL,
+} from "@/lib/billing/library-storage-policy";
 import { startPolarCheckout } from "@/lib/client/start-polar-checkout";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +40,7 @@ export const POLAR_PLAN_STARTER_FEATURES = [
 export const POLAR_PLAN_GROWTH_FEATURES = [
   "Everything in Starter",
   "Unlimited projects",
-  "50 GB storage · up to 2 GB per file",
+  `${GROWTH_LIBRARY_TOTAL_LABEL} storage · up to ${GROWTH_LIBRARY_MAX_FILE_LABEL} per file`,
   "Custom domain",
   "Hide Powered by tag",
   "Priority support",
