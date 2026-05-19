@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,14 +9,34 @@ import { Field, FieldLabel, FieldDescription } from "@/components/ui/field";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { PolarPlanPickerDialog } from "@/components/billing/polar-plan-picker-dialog";
 import { Copy, Send } from "lucide-react";
 import { toast } from "sonner";
+import {
+  hasSeenFounderWelcome,
+  queueFounderWelcomeAfterFirstProject,
+} from "@/lib/founder/founder-welcome";
 import { createProject, updateProjectInviteAndResend } from "@/lib/actions/projects";
 
+/**
+ * @param {{
+ *   open: boolean;
+ *   onOpenChange: (open: boolean) => void;
+ *   formData: object;
+ *   updateFormData: (data: object) => void;
+ *   clients?: object[];
+ *   wizardProjectId?: string | null;
+ *   onWizardProjectCreated?: (id: string) => void;
+ *   createProjectBlockReason?: "no_subscription" | "starter_limit" | null;
+ *   polarConfigured?: boolean;
+ *   foundingPricing?: object | null;
+ *   currentPlanKey?: string | null;
+ * }} props
+ */
 export function CreateProjectStep5({
   open,
   onOpenChange,
@@ -27,12 +46,13 @@ export function CreateProjectStep5({
   wizardProjectId = null,
   onWizardProjectCreated,
   createProjectBlockReason = null,
+  polarConfigured = false,
+  foundingPricing = null,
+  currentPlanKey = null,
 }) {
   const router = useRouter();
-  /** Invite form vs paywall (no subscription or Starter project cap). */
-  const [subView, setSubView] = useState("invite");
-  /** Which paywall to show when `subView === "blocked"` (also set from server action errors). */
-  const [blockedKind, setBlockedKind] = useState(null);
+  const [planPickerOpen, setPlanPickerOpen] = useState(false);
+  const [paywallKind, setPaywallKind] = useState(null);
   const [clientEmail, setClientEmail] = useState(formData.clientEmail || "");
   const [inviteMessage, setInviteMessage] = useState(
     formData.inviteMessage ||
@@ -44,6 +64,12 @@ export function CreateProjectStep5({
   const closedDialogWithProjectRef = useRef(false);
 
   const createdProjectId = wizardProjectId;
+
+  const openPlanPicker = (kind) => {
+    setPaywallKind(kind);
+    onOpenChange(false);
+    setPlanPickerOpen(true);
+  };
 
   useEffect(() => {
     if (!open) {
@@ -60,13 +86,6 @@ export function CreateProjectStep5({
       setRightSlot("create");
     }
   }, [open, wizardProjectId]);
-
-  useEffect(() => {
-    if (open) {
-      setSubView("invite");
-      setBlockedKind(null);
-    }
-  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -98,8 +117,7 @@ export function CreateProjectStep5({
     e.preventDefault();
 
     if (!createdProjectId && createProjectBlockReason) {
-      setBlockedKind(createProjectBlockReason);
-      setSubView("blocked");
+      openPlanPicker(createProjectBlockReason);
       return;
     }
 
@@ -126,21 +144,40 @@ export function CreateProjectStep5({
 
     if (!result.ok) {
       if (result.code === "NO_ACTIVE_SUBSCRIPTION") {
-        setBlockedKind("no_subscription");
-        setSubView("blocked");
+        openPlanPicker("no_subscription");
         return;
       }
       if (result.code === "STARTER_ACTIVE_PROJECT_LIMIT") {
-        setBlockedKind("starter_limit");
-        setSubView("blocked");
+        openPlanPicker("starter_limit");
         return;
       }
       toast.error(result.error || "Could not save project");
       return;
     }
 
-    if (!createdProjectId && result.id && onWizardProjectCreated) {
+    const wasFirstCreate = !createdProjectId;
+
+    if (wasFirstCreate && result.id && onWizardProjectCreated) {
       onWizardProjectCreated(result.id);
+    }
+
+    if (wasFirstCreate) {
+      if (
+        result.isFirstProject &&
+        result.inviteSent &&
+        !hasSeenFounderWelcome()
+      ) {
+        queueFounderWelcomeAfterFirstProject();
+      }
+      toast.success("Project created", {
+        description: result.inviteSent
+          ? "Your client invite is on its way."
+          : "You can copy the portal link or open your project list.",
+      });
+      onOpenChange(false);
+      router.push("/projects");
+      router.refresh();
+      return;
     }
 
     setRightSlot("afterSave");
@@ -161,59 +198,28 @@ export function CreateProjectStep5({
     router.refresh();
   };
 
-  const paywallKind = blockedKind ?? createProjectBlockReason;
+  const blockedKind = paywallKind ?? createProjectBlockReason;
+  const isStarterLimit = blockedKind === "starter_limit";
+  const planPickerTitle = isStarterLimit ? "Upgrade to Growth" : "Choose your plan";
+  const planPickerDescription = isStarterLimit
+    ? "Your Starter plan includes one active project. Growth unlocks unlimited active projects and more storage."
+    : "Subscribe to create projects and invite clients. Pick Starter or Growth — checkout opens in Polar.";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-white">
-        <DialogHeader>
-          <div className="space-y-2">
-            <p className="text-sm text-primary font-semibold uppercase">Step 5 of 5</p>
-            <DialogTitle className="text-2xl font-bold">
-              {subView === "blocked"
-                ? paywallKind === "starter_limit"
-                  ? "Upgrade to Growth"
-                  : "Subscribe to continue"
-                : "Invite & Launch"}
-            </DialogTitle>
-            {subView === "blocked" && paywallKind === "starter_limit" ? (
-              <DialogDescription className="text-left">
-                Your Starter plan includes one active project. Growth includes unlimited active
-                projects (and more storage) for a simple step up when you outgrow Starter.
-              </DialogDescription>
-            ) : subView === "blocked" ? (
-              <DialogDescription className="text-left">
-                Creating a project requires an active Mably subscription. Open Subscription settings
-                to choose Starter or Growth — either plan unlocks creating projects.
-              </DialogDescription>
-            ) : (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl bg-white">
+          <DialogHeader>
+            <div className="space-y-2">
+              <p className="text-sm text-primary font-semibold uppercase">Step 5 of 5</p>
+              <DialogTitle className="text-2xl font-bold">Invite & Launch</DialogTitle>
               <p className="text-muted-foreground text-sm">
                 Save your project and share the client portal link. If you close this dialog and
                 open it again, we update the same project — no duplicates.
               </p>
-            )}
-          </div>
-        </DialogHeader>
+            </div>
+          </DialogHeader>
 
-        {subView === "blocked" ? (
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setSubView("invite");
-                setBlockedKind(null);
-              }}
-            >
-              Back to invite
-            </Button>
-            <Button type="button" asChild>
-              <Link href="/settings?tab=subscription">Open Subscription settings</Link>
-            </Button>
-          </div>
-        ) : null}
-
-        {subView === "invite" ? (
           <form onSubmit={handleSendInvite} className="space-y-6 pt-2">
             <div className="space-y-4">
               <Field>
@@ -244,16 +250,27 @@ export function CreateProjectStep5({
               </Field>
 
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between sm:flex-wrap pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCopyLink}
-                  className="gap-2"
-                  disabled={!createdProjectId}
-                >
-                  <Copy className="h-4 w-4" />
-                  Copy project link
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleCopyLink}
+                        className="gap-2"
+                        disabled={!createdProjectId}
+                      >
+                        <Copy className="h-4 w-4" />
+                        Copy project link
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!createdProjectId ? (
+                    <TooltipContent side="top">
+                      Create and send the invite first.
+                    </TooltipContent>
+                  ) : null}
+                </Tooltip>
                 {rightSlot === "afterSave" ? (
                   <Button
                     type="button"
@@ -276,8 +293,20 @@ export function CreateProjectStep5({
               </div>
             </div>
           </form>
-        ) : null}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <PolarPlanPickerDialog
+        open={planPickerOpen}
+        onOpenChange={setPlanPickerOpen}
+        polarConfigured={polarConfigured}
+        currentPlanKey={currentPlanKey}
+        useUpgradeCtas={isStarterLimit}
+        foundingPricing={foundingPricing}
+        defaultPlan={isStarterLimit ? "growth" : null}
+        title={planPickerTitle}
+        description={planPickerDescription}
+      />
+    </>
   );
 }

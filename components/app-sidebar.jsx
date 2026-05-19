@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ClipboardList, Users, Settings } from "lucide-react";
+import { ClipboardList, Home, Users, Settings } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { NavUser } from "@/components/nav-user";
@@ -17,6 +17,14 @@ import { NavMain } from "./nav-main";
 
 const navData = {
   navGeneral: [
+    {
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: Home,
+      isActive: false,
+      disabled: true,
+      comingSoon: true,
+    },
     {
       title: "Projects",
       url: "/projects",
@@ -70,7 +78,9 @@ export function AppSidebar({ user, ...props }) {
   // Update active state based on current pathname
   const navGeneralWithActive = navData.navGeneral.map((item) => ({
     ...item,
-    isActive: pathname === item.url || pathname.startsWith(item.url + '/')
+    isActive: item.disabled
+      ? false
+      : pathname === item.url || pathname.startsWith(item.url + "/"),
   }));
   
   const navOtherWithActive = navData.navOther.map((item) => ({

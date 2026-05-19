@@ -46,6 +46,9 @@ export function CreateProjectPageClient({
   initialClients,
   initialClientId = "",
   createProjectBlockReason = null,
+  polarConfigured = false,
+  foundingPricing = null,
+  currentPlanKey = null,
 }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [clients, setClients] = useState(initialClients ?? []);
@@ -164,10 +167,10 @@ export function CreateProjectPageClient({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-[100vh] max-w-[1600px] mx-auto p-[24px] gap-[24px]">
+    <div className="flex flex-col lg:flex-row h-[100vh] max-w-[1600px] mx-auto p-[24px] pt-4 gap-[24px] sm:pt-5">
       {/* Left Side - Timeline & Steps (Fixed, Non-scrolling) */}
       <div
-        className="relative w-full lg:w-[50%] h-auto lg:h-full bg-cover bg-center p-[32px] sm:p-8 lg:p-[80px] gap-[60px] flex flex-col justify-between rounded-3xl overflow-hidden"
+        className="relative w-full lg:w-[50%] h-auto lg:h-full bg-cover bg-center px-[32px] pb-[32px] pt-6 sm:px-8 sm:pb-8 sm:pt-7 lg:px-[80px] lg:pb-[80px] lg:pt-12 gap-[60px] flex flex-col justify-between rounded-3xl overflow-hidden"
         style={{
           backgroundImage: "url('/images/form-background.webp')",
         }}
@@ -181,7 +184,7 @@ export function CreateProjectPageClient({
           <Button
             variant="text"
             size="lg"
-            className="inline-flex items-center gap-2 px-0 h-auto mb-[8px] hover:opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-2 px-0 h-auto mb-[16px] hover:opacity-50 cursor-pointer"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -209,53 +212,39 @@ export function CreateProjectPageClient({
           </p>
 
           {/* Timeline Steps */}
-          <div className="space-y-6 lg:space-y-[60px]">
+          <div className="space-y-4 lg:space-y-10">
             {steps.map((step, index) => {
               const Icon = step.icon;
               const isActive = currentStep === step.number;
               const isCompleted = currentStep > step.number;
-              const isUpcoming = currentStep < step.number;
-
               return (
-                <div key={step.number} className="flex gap-3 sm:gap-4 relative">
-                  {/* Vertical Line */}
-                  {index < steps.length - 1 && (
+                <div key={step.number} className="flex gap-3 sm:gap-4">
+                  <div className="relative flex w-9 shrink-0 flex-col items-center self-stretch sm:w-11">
+                    {index < steps.length - 1 && (
+                      <div
+                        aria-hidden
+                        className={`absolute left-1/2 top-9 z-0 w-px -translate-x-1/2 border-l-2 border-dashed sm:top-11 -bottom-4 lg:-bottom-10 ${
+                          isCompleted ? "border-primary" : "border-zinc-400"
+                        }`}
+                      />
+                    )}
                     <div
-                      className={`
-                        absolute left-5 sm:left-6 top-12 sm:top-14 w-[.5px] h-[calc(100%+12px)] sm:h-[calc(100%+16px)]
-                        border-l border-dashed
-                        ${isCompleted ? "border-primary" : "border-zinc-400"}
-                        bg-transparent
-                      `}
-                      style={{
-                        borderLeftWidth: "2px",
-                      }}
-                    />
-                  )}
-
-                  {/* Icon Circle */}
-                  <div
-                    className={`relative z-10 flex items-center justify-center rounded-full h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0 transition-all duration-300 ${
-                      isActive
-                        ? "bg-primary shadow-lg text-primary-foreground scale-100"
-                        : isCompleted
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                  </div>
-
-                  {/* Step Content */}
-                  <div className="flex-1 pt-0.5 sm:pt-1">
-                    <h3
-                      className={`font-semibold text-lg sm:text-lg mb-0.5 sm:mb-1 transition-colors`}
+                      className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300 sm:h-11 sm:w-11 ${
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-lg"
+                          : isCompleted
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                      }`}
                     >
+                      <Icon className="h-[15px] w-[15px] sm:h-[18px] sm:w-[18px]" />
+                    </div>
+                  </div>
+                  <div className="min-h-9 flex-1 sm:min-h-[64px]">
+                    <h3 className="mb-0.5 text-lg font-semibold sm:mb-1">
                       {step.title}
                     </h3>
-                    <p
-                      className={`text-xs sm:text-sm transition-colors text-muted-foreground`}
-                    >
+                    <p className="text-xs text-muted-foreground sm:text-sm">
                       {step.description}
                     </p>
                   </div>
@@ -266,7 +255,7 @@ export function CreateProjectPageClient({
         </div>
 
         {/* Info Box at Bottom */}
-        <div
+        {/* <div
           className="relative z-10 rounded-lg p-[16px] size-fit mx-auto"
           style={{ backgroundColor: "rgba(255,255,255,0.6)" }}
         >
@@ -282,12 +271,12 @@ export function CreateProjectPageClient({
               </p>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Right Side - Form Content (Scrollable) */}
       <div className="w-full lg:w-[50%] bg-background flex justify-center overflow-y-auto overflow-x-hidden rounded-3xl">
-        <div className="w-full max-w-xl pt-[80px] sm:p-8 lg:py-[80px] pb-[40px]">
+        <div className="w-full max-w-xl pt-10 sm:p-8 sm:pt-10 lg:pt-12 lg:pb-[80px] pb-[40px]">
           {renderStep()}
         </div>
       </div>
@@ -302,6 +291,9 @@ export function CreateProjectPageClient({
         wizardProjectId={wizardProjectId}
         onWizardProjectCreated={setWizardProjectId}
         createProjectBlockReason={createProjectBlockReason}
+        polarConfigured={polarConfigured}
+        foundingPricing={foundingPricing}
+        currentPlanKey={currentPlanKey}
       />
     </div>
   );

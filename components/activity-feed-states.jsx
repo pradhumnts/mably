@@ -150,7 +150,7 @@ export function ActivityEmptyFeedCard({ project, projectId }) {
             </div>
             <p className="text-base font-semibold text-foreground mb-1">Your timeline is ready</p>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Nothing has been logged yet. The entries below are the kinds of updates that will show
+              The entries below are the kinds of updates that will show
               up automatically—no extra work required.
             </p>
           </div>

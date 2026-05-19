@@ -5,6 +5,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -14,10 +15,13 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function NavMain({ items, label }) {
+  const { state } = useSidebar();
   return (
     <SidebarGroup>
       <SidebarGroupLabel>
@@ -32,9 +36,11 @@ export function NavMain({ items, label }) {
             if (item.alwaysOpen) {
               return (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton tooltip={item.title} isActive={item.isActive}>
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
+                  <SidebarMenuButton asChild tooltip={item.title} isActive={item.isActive}>
+                    <a href={item.url}>
+                      {item.icon && <item.icon />}
+                      <span>{item.title}</span>
+                    </a>
                   </SidebarMenuButton>
                   <SidebarMenuSub>
                     {item.items.map((subItem) => (
@@ -79,6 +85,37 @@ export function NavMain({ items, label }) {
             );
           }
           
+          // Disabled / coming-soon item (no navigation)
+          if (item.disabled) {
+            const tooltip = item.comingSoon ? `${item.title} · Coming soon` : item.title;
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  type="button"
+                  aria-disabled="true"
+                  tabIndex={-1}
+                  onClick={(e) => e.preventDefault()}
+                  tooltip={tooltip}
+                  className="cursor-default opacity-80 hover:bg-transparent hover:text-sidebar-foreground/80"
+                >
+                  {item.icon && <item.icon />}
+                  <span>{item.title}</span>
+                  {item.comingSoon && state === "expanded" ? (
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "ml-auto h-5 shrink-0 border-0 px-1.5 py-0 text-[10px] font-medium",
+                        "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      Coming soon
+                    </Badge>
+                  ) : null}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          }
+
           // Simple menu item without collapsible
           return (
             <SidebarMenuItem key={item.title}>

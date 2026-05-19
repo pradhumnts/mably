@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { ClientDetailsDialog } from "@/components/client-details-dialog";
 import { AddClientDialog } from "@/components/add-client-dialog";
 import { DeleteClientDialog } from "@/components/delete-client-dialog";
@@ -230,7 +231,17 @@ export function ClientsPageClient({ initialClients }) {
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex flex-col">
-                            <span className="font-medium">{client.name}</span>
+                            <span className="font-medium flex items-center gap-2">
+                              {client.name}
+                              {client.isSample ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="h-5 px-1.5 text-[10px] font-medium text-muted-foreground"
+                                >
+                                  Sample
+                                </Badge>
+                              ) : null}
+                            </span>
                             <span className="text-sm text-muted-foreground">
                               {client.email}
                             </span>
@@ -257,15 +268,17 @@ export function ClientsPageClient({ initialClients }) {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="border border-slate-200">
-                              <DropdownMenuItem asChild>
-                                <Link
-                                  href={`/projects/new?clientId=${encodeURIComponent(client.id)}`}
-                                  className="cursor-pointer"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  Start New Project
-                                </Link>
-                              </DropdownMenuItem>
+                              {!client.isSample ? (
+                                <DropdownMenuItem asChild>
+                                  <Link
+                                    href={`/projects/new?clientId=${encodeURIComponent(client.id)}`}
+                                    className="cursor-pointer"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    Start New Project
+                                  </Link>
+                                </DropdownMenuItem>
+                              ) : null}
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -372,6 +385,7 @@ export function ClientsPageClient({ initialClients }) {
         client={clientPendingDeletion}
         onDeleted={handleClientDeleted}
       />
+
     </>
   );
 }

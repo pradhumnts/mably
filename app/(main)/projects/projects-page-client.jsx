@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { FounderWelcomeDialog } from "@/components/founder-welcome-dialog";
+import { consumeFounderWelcomePending } from "@/lib/founder/founder-welcome";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -60,9 +62,21 @@ function ProjectsEmptyState() {
 
 export function ProjectsPageClient({ initialProjects }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [founderWelcomeOpen, setFounderWelcomeOpen] = useState(false);
+
+  useEffect(() => {
+    if (consumeFounderWelcomePending()) {
+      setFounderWelcomeOpen(true);
+    }
+  }, []);
 
   return (
     <>
+      <FounderWelcomeDialog
+        open={founderWelcomeOpen}
+        onOpenChange={setFounderWelcomeOpen}
+      />
+
       <DeleteProjectDialog
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => {

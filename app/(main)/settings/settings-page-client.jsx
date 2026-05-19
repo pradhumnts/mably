@@ -351,7 +351,7 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
                       <BillingPageClient
                         polarConfigured={billing.polarConfigured}
                         initialSubscription={billing.initialSubscription}
-                        canReconcile={billing.canReconcile}
+                        autoSyncFromPolar={billing.autoSyncFromPolar}
                         foundingPricing={billing.foundingPricing}
                         preferFoundingCheckout={billing.preferFoundingCheckout}
                         checkoutPlan={billing.checkoutPlan}

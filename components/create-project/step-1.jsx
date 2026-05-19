@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Field, FieldGroup, FieldLabel, FieldDescription } from "@/components/ui/field";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+  FieldError,
+} from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -41,12 +47,24 @@ export function CreateProjectStep1({
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
+  const [clientError, setClientError] = useState("");
 
   const clientId = formData.clientId || "";
   const selectedClient = clients.find((c) => String(c.id) === String(clientId));
 
+  useEffect(() => {
+    if (clientId) setClientError("");
+  }, [clientId]);
+
   const handleNext = (e) => {
     e.preventDefault();
+
+    if (!String(clientId).trim()) {
+      setClientError("Please choose a client for this project.");
+      return;
+    }
+
+    setClientError("");
     updateFormData({
       projectName,
       startDate,
@@ -60,13 +78,16 @@ export function CreateProjectStep1({
   const handleClientSelect = (value) => {
     if (value === "new") {
       setAddClientDialogOpen(true);
-    } else {
-      updateFormData({ clientId: value });
+      return;
     }
+    setClientError("");
+    updateFormData({ clientId: value });
   };
 
   const handleClientSaved = (payload) => {
     if (payload?.id) {
+      setClientError("");
+      updateFormData({ clientId: payload.id });
       onClientCreated?.({
         id: payload.id,
         name: payload.name,
@@ -95,7 +116,6 @@ export function CreateProjectStep1({
             <h1 className="text-2xl sm:text-3xl font-bold">Project & Client Details</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
               Set up the core details of your project and assign it to a client.
-              You can update everything later.
             </p>
           </div>
 
@@ -210,19 +230,24 @@ export function CreateProjectStep1({
                 rows={4}
                 className="resize-none"
               />
-              <FieldDescription>
-                This helps you and your client stay aligned on the scope.
-              </FieldDescription>
+             
             </Field>
 
             {/* Client Selection */}
-            <Field>
+            <Field data-invalid={clientError ? true : undefined}>
               <FieldLabel htmlFor="client">
-                Who you're working with?
+                Who you&apos;re working with{" "}
               </FieldLabel>
-              <Select value={clientId} onValueChange={handleClientSelect}>
-                <SelectTrigger id="client" className="h-auto py-[28px]">
-                  <SelectValue placeholder="Select an existing client or create a new one">
+              <Select value={clientId || undefined} onValueChange={handleClientSelect}>
+                <SelectTrigger
+                  id="client"
+                  aria-invalid={clientError ? true : undefined}
+                  className={cn(
+                    "h-auto w-full py-[28px]",
+                    clientError && "border-destructive"
+                  )}
+                >
+                  <SelectValue placeholder="Choose a client…">
                     {selectedClient && (
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
@@ -276,6 +301,7 @@ export function CreateProjectStep1({
                   </SelectItem>
                 </SelectContent>
               </Select>
+              {clientError ? <FieldError>{clientError}</FieldError> : null}
             </Field>
           </div>
 

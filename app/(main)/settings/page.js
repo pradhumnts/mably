@@ -8,8 +8,6 @@ import {
   getPolarProductGrowth,
   getPolarProductStarter,
 } from "@/lib/billing/polar-env";
-import { reconcilePolarSubscriptionForUser } from "@/lib/billing/reconcile-polar-subscription";
-
 export const metadata = {
   title: "Settings · Mably",
   description: "Account and workspace settings",
@@ -29,14 +27,11 @@ export default async function SettingsPage({ searchParams }) {
 
   let subscription = null;
   let polarConfigured = false;
-  let canReconcile = false;
+  let autoSyncFromPolar = false;
 
   if (isFreelancer) {
-    canReconcile = Boolean(token);
+    autoSyncFromPolar = Boolean(token);
     polarConfigured = Boolean(token && starter && growth);
-    if (token) {
-      await reconcilePolarSubscriptionForUser(profile.id);
-    }
     subscription = await getFreelancerSubscriptionForUser();
   }
 
@@ -68,7 +63,7 @@ export default async function SettingsPage({ searchParams }) {
           ? {
               polarConfigured,
               initialSubscription: subscription,
-              canReconcile,
+              autoSyncFromPolar,
               foundingPricing,
               preferFoundingCheckout,
               checkoutPlan,

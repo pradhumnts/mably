@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CreditCard, RefreshCw } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import {
   PolarPlanPickerContent,
@@ -34,7 +34,7 @@ function formatUtcDate(value) {
  * @param {{
  *   polarConfigured: boolean;
  *   initialSubscription: object | null;
- *   canReconcile?: boolean;
+ *   autoSyncFromPolar?: boolean;
  *   onSubscriptionSynced?: () => void;
  *   foundingPricing?: { configured: boolean; available: boolean; claimed: number; remaining: number; limit: number } | null;
  *   preferFoundingCheckout?: boolean;
@@ -44,7 +44,7 @@ function formatUtcDate(value) {
 export function BillingPageClient({
   polarConfigured,
   initialSubscription,
-  canReconcile = false,
+  autoSyncFromPolar = false,
   onSubscriptionSynced,
   foundingPricing = null,
   preferFoundingCheckout = false,
@@ -56,10 +56,40 @@ export function BillingPageClient({
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [portalScopeHelpOpen, setPortalScopeHelpOpen] = useState(false);
   const [portalScopeHelp, setPortalScopeHelp] = useState({ docsUrl: "", requiredScope: "" });
+  const onSubscriptionSyncedRef = useRef(onSubscriptionSynced);
+  onSubscriptionSyncedRef.current = onSubscriptionSynced;
 
   useEffect(() => {
     setSubscription(initialSubscription);
   }, [initialSubscription]);
+
+  useEffect(() => {
+    if (!autoSyncFromPolar) return;
+
+    let cancelled = false;
+
+    (async () => {
+      setReconcileLoading(true);
+      try {
+        const res = await fetch("/api/billing/reconcile", { method: "POST" });
+        const json = await res.json();
+        if (cancelled) return;
+        if (!res.ok) throw new Error(json.error ?? "Could not refresh");
+        setSubscription(json.subscription ?? null);
+        onSubscriptionSyncedRef.current?.();
+      } catch (e) {
+        if (!cancelled) {
+          toast.error(e?.message ?? "Could not sync subscription from Polar");
+        }
+      } finally {
+        if (!cancelled) setReconcileLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [autoSyncFromPolar]);
 
   const openPortal = async () => {
     setPortalLoading(true);
@@ -84,22 +114,6 @@ export function BillingPageClient({
       toast.error(e?.message ?? "Portal session failed");
     } finally {
       setPortalLoading(false);
-    }
-  };
-
-  const refreshFromPolar = async () => {
-    setReconcileLoading(true);
-    try {
-      const res = await fetch("/api/billing/reconcile", { method: "POST" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Could not refresh");
-      setSubscription(json.subscription ?? null);
-      onSubscriptionSynced?.();
-      toast.success(json.synced ? "Subscription synced from Polar." : "No active subscription found in Polar.");
-    } catch (e) {
-      toast.error(e?.message ?? "Refresh failed");
-    } finally {
-      setReconcileLoading(false);
     }
   };
 
@@ -146,25 +160,13 @@ export function BillingPageClient({
                 </p>
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
-                {canReconcile ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => void refreshFromPolar()}
-                    disabled={reconcileLoading}
-                  >
-                    <RefreshCw className={`h-4 w-4 ${reconcileLoading ? "animate-spin" : ""}`} />
-                    {reconcileLoading ? "Syncing…" : "Refresh from Polar"}
-                  </Button>
-                ) : null}
                 {canManage ? (
                   <Button
                     variant="outline"
                     size="sm"
                     className="gap-2"
                     onClick={() => void openPortal()}
-                    disabled={portalLoading}
+                    disabled={portalLoading || reconcileLoading}
                   >
                     <CreditCard className="h-4 w-4" />
                     {portalLoading ? "Opening…" : "Manage subscription"}
@@ -178,20 +180,6 @@ export function BillingPageClient({
             {formattedPeriodEnd ? (
               <p className="text-xs text-muted-foreground">Current period ends: {formattedPeriodEnd}</p>
             ) : null}
-          </div>
-        ) : canReconcile ? (
-          <div className="flex flex-row flex-wrap items-start justify-between gap-4">
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => void refreshFromPolar()}
-              disabled={reconcileLoading}
-            >
-              <RefreshCw className={`h-4 w-4 ${reconcileLoading ? "animate-spin" : ""}`} />
-              {reconcileLoading ? "Syncing…" : "Refresh billing status"}
-            </Button>
           </div>
         ) : null}
 

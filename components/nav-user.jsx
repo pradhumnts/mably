@@ -4,9 +4,11 @@ import {
   ChevronsUpDown,
   Lightbulb,
   LogOut,
+  MessageCircle,
   User,
   Settings,
 } from "lucide-react";
+import { ChatWithTeamDialog } from "@/components/chat-with-team-dialog";
 
 import {
   Avatar,
@@ -38,6 +40,7 @@ export function NavUser({ user }) {
   const pathname = usePathname();
   const { isMobile } = useSidebar();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [teamChatOpen, setTeamChatOpen] = useState(false);
   const onFeatureLab = pathname === "/features" || pathname.startsWith("/features/");
 
   const handleLogout = async () => {
@@ -100,6 +103,16 @@ export function NavUser({ user }) {
                   Profile
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuItem
+              className="cursor-pointer"
+              onSelect={(e) => {
+                e.preventDefault();
+                setTeamChatOpen(true);
+              }}
+            >
+              <MessageCircle className="size-4" />
+              Chat with team
+            </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/settings" className="cursor-pointer">
                   <Settings />
@@ -124,12 +137,18 @@ export function NavUser({ user }) {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            
             <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
               <LogOut />
               {isLoggingOut ? "Logging out..." : "Log out"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <ChatWithTeamDialog
+          open={teamChatOpen}
+          onOpenChange={setTeamChatOpen}
+          user={user}
+        />
       </SidebarMenuItem>
     </SidebarMenu>
   );

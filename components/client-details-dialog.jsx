@@ -1,5 +1,6 @@
 "use client";
 
+import { format } from "date-fns";
 import Link from "next/link";
 import {
   Dialog,
@@ -74,6 +75,15 @@ const getPlatformIcon = (url, label) => {
   return <LinkIcon className="h-5 w-5" />;
 };
 
+function formatLastActiveForDialog(iso) {
+  if (!iso) return "—";
+  try {
+    return format(new Date(iso), "h:mm a, MMM d");
+  } catch {
+    return "—";
+  }
+}
+
 export function ClientDetailsDialog({
   client,
   projects,
@@ -93,7 +103,7 @@ export function ClientDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl min-w-[500px] max-h-[90vh] overflow-y-auto bg-zinc-50">
+      <DialogContent className="w-[calc(100%-2rem)] max-w-4xl sm:min-w-[36rem] max-h-[90vh] overflow-y-auto bg-zinc-50">
         <DialogHeader className="-space-y-1">
           <DialogTitle className="text-2xl font-semibold">Client Details</DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -121,29 +131,31 @@ export function ClientDetailsDialog({
             <Separator />
 
             {/* Phone, Last Active, Location */}
-            <div className="flex flex-col md:flex-row md:items-stretch gap-[32px]">
-              <div className="space-y-1">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
+              <div className="min-w-0 space-y-1">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="h-4 w-4" />
+                  <Phone className="h-4 w-4 shrink-0" />
                   <span>Phone</span>
                 </div>
-                <p className="font-medium break-words">
+                <p className="font-medium break-words text-sm leading-snug sm:text-base">
                   {client.phone?.trim() ? client.phone : "—"}
                 </p>
               </div>
-              <div className="space-y-1">
+              <div className="min-w-0 space-y-1">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
+                  <Clock className="h-4 w-4 shrink-0" />
                   <span>Last Active</span>
                 </div>
-                <p className="font-medium">{client.lastActive}</p>
+                <p className="font-medium break-words text-sm leading-snug sm:text-base">
+                  {formatLastActiveForDialog(client.updatedAt)}
+                </p>
               </div>
-              <div className="space-y-1">
+              <div className="min-w-0 space-y-1">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
+                  <MapPin className="h-4 w-4 shrink-0" />
                   <span>Location</span>
                 </div>
-                <p className="font-medium break-words">
+                <p className="font-medium break-words text-sm leading-snug sm:text-base">
                   {client.location?.trim() ? client.location : "—"}
                 </p>
               </div>
@@ -189,17 +201,19 @@ export function ClientDetailsDialog({
                   {(client.name || "").trim().split(/\s+/)[0] || "this client"}.
                 </p>
               </div>
-              <Button
-                className="ml-auto flex items-center gap-1 mb-[2px] font-semibold rounded-lg"
-                asChild
-              >
-                <Link
-                  href={`/projects/new?clientId=${encodeURIComponent(client.id)}`}
+              {!client.isSample ? (
+                <Button
+                  className="ml-auto flex items-center gap-1 mb-[2px] font-semibold rounded-lg"
+                  asChild
                 >
-                  <Plus className="h-5 w-5 stroke-2" />
-                  <span className="hidden sm:inline">Start Project</span>
-                </Link>
-              </Button>
+                  <Link
+                    href={`/projects/new?clientId=${encodeURIComponent(client.id)}`}
+                  >
+                    <Plus className="h-5 w-5 stroke-2" />
+                    <span className="hidden sm:inline">Start Project</span>
+                  </Link>
+                </Button>
+              ) : null}
             </div>
 
             {/* Projects List */}
@@ -288,7 +302,7 @@ export function ClientDetailsDialog({
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="rounded-lg border border-zinc-200 bg-white py-10 text-center text-sm text-muted-foreground">
                   No projects found for this client.
                 </div>
               )}

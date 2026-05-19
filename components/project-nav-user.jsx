@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronsUpDown, LogOut, User } from "lucide-react";
+import { ChevronsUpDown, LogOut, MessageCircle, User } from "lucide-react";
+import { ChatWithTeamDialog } from "@/components/chat-with-team-dialog";
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,7 @@ import { signOut } from "@/lib/auth/actions";
 export function ProjectNavUser({ user, projectId, isFreelancer }) {
   const { isMobile } = useSidebar();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [teamChatOpen, setTeamChatOpen] = useState(false);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -129,12 +131,28 @@ export function ProjectNavUser({ user, projectId, isFreelancer }) {
               )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onSelect={(e) => {
+                e.preventDefault();
+                setTeamChatOpen(true);
+              }}
+            >
+              <MessageCircle className="size-4" />
+              Chat with team
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => void handleLogout()} disabled={isLoggingOut}>
               <LogOut className="size-4" />
               {isLoggingOut ? "Logging out…" : "Log out"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <ChatWithTeamDialog
+          open={teamChatOpen}
+          onOpenChange={setTeamChatOpen}
+          user={user}
+          projectId={pid}
+        />
       </SidebarMenuItem>
     </SidebarMenu>
   );

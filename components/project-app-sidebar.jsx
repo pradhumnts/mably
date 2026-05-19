@@ -106,8 +106,15 @@ export function ProjectAppSidebar({ projectData, freelancerData, isFreelancer = 
   
   // Update active state based on current pathname
   const navGeneralWithActive = navGeneral.map(item => {
-    const itemIsActive = pathname === item.url || pathname.startsWith(item.url + '/');
-    
+    const subItemIsActive =
+      item.items?.some(
+        (sub) => pathname === sub.url || pathname.startsWith(sub.url + "/")
+      ) ?? false;
+    const itemIsActive =
+      pathname === item.url ||
+      pathname.startsWith(item.url + "/") ||
+      subItemIsActive;
+
     // If item has sub-items, update their active state too
     if (item.items && item.items.length > 0) {
       return {
