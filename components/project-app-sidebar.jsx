@@ -55,7 +55,7 @@ export function ProjectAppSidebar({ projectData, freelancerData, isFreelancer = 
   const pathname = usePathname();
   const params = useParams();
   const projectId = params.projectId;
-  
+
   // Navigation data for Project
   const navGeneral = [
     {
@@ -166,7 +166,7 @@ export function ProjectAppSidebar({ projectData, freelancerData, isFreelancer = 
       <SidebarFooter>
         <ProjectNavUser user={user} projectId={String(projectId)} isFreelancer={Boolean(isFreelancer)} />
       </SidebarFooter>
-      <SidebarRail />
+      <SidebarRail className="hidden md:flex" />
     </Sidebar>
   );
 }

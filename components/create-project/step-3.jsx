@@ -6,10 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Field, FieldGroup, FieldLabel, FieldDescription } from "@/components/ui/field";
 import { ChevronRight, ChevronLeft, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DEFAULT_BRAND_COLOR_HEX } from "@/components/brand-color-field";
+import { PortalBrandPreview } from "@/components/create-project/portal-brand-preview";
 
 export function CreateProjectStep3({ formData, updateFormData, nextStep, prevStep, className, ...props }) {
   const [projectLogo, setProjectLogo] = useState(formData.projectLogo || "");
-  const [brandColor, setBrandColor] = useState(formData.brandColor || "#fb923c");
+  const [brandColor, setBrandColor] = useState(
+    formData.brandColor?.trim() || DEFAULT_BRAND_COLOR_HEX
+  );
   const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
@@ -77,7 +81,6 @@ export function CreateProjectStep3({ formData, updateFormData, nextStep, prevSte
             </p>
           </div>
 
-          {/* Form Fields */}
           <div className="space-y-6">
             {/* Project Logo */}
             <Field>
@@ -134,7 +137,7 @@ export function CreateProjectStep3({ formData, updateFormData, nextStep, prevSte
                   type="text"
                   value={brandColor}
                   onChange={(e) => setBrandColor(e.target.value)}
-                  placeholder="#fb923c"
+                  placeholder={DEFAULT_BRAND_COLOR_HEX}
                   className="flex-1"
                 />
               </div>
@@ -142,11 +145,17 @@ export function CreateProjectStep3({ formData, updateFormData, nextStep, prevSte
                 Customize the accent color for this project.
               </FieldDescription>
             </Field>
+
+            <PortalBrandPreview
+              brandColor={brandColor}
+              projectLogo={projectLogo}
+              projectName={formData.projectName}
+            />
           </div>
 
           {/* Navigation Buttons */}
           <div className="flex items-center justify-between">
-            <Button type="button" variant="outline" onClick={() => { updateFormData({ projectLogo: "", brandColor: "#fb923c" }); nextStep(); }}>
+            <Button type="button" variant="outline" onClick={() => { updateFormData({ projectLogo: "", brandColor: DEFAULT_BRAND_COLOR_HEX }); nextStep(); }}>
               Skip
             </Button>
             <div className="flex gap-2">

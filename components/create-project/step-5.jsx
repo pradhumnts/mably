@@ -208,7 +208,7 @@ export function CreateProjectStep5({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl bg-white">
+        <DialogContent className="max-h-[min(90dvh,720px)] max-w-[calc(100vw-2rem)] overflow-y-auto bg-white sm:max-w-2xl">
           <DialogHeader>
             <div className="space-y-2">
               <p className="text-sm text-primary font-semibold uppercase">Step 5 of 5</p>

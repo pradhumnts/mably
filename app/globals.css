@@ -400,3 +400,72 @@
     opacity: 0.92;
   }
 }
+
+/* Client portal: brand-tinted surfaces (buttons use --primary via PortalBrandProvider) */
+.portal-brand-surface {
+  border-bottom-width: 1px;
+  border-color: color-mix(
+    in srgb,
+    var(--primary, rgb(249 115 22)) 28%,
+    transparent
+  );
+  background: linear-gradient(
+    to bottom right,
+    color-mix(
+      in srgb,
+      var(--primary, rgb(249 115 22)) 14%,
+      var(--background)
+    ),
+    var(--background),
+    color-mix(
+      in srgb,
+      var(--primary, rgb(249 115 22)) 8%,
+      var(--background)
+    )
+  );
+}
+
+.dark .portal-brand-surface {
+  border-color: color-mix(
+    in srgb,
+    var(--primary, rgb(251 146 60)) 35%,
+    transparent
+  );
+  background: linear-gradient(
+    to bottom right,
+    color-mix(
+      in srgb,
+      var(--primary, rgb(251 146 60)) 22%,
+      var(--background)
+    ),
+    var(--background),
+    color-mix(
+      in srgb,
+      var(--primary, rgb(251 146 60)) 10%,
+      var(--background)
+    )
+  );
+}
+
+.portal-brand-glow {
+  background-color: color-mix(
+    in srgb,
+    var(--primary, rgb(249 115 22)) 18%,
+    transparent
+  );
+}
+
+/* Default portal wallpapers (no dynamic Tailwind classes — see portal-brand-backdrop.jsx) */
+.portal-brand-backdrop--dashboard {
+  background-image: url("/images/dashboard-bg.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.portal-brand-backdrop--chat {
+  background-image: url("/images/chat-bg.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}

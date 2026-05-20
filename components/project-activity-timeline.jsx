@@ -53,40 +53,40 @@ export function ProjectActivityTimeline({ project }) {
   };
 
   return (
-    <Card className="p-6 mb-6 gap-[16px]">
+    <Card className="mb-6 gap-4 p-4 sm:gap-[16px] sm:p-6">
       <div>
         {projectId ? (
           <Link href={`/project/${projectId}/dashboard`} className="group block">
-            <h2 className="text-2xl font-semibold text-foreground mb-2 group-hover:underline">
+            <h2 className="mb-2 text-xl font-semibold text-foreground group-hover:underline sm:text-2xl">
               {project.title}
             </h2>
           </Link>
         ) : (
-          <h2 className="text-2xl font-semibold text-foreground mb-2">{project.title}</h2>
+          <h2 className="mb-2 text-xl font-semibold text-foreground sm:text-2xl">{project.title}</h2>
         )}
         <DescriptionClamp
           text={project.description}
           className="text-sm text-muted-foreground mb-4"
         />
-        <div className="flex items-center gap-3 text-sm mt-[16px]">
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:mt-[16px]">
           <div className="flex items-center gap-1.5 font-medium">
-            <span className="w-2 h-2 rounded-full bg-orange-500" />
+            <span className="h-2 w-2 rounded-full bg-orange-500" />
             {project.status}
           </div>
-          <span className="mx-2 h-4 border-l border-zinc-300" />
+          <span className="hidden h-4 border-l border-zinc-300 sm:block" />
           <div className="flex items-center gap-1.5 font-medium">
-            <Calendar className="h-3.5 w-3.5" />
+            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Due {project.dueDate}</span>
           </div>
         </div>
       </div>
 
       <div>
-        <h3 className="text-xl font-semibold mb-4">Activity Log</h3>
+        <h3 className="mb-4 text-lg font-semibold sm:text-xl">Activity Log</h3>
         <div className="border-t border-zinc-200 mb-4" />
 
         <div className="relative">
-          <div className="absolute left-5 top-0 bottom-0 w-[1px] bg-zinc-300" />
+          <div className="absolute bottom-0 left-4 top-0 w-px bg-zinc-300 sm:left-5" aria-hidden />
 
           <div className="space-y-[16px]">
             {project.activities.map((activity) => {
@@ -213,7 +213,7 @@ export function ProjectActivityTimeline({ project }) {
                     ) : null}
 
                     {activity.voiceNote ? (
-                      <Card className="mt-3 p-4 bg-muted/30">
+                      <Card className="mt-3 bg-muted/30 p-3 sm:p-4">
                         <div className="space-y-3">
                           <div className="flex gap-3">
                             <Avatar className="h-8 w-8 shrink-0">
@@ -224,7 +224,7 @@ export function ProjectActivityTimeline({ project }) {
                               <p className="text-sm font-semibold">{activity.user.name}</p>
                             </div>
                           </div>
-                          <div className="w-[70%]">
+                          <div className="w-full max-w-md">
                           <LibraryVoiceNotePlayer
                             projectId={activity.voiceNote.projectId}
                             fileId={activity.voiceNote.fileId}
@@ -252,7 +252,7 @@ export function ProjectActivityTimeline({ project }) {
                     ) : null}
 
                     {activity.comment ? (
-                      <Card className="mt-3 p-4 bg-muted/30">
+                      <Card className="mt-3 bg-muted/30 p-3 sm:p-4">
                         <div className="flex gap-3">
                           <Avatar className="h-8 w-8 shrink-0">
                             <AvatarImage src={activity.user.avatar} alt={activity.user.name} />

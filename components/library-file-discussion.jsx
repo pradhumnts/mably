@@ -21,6 +21,7 @@ import { useLibraryVoiceComposerState } from "@/components/library-voice-compose
 import { DeleteLibraryVoiceNoteConfirm } from "@/components/delete-library-voice-note-dialog";
 import { LibraryVoiceMessageDeleted } from "@/components/library-voice-message-deleted";
 import { isDemoVoiceNoteStoragePath } from "@/lib/library/demo-voice-note";
+import { usePortalBrand, usePortalBrandSurfaceStyles } from "@/components/portal-brand";
 
 /** @param {object} comment */
 function mapCommentAfterVoiceRemoval(comment) {
@@ -85,6 +86,8 @@ export function LibraryFileDiscussion({
   const [voiceUploadById, setVoiceUploadById] = useState({});
   /** @type {[null | { commentId: string; durationMs: number; hasCommentText: boolean }, React.Dispatch<any>]} */
   const [deleteVoiceTarget, setDeleteVoiceTarget] = useState(null);
+  const { brandCss } = usePortalBrand();
+  const brandSurface = usePortalBrandSurfaceStyles();
   const listRef = useRef(null);
   const textareaRef = useRef(null);
   const supabase = useMemo(() => createClient(), []);
@@ -304,6 +307,8 @@ export function LibraryFileDiscussion({
         showCloseButton
         onClick={(event) => event.stopPropagation()}
         onPointerDown={(event) => event.stopPropagation()}
+        style={brandCss ?? undefined}
+        data-portal-brand={brandCss ? "" : undefined}
         className={cn(
           "flex w-full max-w-lg flex-col gap-0 overflow-hidden p-0 transition-[height] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] sm:max-w-lg",
           deleteVoiceTarget ? "h-auto" : "h-[min(560px,85vh)]"
@@ -336,10 +341,20 @@ export function LibraryFileDiscussion({
           />
         ) : (
           <>
-        <div className="relative shrink-0 overflow-visible border-b border-orange-200/30 bg-gradient-to-br from-orange-50/90 via-background to-violet-50/40 px-6 py-4 dark:from-orange-950/30 dark:via-background dark:to-violet-950/20">
+        <div
+          className={cn(
+            "relative shrink-0 overflow-visible px-6 py-4",
+            !brandSurface && "portal-brand-surface"
+          )}
+          style={brandSurface?.surface}
+        >
           <div
             aria-hidden
-            className="pointer-events-none absolute -right-10 top-0 h-28 w-28 rounded-full bg-orange-400/20 blur-2xl"
+            className={cn(
+              "pointer-events-none absolute -right-10 top-0 h-28 w-28 rounded-full blur-2xl",
+              !brandSurface && "portal-brand-glow"
+            )}
+            style={brandSurface?.glow}
           />
           <DialogHeader className="relative space-y-0 text-left">
             <div className="flex items-start gap-3">

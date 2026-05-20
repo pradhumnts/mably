@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { RealtimeChat } from "@/components/realtime-chat";
+import { PortalBrandBackdrop } from "@/components/portal-brand-backdrop";
 import { cn } from "@/lib/utils";
 import { getProjectChatBootstrap, markProjectChatRead } from "@/lib/actions/project-chat";
 import { toast } from "sonner";
@@ -74,6 +75,17 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
     isOpenRef.current = isOpen;
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    if (!mq.matches) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
   const onRemoteMessage = useCallback(() => {
     setUnreadCount((n) => (isOpenRef.current ? n : n + 1));
   }, []);
@@ -104,50 +116,47 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
   const chatDisabled = Boolean(bootError || !boot?.conversationId);
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div
+      className={cn(
+        "fixed z-50",
+        isOpen ? "inset-0 md:inset-auto md:bottom-6 md:right-6" : "bottom-4 right-4 md:bottom-6 md:right-6"
+      )}
+    >
       {/* Keep chat mounted when closed so Realtime + local message state are not lost to the initial bootstrap snapshot. */}
       <Card
         className={cn(
-          "mb-4 w-[500px] h-[70vh] shadow-2xl border-[1px] overflow-hidden p-0 gap-0 relative",
+          "relative flex flex-col gap-0 overflow-hidden border p-0 shadow-2xl",
           isOpen
-            ? "animate-in slide-in-from-bottom-4 duration-300"
+            ? "h-[100dvh] w-full max-md:rounded-none md:mb-4 md:h-[70vh] md:w-[500px] md:rounded-lg animate-in slide-in-from-bottom-4 duration-300"
             : "hidden pointer-events-none"
         )}
         aria-hidden={!isOpen}
       >
-          <div
-            className="absolute inset-0 z-0"
-            style={{
-              backgroundImage: "url(/images/chat-bg.webp)",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-            }}
-          />
+          <PortalBrandBackdrop variant="chat" />
 
-          <div className="flex items-center justify-between p-4 border-b border-zinc-100 backdrop-blur-sm relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center -space-x-2">
+          <div className="relative z-10 flex shrink-0 items-center justify-between border-b border-zinc-100 p-3 backdrop-blur-sm sm:p-4">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+              <div className="flex shrink-0 items-center -space-x-2">
                 {userRole === "freelancer" ? (
                   <>
-                    <Avatar className="h-[48px] w-[48px] border border-white">
+                    <Avatar className="h-10 w-10 border border-white sm:h-12 sm:w-12">
                       <AvatarImage src={clientAvatar || undefined} alt={clientName} />
                       <AvatarFallback>{clientName.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <Avatar className="h-[48px] w-[48px] border border-white">
+                    <Avatar className="h-10 w-10 border border-white sm:h-12 sm:w-12">
                       <AvatarImage src={projectLogo || undefined} alt="" />
                       <AvatarFallback>{(projectName || "P").charAt(0)}</AvatarFallback>
                     </Avatar>
                   </>
                 ) : (
-                  <Avatar className="h-[48px] w-[48px] border border-white">
+                  <Avatar className="h-10 w-10 border border-white sm:h-12 sm:w-12">
                     <AvatarImage src={freelancerAvatar || undefined} alt={freelancerName} />
                     <AvatarFallback>{freelancerName.charAt(0)}</AvatarFallback>
                   </Avatar>
                 )}
               </div>
-              <div>
-                <h3 className="font-semibold text-sm text-foreground">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-semibold text-foreground">
                   {userRole === "client" ? freelancerName : clientName}
                 </h3>
               </div>
@@ -155,15 +164,16 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 rounded-full"
+              className="h-8 w-8 shrink-0 rounded-full"
               type="button"
               onClick={() => setIsOpen(false)}
+              aria-label="Close chat"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="relative z-10 flex h-[calc(70vh-5.3rem)] min-h-0 flex-col">
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col">
             {bootError ? (
               <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
                 {bootError}
@@ -202,7 +212,7 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
           }}
           size="icon"
           variant="outline"
-          className="h-16 w-16 rounded-full shadow-xl hover:shadow-2xl transition-shadow duration-300 p-0 overflow-hidden border-2 border-white relative"
+          className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-white p-0 shadow-xl transition-shadow duration-300 hover:shadow-2xl sm:h-16 sm:w-16"
           type="button"
         >
           <span

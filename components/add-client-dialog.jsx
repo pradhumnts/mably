@@ -239,7 +239,7 @@ export function AddClientDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl min-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[min(90dvh,720px)] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-2xl">
         {!showLinkForm ? (
           <>
             <DialogHeader>

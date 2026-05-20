@@ -17,7 +17,7 @@ import { DescriptionClamp } from "@/components/description-clamp";
 
 export function ActivityFeedSkeleton() {
   return (
-    <Card className="p-6 mb-6 gap-[16px]">
+    <Card className="mb-6 gap-4 p-4 sm:gap-[16px] sm:p-6">
       <div className="space-y-3">
         <Skeleton className="h-8 w-full max-w-md" />
         <Skeleton className="h-4 w-full max-w-xl" />
@@ -58,7 +58,7 @@ export function ActivityFeedSkeleton() {
 
 export function ActivitySidebarSkeleton() {
   return (
-    <Card className="gap-4 p-6 sticky top-[88px]">
+    <Card className="gap-4 p-4 sm:p-6 lg:sticky lg:top-[88px]">
       <Skeleton className="h-5 w-40" />
       <div className="space-y-4 pt-2">
         <Skeleton className="h-4 w-full" />
@@ -115,7 +115,7 @@ export function ActivityEmptyFeedCard({ project, projectId }) {
   return (
     <Card className="p-6 mb-6 gap-[16px] overflow-hidden">
       <div>
-        <h2 className="text-2xl font-semibold text-foreground mb-2">{title}</h2>
+        <h2 className="mb-2 text-xl font-semibold text-foreground sm:text-2xl">{title}</h2>
         <DescriptionClamp
           text={description}
           className="text-sm text-muted-foreground mb-4"
@@ -197,9 +197,9 @@ export function ActivityEmptyFilteredCard({
   const dueDate = project?.dueDate || "—";
 
   return (
-    <Card className="p-6 mb-6 gap-[16px]">
+    <Card className="mb-6 gap-4 p-4 sm:gap-[16px] sm:p-6">
       <div>
-        <h2 className="text-2xl font-semibold text-foreground mb-2">{title}</h2>
+        <h2 className="mb-2 text-xl font-semibold text-foreground sm:text-2xl">{title}</h2>
         {description ? (
           <DescriptionClamp
             text={description}

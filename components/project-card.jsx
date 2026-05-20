@@ -21,7 +21,7 @@ export function ProjectCard({ project, onRequestDelete }) {
 
   return (
     <Link href={`/project/${project.id}/dashboard`}>
-    <Card className="overflow-hidden hover:shadow-lg shadow-sm transition-shadow p-[16px] duration-200 cursor-pointer">
+    <Card className="cursor-pointer overflow-hidden p-4 shadow-sm transition-shadow duration-200 hover:shadow-lg">
       <CardHeader className="px-0">
         <div className="flex items-start justify-between">
           {/* Overlapping Avatars */}
@@ -106,7 +106,7 @@ export function ProjectCard({ project, onRequestDelete }) {
         <div className="border-t" />
 
         {/* Project Info */}
-        <div className="flex items-center justify-left gap-4 text-sm">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
           {/* Price */}
           <div className="flex items-center gap-0 font-medium">
             <span>$</span>

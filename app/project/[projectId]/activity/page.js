@@ -26,6 +26,13 @@ import {
 } from "@/components/activity-feed-states";
 import { getProjectActivityPageData } from "@/lib/actions/project-activity";
 import { toast } from "sonner";
+import {
+  stickyPageHeaderClass,
+  stickyPageHeaderInnerClass,
+  pageContentWrapClass,
+  activityToolbarClass,
+  activityFilterRowClass,
+} from "@/lib/ui/page-chrome";
 
 function filterActivities(activities, activeFilter, searchQuery) {
   let filtered = activities;
@@ -72,6 +79,14 @@ function filterActivities(activities, activeFilter, searchQuery) {
 
   return filtered;
 }
+
+const FILTER_OPTIONS = [
+  { key: "all", label: "All" },
+  { key: "files", label: "Files" },
+  { key: "comments", label: "Comments" },
+  { key: "approvals", label: "Approvals" },
+  { key: "payments", label: "Payments" },
+];
 
 export default function ProjectActivity() {
   const params = useParams();
@@ -133,10 +148,10 @@ export default function ProjectActivity() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="flex h-16 items-center gap-2 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
+      <header className={stickyPageHeaderClass}>
+        <div className={stickyPageHeaderInnerClass}>
           <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="h-4 my-auto mr-2" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">
@@ -153,76 +168,48 @@ export default function ProjectActivity() {
         </div>
       </header>
 
-      <div className="flex-1 z-1">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="flex-1">
+        <div className={pageContentWrapClass}>
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Activity</h1>
-            <p className="text-muted-foreground">
+            <h1 className="mb-1 text-2xl font-bold text-foreground sm:mb-2 sm:text-3xl">Activity</h1>
+            <p className="text-sm text-muted-foreground sm:text-base">
               Track what&apos;s done, what&apos;s coming next, and what&apos;s currently in review
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
-            <div className="lg:col-span-8">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex gap-2 flex-wrap">
-                  <Button
-                    variant={activeFilter === "all" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setActiveFilter("all")}
-                  >
-                    All
-                  </Button>
-                  <Button
-                    variant={activeFilter === "files" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setActiveFilter("files")}
-                  >
-                    Files
-                  </Button>
-                  <Button
-                    variant={activeFilter === "comments" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setActiveFilter("comments")}
-                  >
-                    Comments
-                  </Button>
-                  <Button
-                    variant={activeFilter === "approvals" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setActiveFilter("approvals")}
-                  >
-                    Approvals
-                  </Button>
-                  <Button
-                    variant={activeFilter === "payments" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setActiveFilter("payments")}
-                  >
-                    Payments
-                  </Button>
-                </div>
+          <div className={activityToolbarClass}>
+            <div className={activityFilterRowClass}>
+              {FILTER_OPTIONS.map(({ key, label }) => (
+                <Button
+                  key={key}
+                  variant={activeFilter === key ? "default" : "outline"}
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => setActiveFilter(key)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
 
-                <div className="relative w-full sm:w-auto sm:min-w-[280px]">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search activities..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search activities..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-10 pl-10"
+              />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <div className="min-w-0 lg:col-span-8">
               {loading ? (
                 <ActivityFeedSkeleton />
               ) : loadError ? (
-                <Card className="p-8 sm:p-10 text-center border-dashed">
-                  <p className="text-muted-foreground max-w-md mx-auto mb-6 leading-relaxed">
+                <Card className="border-dashed p-6 text-center sm:p-10">
+                  <p className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-muted-foreground">
                     {loadError}
                   </p>
                   <Button variant="default" onClick={() => void load()}>
@@ -247,7 +234,7 @@ export default function ProjectActivity() {
               ) : null}
             </div>
 
-            <div className="lg:col-span-4">
+            <div className="min-w-0 lg:col-span-4">
               {loading ? (
                 <ActivitySidebarSkeleton />
               ) : (

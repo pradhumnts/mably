@@ -12,32 +12,19 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Phone, MapPin, Clock, MoreVertical, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
+import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { ClientsListViews } from "@/components/clients/clients-list-views";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+  stickyPageHeaderClass,
+  stickyPageHeaderInnerClass,
+  pageContentWrapClass,
+} from "@/lib/ui/page-chrome";
 import { ClientDetailsDialog } from "@/components/client-details-dialog";
 import { AddClientDialog } from "@/components/add-client-dialog";
 import { DeleteClientDialog } from "@/components/delete-client-dialog";
 import { getProjectsForClient } from "@/lib/actions/clients";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 export function ClientsPageClient({ initialClients }) {
   const router = useRouter();
@@ -141,36 +128,38 @@ export function ClientsPageClient({ initialClients }) {
 
   return (
     <>
-        <header className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-          <div className="flex h-16 items-center gap-2 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
+        <header className={stickyPageHeaderClass}>
+          <div className={stickyPageHeaderInnerClass}>
             <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="h-4 my-auto mr-2" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumb>
               <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbItem className="hidden sm:block">
                   <BreadcrumbLink href="/clients">Clients</BreadcrumbLink>
                 </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbSeparator className="hidden sm:block" />
                 <BreadcrumbItem>
                   <BreadcrumbPage>All Clients</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
             <Button
-              className="ml-auto flex items-center gap-1 font-semibold rounded-lg"
+              size="sm"
+              className="ml-auto shrink-0 gap-1 rounded-lg font-semibold sm:size-default"
               onClick={openAddClient}
             >
-              <Plus className="h-5 w-5 stroke-2" />
+              <Plus className="h-4 w-4 stroke-2 sm:h-5 sm:w-5" />
+              <span className="sm:hidden">Add</span>
               <span className="hidden sm:inline">Add new client</span>
             </Button>
           </div>
         </header>
 
         <div className="flex-1">
-          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className={pageContentWrapClass}>
             {/* Search Bar */}
             <div className="mb-6">
-              <div className="relative max-w-md">
+              <div className="relative w-full max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="text"
@@ -182,153 +171,21 @@ export function ClientsPageClient({ initialClients }) {
               </div>
             </div>
 
-            {/* Clients Table */}
-            <div className="rounded-lg border bg-card">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent h-[48px]">
-                    <TableHead className="w-[300px]">
-                      <button className="flex items-center gap-2 font-medium text-muted-foreground hover:text-foreground">
-                        Name
-                        <ArrowUpDown className="h-4 w-4" />
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="h-4 w-4" />
-                        Phone
-                      </div>
-                    </TableHead>
-                    <TableHead>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <MapPin className="h-4 w-4" />
-                        Location
-                      </div>
-                    </TableHead>
-                    <TableHead>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        Last Active
-                      </div>
-                    </TableHead>
-                    <TableHead className="w-4"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentClients.length > 0 ? (
-                    currentClients.map((client) => (
-                    <TableRow
-                      key={client.id}
-                      className="group h-[68px] border-none hover:bg-zinc-100 cursor-pointer"
-                      onClick={() => handleClientClick(client)}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-[36px] w-[36px]">
-                            <AvatarImage src={client.avatar || undefined} alt={client.name} />
-                            <AvatarFallback>
-                              {(client.name || "?").charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex flex-col">
-                            <span className="font-medium flex items-center gap-2">
-                              {client.name}
-                              {client.isSample ? (
-                                <Badge
-                                  variant="secondary"
-                                  className="h-5 px-1.5 text-[10px] font-medium text-muted-foreground"
-                                >
-                                  Sample
-                                </Badge>
-                              ) : null}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {client.email}
-                            </span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-foreground">
-                        {client.phone?.trim() ? client.phone : "—"}
-                      </TableCell>
-                      <TableCell className="text-foreground">
-                        {client.location?.trim() ? client.location : "—"}
-                      </TableCell>
-                      <TableCell className="text-foreground">{client.lastActive}</TableCell>
-                        <TableCell className="pr-4" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenu className="w-full">
-                            <DropdownMenuTrigger asChild className="border border-slate-200">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 p-0"
-                                aria-label="Open client menu"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="border border-slate-200">
-                              {!client.isSample ? (
-                                <DropdownMenuItem asChild>
-                                  <Link
-                                    href={`/projects/new?clientId=${encodeURIComponent(client.id)}`}
-                                    className="cursor-pointer"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    Start New Project
-                                  </Link>
-                                </DropdownMenuItem>
-                              ) : null}
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleClientClick(client);
-                                }}
-                              >
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openEditClient(client);
-                                }}
-                              >
-                                Edit Client
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  requestDeleteClient(client);
-                                }}
-                              >
-                                Delete Client
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                    </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center">
-                        <p className="text-muted-foreground">No clients found.</p>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <ClientsListViews
+              clients={currentClients}
+              onClientClick={handleClientClick}
+              onEditClient={openEditClient}
+              onRequestDelete={requestDeleteClient}
+            />
 
             {/* Pagination */}
             {filteredClients.length > 0 && (
-              <div className="flex items-center justify-between mt-4">
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
                   Showing {startIndex + 1} to {Math.min(endIndex, filteredClients.length)} of{" "}
                   {filteredClients.length} clients
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-2 sm:justify-end">
                   <Button
                     variant="ghost"
                     size="sm"

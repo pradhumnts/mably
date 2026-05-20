@@ -243,7 +243,7 @@ export function CreateProjectStep1({
                   id="client"
                   aria-invalid={clientError ? true : undefined}
                   className={cn(
-                    "h-auto w-full py-[28px]",
+                    "h-auto w-full py-4 sm:py-6",
                     clientError && "border-destructive"
                   )}
                 >

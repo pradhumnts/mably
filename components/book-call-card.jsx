@@ -11,8 +11,8 @@ export function BookCallCard({
 }) {
   return (
     <Link href={calendarLink} target="_blank" rel="noopener noreferrer">
-      <Card className="hover:shadow-lg ring-0 focus:shadow-none duration-200 cursor-pointer w-fit p-[0px] bg-white/50">
-        <CardContent className="p-[16px] flex gap-[16px]">
+      <Card className="w-full max-w-full cursor-pointer bg-white/50 p-0 ring-0 transition-shadow duration-200 hover:shadow-lg focus:shadow-none sm:w-fit sm:max-w-sm">
+        <CardContent className="flex gap-4 p-4">
           <div className="flex items-start gap-3">
             <Avatar className="h-12 w-12 flex-shrink-0">
               <AvatarImage src={freelancerAvatar} alt={freelancerName} />

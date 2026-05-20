@@ -73,7 +73,7 @@ export function ChatMessageItem({
       ) : null}
 
       <div
-        className={cn("flex min-w-0 flex-1 flex-col gap-1 max-w-[min(100%,320px)]", {
+        className={cn("flex min-w-0 flex-1 flex-col gap-1 max-w-[min(85vw,320px)]", {
           "w-fit flex-none": !showVoice,
           "items-end": isOwnMessage,
         })}

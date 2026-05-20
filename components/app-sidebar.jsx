@@ -74,9 +74,14 @@ function SidebarLogo() {
 
 export function AppSidebar({ user, ...props }) {
   const pathname = usePathname();
+  const { isMobile } = useSidebar();
+
+  const navGeneralItems = isMobile
+    ? navData.navGeneral.filter((item) => !item.disabled)
+    : navData.navGeneral;
 
   // Update active state based on current pathname
-  const navGeneralWithActive = navData.navGeneral.map((item) => ({
+  const navGeneralWithActive = navGeneralItems.map((item) => ({
     ...item,
     isActive: item.disabled
       ? false
@@ -100,7 +105,7 @@ export function AppSidebar({ user, ...props }) {
       <SidebarFooter>
         <NavUser user={user} />
       </SidebarFooter>
-      <SidebarRail />
+      <SidebarRail className="hidden md:flex" />
     </Sidebar>
   );
 }

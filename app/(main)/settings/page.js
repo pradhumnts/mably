@@ -56,6 +56,7 @@ export default async function SettingsPage({ searchParams }) {
         calendarLink: profile.calendarLink,
         notificationPreferences: profile.notificationPreferences,
         role: profile.role,
+        defaultBrandColor: profile.defaultBrandColor,
       }}
       initialTab={initialTab}
       billing={

@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   updateProfile,
   uploadProfileAvatar,
   updateCalendarLink,
+  updateFreelancerDefaultBrandColor,
 } from "@/lib/actions/profile";
+import {
+  BrandColorFieldGroup,
+  DEFAULT_BRAND_COLOR_HEX,
+} from "@/components/brand-color-field";
 import { saveFreelancerDashboardNotificationPreferences } from "@/lib/actions/freelancer-notification-preferences";
 import {
   Breadcrumb,
@@ -58,8 +63,18 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
   // Branding State
   const [branding, setBranding] = useState({
     logo: "https://images.unsplash.com/photo-1633409361618-c73427e4e206?w=150",
-    brandColor: "#000000",
+    brandColor: initialProfile?.defaultBrandColor ?? DEFAULT_BRAND_COLOR_HEX,
   });
+  const [brandingSaving, setBrandingSaving] = useState(false);
+
+  useEffect(() => {
+    if (initialProfile?.defaultBrandColor) {
+      setBranding((prev) => ({
+        ...prev,
+        brandColor: initialProfile.defaultBrandColor,
+      }));
+    }
+  }, [initialProfile?.defaultBrandColor]);
 
   const np = initialProfile?.notificationPreferences;
 
@@ -134,9 +149,20 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
     router.refresh();
   };
 
-  const handleSaveBranding = () => {
-    // TODO: Save to database
-    toast.success("Branding settings updated successfully");
+  const handleSaveBranding = async () => {
+    setBrandingSaving(true);
+    const result = await updateFreelancerDefaultBrandColor({
+      brandColor: branding.brandColor,
+    });
+    setBrandingSaving(false);
+
+    if (!result.ok) {
+      toast.error(result.error || "Could not save branding");
+      return;
+    }
+
+    toast.success("Branding settings updated");
+    router.refresh();
   };
 
   const handleSaveNotifications = async () => {
@@ -173,16 +199,16 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
   return (
     <>
         {/* Header */}
-        <header className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-          <div className="flex h-16 items-center gap-2 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
+        <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-2 px-4 sm:h-16 sm:px-6 lg:px-8">
             <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="h-4 my-auto mr-2" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumb>
               <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbItem className="hidden sm:block">
                   <BreadcrumbLink href="/projects">Projects</BreadcrumbLink>
                 </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbSeparator className="hidden sm:block" />
                 <BreadcrumbItem>
                   <BreadcrumbPage>Settings</BreadcrumbPage>
                 </BreadcrumbItem>
@@ -193,24 +219,40 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
 
         {/* Content */}
         <div className="flex-1">
-          <div className="max-w-[1600px] w-[60%] px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8 lg:max-w-4xl lg:px-8">
             {/* Tabs */}
             <Tabs defaultValue={initialTab} className="w-full">
-              <TabsList
-                className={cn(
-                  "mb-6 grid w-fit",
-                  billing
-                    ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
-                    : "grid-cols-2 lg:grid-cols-5"
-                )}
-              >
-                <TabsTrigger value="profile">Profile</TabsTrigger>
-                {billing ? <TabsTrigger value="subscription">Subscription</TabsTrigger> : null}
-                <TabsTrigger value="branding">Branding</TabsTrigger>
-                <TabsTrigger value="notifications">Notifications</TabsTrigger>
-                <TabsTrigger value="calendar">Calendar</TabsTrigger>
-                <TabsTrigger value="portal">Portal Defaults</TabsTrigger>
-              </TabsList>
+              <div className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+                <TabsList
+                  className={cn(
+                    "inline-flex h-auto w-max flex-nowrap gap-1 p-1",
+                    billing
+                      ? "sm:grid sm:w-fit sm:grid-cols-3 lg:grid-cols-6"
+                      : "sm:grid sm:w-fit sm:grid-cols-2 lg:grid-cols-5"
+                  )}
+                >
+                  <TabsTrigger value="profile" className="shrink-0">
+                    Profile
+                  </TabsTrigger>
+                  {billing ? (
+                    <TabsTrigger value="subscription" className="shrink-0">
+                      Subscription
+                    </TabsTrigger>
+                  ) : null}
+                  <TabsTrigger value="branding" className="shrink-0">
+                    Branding
+                  </TabsTrigger>
+                  <TabsTrigger value="notifications" className="shrink-0">
+                    Notifications
+                  </TabsTrigger>
+                  <TabsTrigger value="calendar" className="shrink-0">
+                    Calendar
+                  </TabsTrigger>
+                  <TabsTrigger value="portal" className="shrink-0">
+                    Portal
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
               {/* Profile & Business Information Tab */}
               <TabsContent value="profile">
@@ -223,8 +265,8 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {/* Profile Picture */}
-                    <div className="flex items-center gap-6">
-                      <Avatar className="h-24 w-24">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+                      <Avatar className="h-24 w-24 shrink-0">
                         <AvatarImage
                           src={profileInfo.avatar || undefined}
                           alt="Profile"
@@ -406,43 +448,21 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
 
                     <Separator />
 
-                    {/* Brand Color */}
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-base font-semibold">Brand Color</Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          This color will be used throughout client portals
-                        </p>
-                      </div>
+                    <BrandColorFieldGroup
+                      value={branding.brandColor}
+                      onChange={(brandColor) =>
+                        setBranding((prev) => ({ ...prev, brandColor }))
+                      }
+                      disabled={brandingSaving}
+                      description="Default for new projects. Used for buttons, links, headers, and highlights in client portals."
+                    />
 
-                      <div className="space-y-2">
-                        <Label htmlFor="brandColor">Brand Color</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="brandColor"
-                            type="color"
-                            value={branding.brandColor}
-                            onChange={(e) =>
-                              setBranding({ ...branding, brandColor: e.target.value })
-                            }
-                            className="w-20 h-10 cursor-pointer"
-                          />
-                          <Input
-                            value={branding.brandColor}
-                            onChange={(e) =>
-                              setBranding({ ...branding, brandColor: e.target.value })
-                            }
-                            placeholder="#000000"
-                            className="flex-1"
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Used for buttons, links, headers, and highlights
-                        </p>
-                      </div>
-                    </div>
-
-                    <Button onClick={handleSaveBranding}>Save Changes</Button>
+                    <Button
+                      onClick={() => void handleSaveBranding()}
+                      disabled={brandingSaving}
+                    >
+                      {brandingSaving ? "Saving…" : "Save Changes"}
+                    </Button>
                   </CardContent>
                 </Card>
               </TabsContent>

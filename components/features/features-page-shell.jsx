@@ -119,15 +119,15 @@ function FeaturesPageTabs({ requests, myVoteIds, onSubmitted }) {
   return (
     <>
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-2 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-2 px-4 sm:h-16 sm:px-6 lg:px-8">
           <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="my-auto mr-2 h-4" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
           <Breadcrumb>
             <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
+              <BreadcrumbItem className="hidden sm:block">
                 <BreadcrumbLink href="/features">Features</BreadcrumbLink>
               </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbSeparator className="hidden sm:block" />
               <BreadcrumbItem>
                 <BreadcrumbPage>Feature lab</BreadcrumbPage>
               </BreadcrumbItem>
@@ -142,7 +142,7 @@ function FeaturesPageTabs({ requests, myVoteIds, onSubmitted }) {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <TabsList className="h-auto gap-1 rounded-xl bg-muted/60 p-1.5">
+              <TabsList className="h-auto w-full gap-1 overflow-x-auto rounded-xl bg-muted/60 p-1.5 sm:w-auto">
                 <TabsTrigger
                   value="requests"
                   className={cn(

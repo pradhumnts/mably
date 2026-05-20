@@ -12,13 +12,6 @@ import { Send } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isDemoProjectId } from "@/lib/data/demo-project";
 
-const PORTAL_CHAT_WALLPAPER_STYLE = {
-  backgroundImage: "url(/images/chat-bg.webp)",
-  backgroundSize: "cover",
-  backgroundPosition: "center",
-  backgroundRepeat: "no-repeat",
-};
-
 export function RealtimeChat({
   projectId,
   conversationId,
@@ -155,13 +148,8 @@ export function RealtimeChat({
 
       <div className="relative min-h-0 flex-1">
         <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 z-0"
-          style={PORTAL_CHAT_WALLPAPER_STYLE}
-        />
-        <div
           ref={containerRef}
-          className="relative z-10 h-full backdrop-blur-sm min-h-0 overflow-y-auto p-4"
+          className="relative z-10 h-full min-h-0 overflow-y-auto p-3 backdrop-blur-sm sm:p-4"
         >
           {!conversationId ? (
             <div className="text-center text-sm text-muted-foreground">Loading chat…</div>
@@ -200,7 +188,7 @@ export function RealtimeChat({
 
       <form
         onSubmit={(e) => void handleSend(e)}
-        className="flex w-full flex-col gap-2 border-t bg-white/80 backdrop-blur-sm border-border p-4"
+        className="flex w-full flex-col gap-2 border-t border-border bg-white/80 p-3 backdrop-blur-sm pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4"
       >
         {voiceComposer.panelVisible ? voiceComposer.panel : null}
         <div className="flex w-full items-center gap-2">

@@ -11,7 +11,7 @@ export function ProjectDetailsSidebar({ projectType, projectDetails }) {
   }
 
   return (
-    <Card className="gap-[16px] sticky top-[88px]">
+    <Card className="gap-4 lg:sticky lg:top-[88px]">
       {/* Project Milestones Section - Only for milestone projects */}
       {projectType === "milestone" && projectDetails.milestones && (
         <>
@@ -20,15 +20,14 @@ export function ProjectDetailsSidebar({ projectType, projectDetails }) {
           </CardHeader>
           <CardContent className="space-y-[24px]">
         {/* Status */}
-        <div className="flex items-center gap-2 font-medium">
-          <span className="w-2 h-2 rounded-full bg-orange-500" />
-          {projectDetails.status}
-
-          {/* vertical divider */}
-          <span className="mx-2 h-4 border-l border-zinc-300" />
-
-          <span className="font-medium flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-medium">
+          <span className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-orange-500" />
+            {projectDetails.status}
+          </span>
+          <span className="hidden h-4 border-l border-zinc-300 sm:block" />
+          <span className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
             Due {projectDetails.dueDate}
           </span>
         </div>

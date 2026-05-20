@@ -124,7 +124,7 @@ export function CreateInvoiceDialog({ open, onOpenChange, projectId, projectData
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="max-h-[min(90dvh,720px)] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">Add invoice</DialogTitle>
           <DialogDescription>

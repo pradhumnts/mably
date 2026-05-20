@@ -34,6 +34,14 @@ import {
   resolveLibraryLinkHref,
 } from "@/lib/library/infer-types";
 import { toast } from "sonner";
+import {
+  stickyPageHeaderClass,
+  stickyPageHeaderInnerClass,
+  pageContentWrapClass,
+  libraryToolbarClass,
+  libraryFiltersClass,
+  libraryFilterSelectTriggerClass,
+} from "@/lib/ui/page-chrome";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 function formatUploadedAt(iso) {
@@ -178,20 +186,20 @@ export default function LibraryLinks() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="flex h-16 items-center gap-2 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
+      <header className={stickyPageHeaderClass}>
+        <div className={stickyPageHeaderInnerClass}>
           <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="h-4 my-auto mr-2" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
           <Breadcrumb>
             <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
+              <BreadcrumbItem className="hidden sm:block">
                 <BreadcrumbLink href={`/project/${projectId}/dashboard`}>Dashboard</BreadcrumbLink>
               </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbSeparator className="hidden sm:block" />
               <BreadcrumbItem>
                 <BreadcrumbLink href={`/project/${projectId}/library/files`}>Library</BreadcrumbLink>
               </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbSeparator className="hidden sm:block" />
               <BreadcrumbItem>
                 <BreadcrumbPage>Links</BreadcrumbPage>
               </BreadcrumbItem>
@@ -199,19 +207,21 @@ export default function LibraryLinks() {
           </Breadcrumb>
           <Button
             variant="outline"
-            className="ml-auto flex items-center gap-1 font-semibold rounded-lg"
+            size="sm"
+            className="ml-auto shrink-0 gap-1 rounded-lg font-semibold sm:size-default"
             onClick={() => setAddLinkDialogOpen(true)}
           >
-            <Plus className="h-5 w-5 stroke-2" />
+            <Plus className="h-4 w-4 stroke-2 sm:h-5 sm:w-5" />
+            <span className="sm:hidden">Add</span>
             <span className="hidden sm:inline">Add Link</span>
           </Button>
         </div>
       </header>
 
       <div className="flex-1">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <div className="relative flex-1 max-w-md">
+        <div className={pageContentWrapClass}>
+          <div className={libraryToolbarClass}>
+            <div className="relative w-full sm:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
@@ -221,9 +231,9 @@ export default function LibraryLinks() {
                 className="pl-9 h-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className={libraryFiltersClass}>
               <Select value={linkTypeFilter} onValueChange={setLinkTypeFilter}>
-                <SelectTrigger className="w-[180px] h-10">
+                <SelectTrigger className={libraryFilterSelectTriggerClass}>
                   <SelectValue placeholder="Link type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -238,7 +248,7 @@ export default function LibraryLinks() {
               </Select>
 
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[180px] h-10">
+                <SelectTrigger className={libraryFilterSelectTriggerClass}>
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
@@ -271,7 +281,8 @@ export default function LibraryLinks() {
                     }}
                   >
                     <CardContent className="p-0">
-                      <div className="flex items-start gap-4">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                        <div className="flex min-w-0 flex-1 items-start gap-4">
                         <button
                           type="button"
                           className="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -285,7 +296,7 @@ export default function LibraryLinks() {
                         </button>
 
                         <div className="min-w-0 flex-1">
-                          <div className="mb-1 flex items-center gap-2">
+                          <div className="mb-1 flex min-w-0 flex-wrap items-center gap-2">
                             <button
                               type="button"
                               className="truncate text-left text-base font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
@@ -298,7 +309,7 @@ export default function LibraryLinks() {
                             </button>
                           </div>
 
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
                             <Avatar className="h-5 w-5">
                               <AvatarImage src={link.uploadedByAvatar || undefined} alt={link.uploadedBy} />
                               <AvatarFallback className="text-xs">
@@ -348,8 +359,9 @@ export default function LibraryLinks() {
                             </div>
                           )}
                         </div>
+                        </div>
 
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex shrink-0 items-center justify-end gap-2">
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
@@ -399,7 +411,7 @@ export default function LibraryLinks() {
                   </Card>
                 ))
               ) : (
-                <div className="col-span-2 flex flex-col items-center justify-center py-12 px-4 text-center">
+                <div className="col-span-full flex flex-col items-center justify-center py-12 px-4 text-center">
                   <div className="rounded-full bg-muted p-6 mb-4">
                     <LinkIcon className="h-12 w-12 text-muted-foreground" />
                   </div>

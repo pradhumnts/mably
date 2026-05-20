@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, DollarSign, Smile, Rocket, Send, Info } from "lucide-react";
+import Link from "next/link";
+import { FileText, DollarSign, Smile, Rocket, Send } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { CreateProjectStep1 } from "@/components/create-project/step-1";
 import { CreateProjectStep2 } from "@/components/create-project/step-2";
 import { CreateProjectStep3 } from "@/components/create-project/step-3";
 import { CreateProjectStep4 } from "@/components/create-project/step-4";
 import { CreateProjectStep5 } from "@/components/create-project/step-5";
 import { Button } from "@/components/ui/button";
+import { DEFAULT_BRAND_COLOR_HEX } from "@/components/brand-color-field";
 
 const steps = [
   {
@@ -45,6 +48,7 @@ const steps = [
 export function CreateProjectPageClient({
   initialClients,
   initialClientId = "",
+  defaultBrandColor = DEFAULT_BRAND_COLOR_HEX,
   createProjectBlockReason = null,
   polarConfigured = false,
   foundingPricing = null,
@@ -68,7 +72,7 @@ export function CreateProjectPageClient({
     milestones: [],
     // Step 3
     projectLogo: "",
-    brandColor: "",
+    brandColor: defaultBrandColor,
     // Step 4
     welcomeMessage: "",
     questions: [],
@@ -166,11 +170,13 @@ export function CreateProjectPageClient({
     }
   };
 
+  const activeStep = steps.find((s) => s.number === currentStep) ?? steps[0];
+
   return (
-    <div className="flex flex-col lg:flex-row h-[100vh] max-w-[1600px] mx-auto p-[24px] pt-4 gap-[24px] sm:pt-5">
-      {/* Left Side - Timeline & Steps (Fixed, Non-scrolling) */}
+    <div className="mx-auto flex min-h-dvh max-w-[1600px] flex-col gap-4 p-4 sm:gap-5 sm:p-5 lg:h-screen lg:flex-row lg:gap-6 lg:p-6">
+      {/* Left Side - Timeline & Steps (desktop) */}
       <div
-        className="relative w-full lg:w-[50%] h-auto lg:h-full bg-cover bg-center px-[32px] pb-[32px] pt-6 sm:px-8 sm:pb-8 sm:pt-7 lg:px-[80px] lg:pb-[80px] lg:pt-12 gap-[60px] flex flex-col justify-between rounded-3xl overflow-hidden"
+        className="relative hidden w-full flex-col justify-between overflow-hidden rounded-3xl bg-cover bg-center lg:flex lg:h-full lg:w-1/2 lg:px-20 lg:pb-20 lg:pt-12"
         style={{
           backgroundImage: "url('/images/form-background.webp')",
         }}
@@ -178,13 +184,11 @@ export function CreateProjectPageClient({
       
         {/* Content */}
         <div className="relative z-10">
-        <a
-          href="/projects"
-        >
+        <Link href="/projects">
           <Button
             variant="text"
             size="lg"
-            className="inline-flex items-center gap-2 px-0 h-auto mb-[16px] hover:opacity-50 cursor-pointer"
+            className="mb-4 inline-flex h-auto cursor-pointer items-center gap-2 px-0 hover:opacity-50"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -203,7 +207,7 @@ export function CreateProjectPageClient({
             </svg>
             Back to Projects
           </Button>
-        </a>
+        </Link>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
             Create New Project.
           </h1>
@@ -274,10 +278,60 @@ export function CreateProjectPageClient({
         </div> */}
       </div>
 
-      {/* Right Side - Form Content (Scrollable) */}
-      <div className="w-full lg:w-[50%] bg-background flex justify-center overflow-y-auto overflow-x-hidden rounded-3xl">
-        <div className="w-full max-w-xl pt-10 sm:p-8 sm:pt-10 lg:pt-12 lg:pb-[80px] pb-[40px]">
-          {renderStep()}
+      {/* Form column */}
+      <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-3xl bg-background lg:w-1/2">
+        <div className="shrink-0 border-b px-1 pb-4 pt-1 lg:hidden">
+          <Link href="/projects">
+            <Button
+              variant="text"
+              size="sm"
+              className="mb-3 inline-flex h-auto gap-2 px-0 hover:opacity-70"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Projects
+            </Button>
+          </Link>
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+            Step {currentStep} of 5
+          </p>
+          <h1 className="mt-1 text-xl font-bold">{activeStep.title}</h1>
+          <div
+            className="mt-3 flex gap-1.5"
+            role="progressbar"
+            aria-valuenow={currentStep}
+            aria-valuemin={1}
+            aria-valuemax={5}
+            aria-label={`Step ${currentStep} of 5`}
+          >
+            {steps.map((step) => (
+              <div
+                key={step.number}
+                className={cn(
+                  "h-1 flex-1 rounded-full transition-colors",
+                  step.number <= currentStep ? "bg-primary" : "bg-muted"
+                )}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+          <div className="mx-auto w-full max-w-xl px-1 py-4 pb-8 sm:px-4 sm:py-6 lg:px-8 lg:pb-20 lg:pt-12">
+            {renderStep()}
+          </div>
         </div>
       </div>
 

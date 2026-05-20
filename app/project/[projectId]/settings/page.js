@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { usePortalProject } from "../project-portal-shell";
 import {
   Breadcrumb,
@@ -45,6 +45,11 @@ import {
   savePortalNotificationPreferences,
   uploadPortalClientAvatar,
 } from "@/lib/actions/project-portal-settings";
+import {
+  BrandColorFieldGroup,
+  DEFAULT_BRAND_COLOR_HEX,
+} from "@/components/brand-color-field";
+import { PortalBrandPreview } from "@/components/create-project/portal-brand-preview";
 
 function parseIsoDate(iso) {
   if (!iso || typeof iso !== "string") return undefined;
@@ -95,6 +100,7 @@ function contactInitial(name, email) {
 
 export default function ProjectSettings() {
   const params = useParams();
+  const router = useRouter();
   const projectId = params.projectId;
   const { meta } = usePortalProject();
   const userRole = meta.isFreelancer ? "freelancer" : "client";
@@ -108,6 +114,7 @@ export default function ProjectSettings() {
     dueDate: undefined,
     status: "active",
     logo: "",
+    brandColor: DEFAULT_BRAND_COLOR_HEX,
   });
   const [notifications, setNotifications] = useState({
     fileUploads: true,
@@ -133,6 +140,7 @@ export default function ProjectSettings() {
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [savingProject, setSavingProject] = useState(false);
+  const [savingBranding, setSavingBranding] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -146,6 +154,7 @@ export default function ProjectSettings() {
       dueDate: parseIsoDate(r.project.endDate),
       status: r.project.status,
       logo: r.project.logoUrl ?? "",
+      brandColor: r.project.brandColor ?? DEFAULT_BRAND_COLOR_HEX,
     });
     setNotifications(r.notifications);
     setContactInfo({
@@ -191,6 +200,27 @@ export default function ProjectSettings() {
   const handleSaveProjectInfo = async () => {
     setSavingProject(true);
     try {
+      const r = await updatePortalProjectSettings(String(projectId), {
+        name: projectInfo.name,
+        description: projectInfo.description,
+        startDate: projectInfo.startDate ?? null,
+        dueDate: projectInfo.dueDate ?? null,
+        status: projectInfo.status,
+      });
+      if (!r.ok) {
+        toast.error(r.error || "Could not update project");
+        return;
+      }
+      toast.success("Project information updated");
+      await refreshFromServer();
+    } finally {
+      setSavingProject(false);
+    }
+  };
+
+  const handleSaveBranding = async () => {
+    setSavingBranding(true);
+    try {
       const logoDataUrl =
         typeof projectInfo.logo === "string" && projectInfo.logo.startsWith("data:image")
           ? projectInfo.logo
@@ -202,15 +232,17 @@ export default function ProjectSettings() {
         dueDate: projectInfo.dueDate ?? null,
         status: projectInfo.status,
         ...(logoDataUrl ? { logoDataUrl } : {}),
+        brandColor: projectInfo.brandColor,
       });
       if (!r.ok) {
-        toast.error(r.error || "Could not update project");
+        toast.error(r.error || "Could not update branding");
         return;
       }
-      toast.success("Project information updated");
+      toast.success("Branding updated");
       await refreshFromServer();
+      router.refresh();
     } finally {
-      setSavingProject(false);
+      setSavingBranding(false);
     }
   };
 
@@ -291,16 +323,16 @@ export default function ProjectSettings() {
   };
 
   const header = (
-    <header className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-      <div className="flex h-16 items-center gap-2 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
+    <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-2 px-4 sm:h-16 sm:px-6 lg:px-8">
         <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="h-4 my-auto mr-2" />
+        <Separator orientation="vertical" className="mr-2 h-4" />
         <Breadcrumb>
           <BreadcrumbList>
-            <BreadcrumbItem className="hidden md:block">
+            <BreadcrumbItem className="hidden sm:block">
               <BreadcrumbLink href={`/project/${projectId}/dashboard`}>Dashboard</BreadcrumbLink>
             </BreadcrumbItem>
-            <BreadcrumbSeparator className="hidden md:block" />
+            <BreadcrumbSeparator className="hidden sm:block" />
             <BreadcrumbItem>
               <BreadcrumbPage>Settings</BreadcrumbPage>
             </BreadcrumbItem>
@@ -315,7 +347,7 @@ export default function ProjectSettings() {
       {header}
 
       <div className="flex-1">
-        <div className="max-w-[1600px] w-[60%] px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8 lg:max-w-4xl lg:px-8">
           {!ready ? (
             <div className="flex items-center gap-2 text-muted-foreground py-12">
               <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
@@ -355,13 +387,14 @@ export default function ProjectSettings() {
               <TabsList
                 className={
                   userRole === "freelancer"
-                    ? "grid w-fit grid-cols-2 mb-6"
+                    ? "grid w-fit grid-cols-3 mb-6"
                     : "grid w-fit grid-cols-3 mb-6"
                 }
               >
                 {userRole === "freelancer" ? (
                   <>
                     <TabsTrigger value="project-info">Project Information</TabsTrigger>
+                    <TabsTrigger value="branding">Branding</TabsTrigger>
                     <TabsTrigger value="notifications">Notifications</TabsTrigger>
                   </>
                 ) : (
@@ -381,36 +414,6 @@ export default function ProjectSettings() {
                       <CardDescription>Update your project details and timeline</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      <div className="flex items-center gap-6">
-                        <Avatar className="h-24 w-24 rounded-lg">
-                          <AvatarImage src={projectInfo.logo || undefined} alt="Project logo" />
-                          <AvatarFallback className="rounded-lg">
-                            {(projectInfo.name || "?").charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <input
-                            type="file"
-                            id="logo-upload"
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleLogoUpload}
-                          />
-                          <Button
-                            variant="outline"
-                            type="button"
-                            onClick={() => document.getElementById("logo-upload")?.click()}
-                            disabled={savingProject}
-                          >
-                            <Upload className="h-4 w-4 mr-2" />
-                            Change project logo
-                          </Button>
-                          <p className="text-sm text-muted-foreground mt-2">JPG, PNG, GIF, or WebP, max 5MB</p>
-                        </div>
-                      </div>
-
-                      <Separator />
-
                       <div className="space-y-2">
                         <Label htmlFor="projectName">Project name</Label>
                         <Input
@@ -533,6 +536,82 @@ export default function ProjectSettings() {
                           </>
                         ) : (
                           "Save changes"
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
+
+              {userRole === "freelancer" && (
+                <TabsContent value="branding">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Client portal branding</CardTitle>
+                      <CardDescription>
+                        Logo and accent color shown to your client in the portal, chat, and file discussions
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="flex items-center gap-6">
+                        <Avatar className="h-24 w-24 rounded-lg">
+                          <AvatarImage src={projectInfo.logo || undefined} alt="Project logo" />
+                          <AvatarFallback className="rounded-lg">
+                            {(projectInfo.name || "?").charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <input
+                            type="file"
+                            id="logo-upload"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleLogoUpload}
+                          />
+                          <Button
+                            variant="outline"
+                            type="button"
+                            onClick={() => document.getElementById("logo-upload")?.click()}
+                            disabled={savingBranding}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Change project logo
+                          </Button>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            JPG, PNG, GIF, or WebP, max 5MB
+                          </p>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <BrandColorFieldGroup
+                        value={projectInfo.brandColor}
+                        onChange={(brandColor) =>
+                          setProjectInfo((prev) => ({ ...prev, brandColor }))
+                        }
+                        disabled={savingBranding}
+                        description="Accent color for buttons, links, and backgrounds in the client portal."
+                      />
+
+                      <PortalBrandPreview
+                        brandColor={projectInfo.brandColor}
+                        projectLogo={projectInfo.logo}
+                        projectName={projectInfo.name}
+                      />
+
+                      <Button
+                        type="button"
+                        onClick={() => void handleSaveBranding()}
+                        disabled={savingBranding}
+                      >
+                        {savingBranding ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving…
+                          </>
+                        ) : (
+                          "Save branding"
                         )}
                       </Button>
                     </CardContent>

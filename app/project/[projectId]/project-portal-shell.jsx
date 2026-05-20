@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import { FloatingChatWidget } from "@/components/floating-chat-widget";
 import { PortalOnboardingDialog } from "@/components/portal-onboarding-dialog";
+import { PortalBrandProvider } from "@/components/portal-brand";
 // import { LegalFooterLinks } from "@/components/legal-footer-links"; // hidden until legal pages are live
 
 const PortalProjectContext = createContext(null);
@@ -53,6 +54,7 @@ export function ProjectPortalShell({ bundle, children }) {
 
   return (
     <PortalProjectContext.Provider value={bundle}>
+      <PortalBrandProvider brandColor={bundle.branding?.brandColor}>
       <SidebarProvider>
         <ProjectAppSidebar
           projectData={bundle.sidebar}
@@ -90,12 +92,13 @@ export function ProjectPortalShell({ bundle, children }) {
           userRole={userRole}
           portalChatPersonas={portalChatPersonas}
         />
+        <PortalOnboardingDialog
+          projectId={String(projectId)}
+          isFreelancer={Boolean(bundle.meta?.isFreelancer)}
+          projectName={bundle.sidebar?.projectName}
+        />
       </SidebarProvider>
-      <PortalOnboardingDialog
-        projectId={String(projectId)}
-        isFreelancer={Boolean(bundle.meta?.isFreelancer)}
-        projectName={bundle.sidebar?.projectName}
-      />
+      </PortalBrandProvider>
     </PortalProjectContext.Provider>
   );
 }

@@ -193,7 +193,7 @@ export function ClientDetailsDialog({
 
           {/* Projects Section */}
           <div className="space-y-4">
-            <div className="flex items-end justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h3 className="text-xl font-semibold">Projects</h3>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -203,13 +203,14 @@ export function ClientDetailsDialog({
               </div>
               {!client.isSample ? (
                 <Button
-                  className="ml-auto flex items-center gap-1 mb-[2px] font-semibold rounded-lg"
+                  className="w-full shrink-0 gap-1 rounded-lg font-semibold sm:ml-auto sm:mb-[2px] sm:w-auto"
                   asChild
                 >
                   <Link
                     href={`/projects/new?clientId=${encodeURIComponent(client.id)}`}
                   >
                     <Plus className="h-5 w-5 stroke-2" />
+                    <span className="sm:hidden">New project</span>
                     <span className="hidden sm:inline">Start Project</span>
                   </Link>
                 </Button>

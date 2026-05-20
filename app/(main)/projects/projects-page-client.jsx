@@ -84,25 +84,26 @@ export function ProjectsPageClient({ initialProjects }) {
         }}
         project={deleteTarget}
       />
-      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="flex h-16 items-center gap-2 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
+      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-2 px-4 sm:h-16 sm:px-6 lg:px-8">
           <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="h-4 my-auto mr-2" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
           <Breadcrumb>
             <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
+              <BreadcrumbItem className="hidden sm:block">
                 <BreadcrumbLink href="/projects">Projects</BreadcrumbLink>
               </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbSeparator className="hidden sm:block" />
               <BreadcrumbItem>
                 <BreadcrumbPage>All Projects</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <div className="flex-1" />
-          <Button asChild className="flex items-center gap-1 font-semibold rounded-lg">
+          <div className="min-w-0 flex-1" />
+          <Button asChild size="sm" className="shrink-0 gap-1 rounded-lg font-semibold sm:size-default">
             <Link href="/projects/new">
-              <Plus className="h-5 w-5 stroke-2" />
+              <Plus className="h-4 w-4 stroke-2 sm:h-5 sm:w-5" />
+              <span className="sm:hidden">New</span>
               <span className="hidden sm:inline">Create new project</span>
             </Link>
           </Button>

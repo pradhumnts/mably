@@ -21,6 +21,7 @@ import {
   AvatarGroup,
   AvatarImage,
 } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Send } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -86,19 +87,23 @@ export function ChatWithTeamDialog({ open, onOpenChange, projectId }) {
               {MABLY_TEAM_AVATARS.map((member) => {
                 const initial = (member.name || "?").trim().charAt(0).toUpperCase();
                 return (
-                  <Avatar
-                    key={member.name}
-                    className="size-10 border-2 border-background shadow-sm"
-                  >
-                    <AvatarImage
-                      src={member.imageSrc}
-                      alt={member.name}
-                      className="object-cover"
-                    />
-                    <AvatarFallback className="text-xs font-medium">
-                      {initial}
-                    </AvatarFallback>
-                  </Avatar>
+                  <Tooltip key={member.name}>
+                    <TooltipTrigger asChild>
+                      <Avatar className="size-8 border-1 border-background shadow-sm">
+                        <AvatarImage
+                          src={member.imageSrc}
+                          alt={member.name}
+                          className="object-cover"
+                        />
+                        <AvatarFallback className="text-xs font-medium">
+                          {initial}
+                        </AvatarFallback>
+                      </Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={6}>
+                      {member.name}
+                    </TooltipContent>
+                  </Tooltip>
                 );
               })}
             </AvatarGroup>
