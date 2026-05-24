@@ -36,7 +36,9 @@ export async function middleware(request) {
 
   const path = request.nextUrl.pathname
   const isAuthPage = path === '/' || path.startsWith('/login') || path.startsWith('/signup')
-  const isProtectedPage = path.startsWith('/projects') ||
+  const isProtectedPage = path.startsWith('/dashboard') ||
+                         path.startsWith('/notifications') ||
+                         path.startsWith('/projects') ||
                          path.startsWith('/clients') ||
                          path.startsWith('/features') ||
                          path.startsWith('/billing') ||
@@ -112,6 +114,13 @@ export async function middleware(request) {
 
   // Freelancers don't belong on /portal (chooser is client-only)
   if (path === '/portal' || path.startsWith('/portal/')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/projects'
+    url.search = ''
+    return NextResponse.redirect(url)
+  }
+
+  if (path === '/dashboard' || path.startsWith('/dashboard/')) {
     const url = request.nextUrl.clone()
     url.pathname = '/projects'
     url.search = ''

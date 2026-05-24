@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ClipboardList, Home, Users, Settings } from "lucide-react";
+import { Bell, ClipboardList, Home, Users, Settings } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { NavUser } from "@/components/nav-user";
@@ -30,6 +30,11 @@ const navData = {
       url: "/projects",
       icon: ClipboardList,
       isActive: false,
+    },
+    {
+      title: "Notifications",
+      icon: Bell,
+      action: "notifications",
     },
     {
       title: "Clients",
@@ -83,11 +88,12 @@ export function AppSidebar({ user, ...props }) {
   // Update active state based on current pathname
   const navGeneralWithActive = navGeneralItems.map((item) => ({
     ...item,
-    isActive: item.disabled
-      ? false
-      : pathname === item.url || pathname.startsWith(item.url + "/"),
+    isActive:
+      item.disabled || item.action === "notifications"
+        ? false
+        : pathname === item.url || pathname.startsWith(`${item.url}/`),
   }));
-  
+
   const navOtherWithActive = navData.navOther.map((item) => ({
     ...item,
     isActive: pathname === item.url || pathname.startsWith(item.url + '/')

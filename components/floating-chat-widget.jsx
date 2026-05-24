@@ -109,9 +109,20 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
     };
   }, [isOpen, boot?.conversationId, projectId]);
 
-  const handleOpenChat = () => {
+  const handleOpenChat = useCallback(() => {
     setIsOpen(true);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("openChat") !== "1") return;
+    if (bootError || !boot?.conversationId) return;
+    handleOpenChat();
+    const url = new URL(window.location.href);
+    url.searchParams.delete("openChat");
+    window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+  }, [bootError, boot?.conversationId, handleOpenChat]);
 
   const chatDisabled = Boolean(bootError || !boot?.conversationId);
 

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import { FloatingChatWidget } from "@/components/floating-chat-widget";
 import { PortalOnboardingDialog } from "@/components/portal-onboarding-dialog";
+import { WebPushManager } from "@/components/web-push-manager";
 import { PortalBrandProvider } from "@/components/portal-brand";
 // import { LegalFooterLinks } from "@/components/legal-footer-links"; // hidden until legal pages are live
 
@@ -87,6 +88,7 @@ export function ProjectPortalShell({ bundle, children }) {
             <LegalFooterLinks />
           </footer> */}
         </SidebarInset>
+        <WebPushManager />
         <FloatingChatWidget
           projectId={projectId}
           userRole={userRole}

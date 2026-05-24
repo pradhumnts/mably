@@ -19,16 +19,20 @@ import {
 } from "@/components/ui/sidebar";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NotificationsMenuItem } from "@/components/notifications/notifications-menu-item";
 
 export function NavMain({ items, label }) {
   const { state } = useSidebar();
+  if (!items?.length) return null;
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>
-        {label}
-      </SidebarGroupLabel>
+      {label ? <SidebarGroupLabel>{label}</SidebarGroupLabel> : null}
       <SidebarMenu>
         {items.map((item) => {
+          if (item.action === "notifications") {
+            return <NotificationsMenuItem key="notifications" />;
+          }
+
           // If item has sub-items, make it collapsible
           if (item.items && item.items.length > 0) {
             // Always-open sections: skip Radix Collapsible (avoids SSR/client useId / aria-controls mismatches

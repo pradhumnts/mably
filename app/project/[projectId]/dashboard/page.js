@@ -38,7 +38,8 @@ export default function ProjectDashboard() {
   const params = useParams();
   const projectId = params.projectId;
   const { sidebar, dashboard, meta } = usePortalProject();
-  const showBookCall = !meta?.isFreelancer;
+  const calendarLink = dashboard.calendarLink?.trim() || "";
+  const showBookCall = !meta?.isFreelancer && Boolean(calendarLink);
 
   const lastVisit = "Yesterday 2:41 PM";
   const clientName = sidebar.clientName?.split(/\s+/)[0] || "there";
@@ -60,7 +61,7 @@ export default function ProjectDashboard() {
             <BookCallCard
               freelancerName={dashboard.freelancerName}
               freelancerAvatar={dashboard.freelancerAvatar || undefined}
-              calendarLink={dashboard.calendarLink?.trim() || "https://calendly.com/"}
+              calendarLink={calendarLink}
             />
           </div>
         ) : null}

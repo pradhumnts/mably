@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { updateProfile, uploadProfileAvatar } from "@/lib/actions/profile";
 import { completeFreelancerOnboarding } from "@/lib/actions/onboarding";
+import { MarketingEmailConsent } from "@/components/marketing-email-consent";
 import { toast } from "sonner";
 // import { LegalFooterLinks } from "@/components/legal-footer-links"; // hidden until legal pages are live
 
@@ -101,6 +102,7 @@ export function FreelancerOnboardingClient({ initialProfile }) {
   }));
 
   const [selectedRole, setSelectedRole] = useState(null);
+  const [marketingEmails, setMarketingEmails] = useState(false);
 
   const goTo = (next) => {
     setCurrentStep(next);
@@ -159,7 +161,7 @@ export function FreelancerOnboardingClient({ initialProfile }) {
       return;
     }
     setFinishing(true);
-    const r = await completeFreelancerOnboarding(selectedRole);
+    const r = await completeFreelancerOnboarding(selectedRole, { marketingEmails });
     setFinishing(false);
     if (!r.ok) {
       toast.error(r.error || "Something went wrong");
@@ -299,10 +301,13 @@ export function FreelancerOnboardingClient({ initialProfile }) {
                     placeholder="e.g. Brand designer"
                   />
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                Update anything now, you can always change it later
-                in Settings.
-              </p>
+                
+                <MarketingEmailConsent
+                  variant="onboarding-compact"
+                  checked={marketingEmails}
+                  onCheckedChange={setMarketingEmails}
+                  disabled={saving}
+                />
               </div>
             </>
           ) : null}

@@ -13,6 +13,7 @@ import {
   DEFAULT_BRAND_COLOR_HEX,
 } from "@/components/brand-color-field";
 import { saveFreelancerDashboardNotificationPreferences } from "@/lib/actions/freelancer-notification-preferences";
+import { MarketingEmailConsent } from "@/components/marketing-email-consent";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -78,12 +79,30 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
 
   const np = initialProfile?.notificationPreferences;
 
+  useEffect(() => {
+    if (!np) return;
+    setNotifications({
+      clientOpenedPortal: np.clientOpenedPortal !== false,
+      projectCreated: np.projectCreated !== false,
+      paymentReceived: np.paymentReceived !== false,
+      invoiceOverdue: np.invoiceOverdue !== false,
+      marketingEmails: np.marketingEmails === true,
+    });
+  }, [
+    np?.clientOpenedPortal,
+    np?.projectCreated,
+    np?.paymentReceived,
+    np?.invoiceOverdue,
+    np?.marketingEmails,
+  ]);
+
   // Notification Preferences State (merged with portal prefs on the same profile row)
   const [notifications, setNotifications] = useState({
     clientOpenedPortal: np?.clientOpenedPortal !== false,
     projectCreated: np?.projectCreated !== false,
     paymentReceived: np?.paymentReceived !== false,
     invoiceOverdue: np?.invoiceOverdue !== false,
+    marketingEmails: np?.marketingEmails === true,
   });
 
   // Calendar & Availability State (seeded from profiles.calendar_link)
@@ -567,6 +586,19 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
                             />
                           </div>
                         </div>
+
+                        <Separator />
+
+                        <MarketingEmailConsent
+                          variant="settings"
+                          checked={notifications.marketingEmails}
+                          onCheckedChange={(checked) =>
+                            setNotifications((prev) => ({
+                              ...prev,
+                              marketingEmails: checked,
+                            }))
+                          }
+                        />
 
                         <Button onClick={handleSaveNotifications}>
                           Save Preferences

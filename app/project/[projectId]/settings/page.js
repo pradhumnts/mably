@@ -45,6 +45,7 @@ import {
   savePortalNotificationPreferences,
   uploadPortalClientAvatar,
 } from "@/lib/actions/project-portal-settings";
+import { BrowserPushSettings } from "@/components/browser-push-settings";
 import {
   BrandColorFieldGroup,
   DEFAULT_BRAND_COLOR_HEX,
@@ -683,7 +684,9 @@ export default function ProjectSettings() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Notification preferences</CardTitle>
-                    <CardDescription>Choose what updates you want to receive via email</CardDescription>
+                    <CardDescription>
+                      Email preferences and browser alerts for this project
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-4">
@@ -718,6 +721,10 @@ export default function ProjectSettings() {
                           }
                         />
                       </div>
+
+                      <Separator />
+
+                      <BrowserPushSettings />
 
                       <Separator />
 

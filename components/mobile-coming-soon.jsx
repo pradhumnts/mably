@@ -10,12 +10,12 @@ export function MobileComingSoon() {
       <div className="space-y-3">
         <h1 className="text-2xl font-bold text-foreground">Mobile coming soon</h1>
         <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-          This page isn&apos;t available on mobile yet. Head to Projects, Clients, or Settings,
+          This page isn&apos;t available on mobile yet. Head to Dashboard, Projects, or Settings,
           or use your laptop for the full experience.
         </p>
       </div>
       <a
-        href="/projects"
+        href="/dashboard"
         className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow transition-opacity hover:opacity-90"
       >
         Go to Projects

@@ -4,13 +4,18 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 
-export function BookCallCard({ 
-  freelancerName = "Emma", 
-  freelancerAvatar = "https://plus.unsplash.com/premium_photo-1675710868549-3c9d54a40219?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  calendarLink = "https://calendly.com/"
+export function BookCallCard({
+  freelancerName = "Freelancer",
+  freelancerAvatar,
+  calendarLink,
 }) {
+  const href = typeof calendarLink === "string" ? calendarLink.trim() : "";
+  if (!href) {
+    return null;
+  }
+
   return (
-    <Link href={calendarLink} target="_blank" rel="noopener noreferrer">
+    <Link href={href} target="_blank" rel="noopener noreferrer">
       <Card className="w-full max-w-full cursor-pointer bg-white/50 p-0 ring-0 transition-shadow duration-200 hover:shadow-lg focus:shadow-none sm:w-fit sm:max-w-sm">
         <CardContent className="flex gap-4 p-4">
           <div className="flex items-start gap-3">

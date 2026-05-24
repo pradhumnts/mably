@@ -128,7 +128,11 @@ function StepMedia({ imageSrc, imageAlt, videoSrc, className }) {
 
 /**
  * First-visit onboarding for the project portal (client + freelancer).
- * @param {{ projectId: string; isFreelancer: boolean; projectName?: string | null }} props
+ * @param {{
+ *   projectId: string;
+ *   isFreelancer: boolean;
+ *   projectName?: string | null;
+ * }} props
  */
 export function PortalOnboardingDialog({ projectId, isFreelancer, projectName }) {
   const [mounted, setMounted] = useState(false);
@@ -185,8 +189,13 @@ export function PortalOnboardingDialog({ projectId, isFreelancer, projectName })
       open={open}
       onOpenChange={(next) => {
         if (!next) {
-          markDone();
-          setStepIndex(0);
+          if (isLast) finish();
+          else {
+            markDone();
+            setOpen(false);
+            setStepIndex(0);
+          }
+          return;
         }
         setOpen(next);
       }}
@@ -224,6 +233,7 @@ export function PortalOnboardingDialog({ projectId, isFreelancer, projectName })
               />
             ))}
           </div>
+
         </div>
 
         <DialogFooter className="flex-row items-center justify-between gap-2 border-t border-border/80 bg-muted/20 px-4 py-4 sm:px-6">
@@ -248,7 +258,12 @@ export function PortalOnboardingDialog({ projectId, isFreelancer, projectName })
               <ChevronLeft className="h-4 w-4" />
               Back
             </Button>
-            <Button type="button" size="sm" className="gap-1 min-w-[5.5rem]" onClick={goNext}>
+            <Button
+              type="button"
+              size="sm"
+              className="gap-1 min-w-[5.5rem]"
+              onClick={goNext}
+            >
               {isLast ? "Done" : "Next"}
               {!isLast && <ChevronRight className="h-4 w-4" />}
             </Button>
