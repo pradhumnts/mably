@@ -35,6 +35,14 @@ export async function middleware(request) {
   } = await supabase.auth.getUser()
 
   const path = request.nextUrl.pathname
+
+  // Public embed routes (loaded inside iframes on marketing sites). Never
+  // require auth, never redirect — they ship the same UI components but with
+  // no app shell or session.
+  if (path.startsWith('/embed/') || path === '/embed') {
+    return supabaseResponse
+  }
+
   const isAuthPage = path === '/' || path.startsWith('/login') || path.startsWith('/signup')
   const isProtectedPage = path.startsWith('/dashboard') ||
                          path.startsWith('/notifications') ||

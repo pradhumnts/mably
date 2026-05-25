@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mably — Early Offer embed demo</title>
+    <style>
+      :root {
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          Roboto, "Helvetica Neue", Arial, sans-serif;
+        color-scheme: light;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #fafafa;
+        color: #18181b;
+        display: grid;
+        place-items: center;
+      }
+      .card {
+        max-width: 36rem;
+        padding: 2rem;
+        border-radius: 1rem;
+        background: #ffffff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      }
+      h1 {
+        margin: 0 0 0.5rem;
+        font-size: 1.5rem;
+      }
+      p {
+        color: #52525b;
+        line-height: 1.55;
+      }
+      button {
+        appearance: none;
+        cursor: pointer;
+        margin-top: 1rem;
+        padding: 0.65rem 1rem;
+        border-radius: 9999px;
+        border: 1px solid #18181b;
+        background: #18181b;
+        color: #ffffff;
+        font-weight: 600;
+      }
+      button + button {
+        margin-left: 0.5rem;
+        background: transparent;
+        color: #18181b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Mably — Early Offer embed</h1>
+      <p>
+        This page is a sandbox for the embeddable founding-pricing popup. The
+        same script loaded here can be pasted into Framer (or any HTML page) to
+        get the exact in-app popup.
+      </p>
+      <button onclick="MablyEarlyOffer.open()">Open popup</button>
+      <button onclick="MablyEarlyOffer.reset(); MablyEarlyOffer.open()">
+        Reset &amp; open
+      </button>
+    </div>
+
+    <!-- The loader script. In production this stays at /embed/early-offer.js -->
+    <script
+      src="/embed/early-offer.js"
+      data-mably-early-offer="manual"
+      async
+    ></script>
+  </body>
+</html>
