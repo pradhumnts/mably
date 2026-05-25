@@ -118,14 +118,23 @@ export function EarlyOfferEmbedClient({ mode }) {
     });
   }, []);
 
-  const wrapperClass =
-    mode === "popup"
-      ? "min-h-screen w-full flex items-center justify-center bg-black/0 p-3 sm:p-6"
-      : "w-full flex items-center justify-center p-3";
-
+  // Render the card flush to the iframe edges — no padding, no centering
+  // wrapper, no extra width. The host (Framer, etc.) sizes the iframe to the
+  // popup itself. The inline style below kills the in-app card's outer glow
+  // + drop shadow so the visible footprint is exactly the rounded card.
   return (
-    <div className={wrapperClass}>
-      <div className="w-full max-w-4xl">
+    <>
+      <style>{`
+        .mably-embed-popup-root,
+        .mably-embed-popup-root > div {
+          width: 100%;
+          height: 100%;
+        }
+        .mably-embed-popup-root > div {
+          box-shadow: none !important;
+        }
+      `}</style>
+      <div className="mably-embed-popup-root" data-embed-mode={mode}>
         <EarlyPricingOfferCard
           active={active}
           selectedPlan={selectedPlan}
@@ -137,6 +146,6 @@ export function EarlyOfferEmbedClient({ mode }) {
           claimLoading={claimLoading}
         />
       </div>
-    </div>
+    </>
   );
 }

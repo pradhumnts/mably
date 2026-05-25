@@ -104,15 +104,16 @@
     var style = document.createElement("style");
     style.id = "mably-early-offer-styles";
     style.textContent =
-      // Overlay + iframe
-      ".mably-early-offer-overlay{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity 220ms ease;padding:16px;box-sizing:border-box}" +
+      // Overlay + iframe. Overlay backdrop is fully transparent so the host
+      // page (Framer, etc.) decides what shows behind the popup. Click-through
+      // is blocked only on the popup itself, not the empty area around it.
+      ".mably-early-offer-overlay{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:transparent;opacity:0;transition:opacity 220ms ease;padding:0;box-sizing:border-box;pointer-events:none}" +
       ".mably-early-offer-overlay[data-state=open]{opacity:1}" +
-      ".mably-early-offer-frame-wrap{position:relative;width:100%;max-width:min(64rem,calc(100vw - 1rem));height:min(96vh,920px);display:flex;align-items:center;justify-content:center;transform:scale(0.96);transition:transform 220ms cubic-bezier(0.22,1,0.36,1)}" +
+      ".mably-early-offer-frame-wrap{position:relative;width:100%;max-width:min(56rem,calc(100vw - 1rem));height:min(96vh,560px);display:flex;align-items:center;justify-content:center;transform:scale(0.96);transition:transform 220ms cubic-bezier(0.22,1,0.36,1);pointer-events:auto}" +
       ".mably-early-offer-overlay[data-state=open] .mably-early-offer-frame-wrap{transform:scale(1)}" +
       ".mably-early-offer-frame{width:100%;height:100%;border:0;background:transparent;border-radius:1.75rem;display:block;color-scheme:dark}" +
       ".mably-early-offer-fallback-close{position:absolute;top:-44px;right:-4px;padding:6px 12px;border-radius:9999px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.12);cursor:pointer;font:500 12px/1 system-ui,-apple-system,sans-serif;opacity:0;pointer-events:none;transition:opacity 200ms ease}" +
       ".mably-early-offer-frame-wrap[data-iframe-loaded=false] .mably-early-offer-fallback-close{opacity:1;pointer-events:auto}" +
-      "html.mably-early-offer-no-scroll,body.mably-early-offer-no-scroll{overflow:hidden}" +
       // Sticky CTA (mirrors components/billing/early-pricing-offer-sticky-cta.jsx)
       ".mably-eo-sticky{position:fixed;bottom:1.5rem;right:1.5rem;z-index:2147483590;max-width:min(calc(100vw - 3rem),17rem);cursor:pointer;border-radius:9999px;padding:1px;border:0;text-align:left;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-image:linear-gradient(100deg,#e8c9a0 0%,#fde8d4 22%,#b8d4f5 50%,#f5e6d3 78%,#e8c9a0 100%);background-size:220% 100%;box-shadow:0 0 16px rgba(251,191,36,0.12),0 8px 24px rgba(0,0,0,0.3);transition:transform 300ms cubic-bezier(0.22,1,0.36,1),box-shadow 300ms ease,opacity 240ms ease;opacity:0;transform:translateY(12px) scale(0.96);pointer-events:none}" +
       ".mably-eo-sticky[data-state=visible]{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;animation:mably-eo-border-flow 5s ease-in-out infinite,mably-eo-glow-pulse 3.5s ease-in-out infinite}" +
@@ -178,19 +179,6 @@
     stickyEl.setAttribute("data-state", "hidden");
   }
 
-  function lockScroll(lock) {
-    var html = document.documentElement;
-    var body = document.body;
-    if (!body) return;
-    if (lock) {
-      html.classList.add("mably-early-offer-no-scroll");
-      body.classList.add("mably-early-offer-no-scroll");
-    } else {
-      html.classList.remove("mably-early-offer-no-scroll");
-      body.classList.remove("mably-early-offer-no-scroll");
-    }
-  }
-
   function ensureMounted() {
     if (overlayEl) return;
 
@@ -238,10 +226,6 @@
     wrap.appendChild(closeBtnEl);
     overlayEl.appendChild(wrap);
 
-    overlayEl.addEventListener("click", function (e) {
-      if (e.target === overlayEl) close();
-    });
-
     document.body.appendChild(overlayEl);
   }
 
@@ -254,7 +238,6 @@
     // Force reflow before flipping the state to ensure transition fires.
     void overlayEl.offsetWidth;
     overlayEl.setAttribute("data-state", "open");
-    lockScroll(true);
 
     keydownHandler = function (e) {
       if (e.key === "Escape") {
@@ -269,7 +252,6 @@
     if (!overlayEl || !isOpen) return;
     isOpen = false;
     overlayEl.setAttribute("data-state", "closed");
-    lockScroll(false);
     if (keydownHandler) {
       window.removeEventListener("keydown", keydownHandler, true);
       keydownHandler = null;
