@@ -324,21 +324,15 @@
   var scrollTriggerArmed = false;
   var scrollTriggerHandler = null;
 
-  function disarmScrollTrigger() {
-    if (!scrollTriggerArmed) return;
-    scrollTriggerArmed = false;
-    if (scrollTriggerHandler) {
-      window.removeEventListener("scroll", scrollTriggerHandler);
-      window.removeEventListener("resize", scrollTriggerHandler);
-      scrollTriggerHandler = null;
-    }
-  }
-
   function currentScrollPercent() {
     var docEl = document.documentElement;
     var body = document.body || {};
     var scrollTop =
-      window.pageYOffset || docEl.scrollTop || body.scrollTop || 0;
+      window.pageYOffset ||
+      window.scrollY ||
+      docEl.scrollTop ||
+      body.scrollTop ||
+      0;
     var viewport = window.innerHeight || docEl.clientHeight || 0;
     var fullHeight = Math.max(
       docEl.scrollHeight || 0,
@@ -346,39 +340,66 @@
       docEl.offsetHeight || 0,
       body.offsetHeight || 0
     );
-    var scrollable = Math.max(0, fullHeight - viewport);
-    if (scrollable <= 0) return 100;
+    var scrollable = fullHeight - viewport;
+    // Page isn't scrollable (yet, or at all) → report 0% so the trigger stays
+    // armed and waits for an actual scroll event, instead of mistakenly
+    // assuming the user is already past the threshold.
+    if (scrollable <= 0) return 0;
     return (scrollTop / scrollable) * 100;
   }
 
   function armScrollTrigger(percent) {
     disarmScrollTrigger();
     var threshold = Math.max(0, Math.min(100, Number(percent) || 40));
-    // If the document is already short enough or the user is already past the
-    // threshold, open immediately on the next frame.
-    if (currentScrollPercent() >= threshold) {
-      window.requestAnimationFrame(function () {
-        if (!isOpen && !scrollTriggerArmed) open();
-      });
-      return;
-    }
     scrollTriggerArmed = true;
+
     var ticking = false;
-    scrollTriggerHandler = function () {
+    function check() {
       if (!scrollTriggerArmed) return;
       if (ticking) return;
       ticking = true;
       window.requestAnimationFrame(function () {
         ticking = false;
         if (!scrollTriggerArmed) return;
+        // Only fire after the user has actually moved past the threshold
+        // (scrollTop must be > 0). Prevents the popup from opening on first
+        // paint when the document has been rendered but not yet scrolled.
+        var docEl = document.documentElement;
+        var body = document.body || {};
+        var scrollTop =
+          window.pageYOffset ||
+          window.scrollY ||
+          docEl.scrollTop ||
+          body.scrollTop ||
+          0;
+        if (scrollTop <= 0) return;
         if (currentScrollPercent() >= threshold) {
           disarmScrollTrigger();
           if (!isOpen) open();
         }
       });
-    };
+    }
+
+    scrollTriggerHandler = check;
     window.addEventListener("scroll", scrollTriggerHandler, { passive: true });
     window.addEventListener("resize", scrollTriggerHandler, { passive: true });
+    // Some Framer / scroll-container setups dispatch scroll on document
+    // instead of window — listen on both, capture phase catches both.
+    document.addEventListener("scroll", scrollTriggerHandler, {
+      passive: true,
+      capture: true,
+    });
+  }
+
+  function disarmScrollTrigger() {
+    if (!scrollTriggerArmed) return;
+    scrollTriggerArmed = false;
+    if (scrollTriggerHandler) {
+      window.removeEventListener("scroll", scrollTriggerHandler);
+      window.removeEventListener("resize", scrollTriggerHandler);
+      document.removeEventListener("scroll", scrollTriggerHandler, true);
+      scrollTriggerHandler = null;
+    }
   }
 
   // --- Public API -------------------------------------------------------
