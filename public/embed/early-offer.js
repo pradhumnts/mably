@@ -3,22 +3,30 @@
  *
  * Drop-in loader for the founding-pricing popup. Designed for the public
  * Framer landing at mably.io (or any third-party host) — loads the same
- * popup UI shipped inside the Mably app as an iframe with overlay.
+ * popup UI shipped inside the Mably app as an iframe with overlay, plus
+ * the same bottom-right sticky CTA used in-app.
  *
- * Install (auto-open once per visitor):
+ * Behaviour:
+ *   - Popup auto-opens on every page load (unless "Don't show again" set).
+ *   - Closing the popup reveals the sticky CTA bottom-right.
+ *   - Clicking the sticky CTA re-opens the popup.
+ *   - "Don't show again" suppresses future auto-opens; the sticky remains.
+ *
+ * Install (default — popup + sticky):
  *
  *   <script src="https://app.mably.io/embed/early-offer.js" async></script>
  *
- * Install (manual trigger):
+ * Install (sticky-only, no auto-open):
  *
  *   <script src="https://app.mably.io/embed/early-offer.js" data-mably-early-offer="manual" async></script>
- *   <button onclick="MablyEarlyOffer.open()">Claim 75% off</button>
  *
  * Public API (window.MablyEarlyOffer):
  *   - open()                 → show the popup
- *   - close()                → hide it
+ *   - close()                → hide it (reveals the sticky)
  *   - reset()                → clear "don't show again" preference
  *   - isSuppressed()         → boolean
+ *   - showSticky()           → force-show the sticky CTA
+ *   - hideSticky()           → hide the sticky CTA
  *
  * Storage:
  *   localStorage["mably:early-offer:never"] = "1"  (set by "Don't show this again")
@@ -29,7 +37,6 @@
   window.__mablyEarlyOfferLoaded = true;
 
   var STORAGE_KEY = "mably:early-offer:never";
-  var SESSION_DISMISSED_KEY = "mably:early-offer:dismissed";
   var MESSAGE_SOURCE = "mably-early-offer";
 
   // Resolve the origin of this script so the iframe + redirects use the
@@ -80,23 +87,6 @@
 
   function reset() {
     safeStorage("remove", STORAGE_KEY);
-    safeStorage("remove", SESSION_DISMISSED_KEY);
-  }
-
-  function wasDismissedThisSession() {
-    try {
-      return window.sessionStorage.getItem(SESSION_DISMISSED_KEY) === "1";
-    } catch (e) {
-      return false;
-    }
-  }
-
-  function markDismissedThisSession() {
-    try {
-      window.sessionStorage.setItem(SESSION_DISMISSED_KEY, "1");
-    } catch (e) {
-      /* ignore */
-    }
   }
 
   // --- DOM ---------------------------------------------------------------
@@ -104,7 +94,9 @@
   var overlayEl = null;
   var iframeEl = null;
   var closeBtnEl = null;
+  var stickyEl = null;
   var isOpen = false;
+  var stickyForceHidden = false;
   var keydownHandler = null;
 
   function injectStyles() {
@@ -112,6 +104,7 @@
     var style = document.createElement("style");
     style.id = "mably-early-offer-styles";
     style.textContent =
+      // Overlay + iframe
       ".mably-early-offer-overlay{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity 220ms ease;padding:16px;box-sizing:border-box}" +
       ".mably-early-offer-overlay[data-state=open]{opacity:1}" +
       ".mably-early-offer-frame-wrap{position:relative;width:100%;max-width:min(64rem,calc(100vw - 1rem));height:min(96vh,920px);display:flex;align-items:center;justify-content:center;transform:scale(0.96);transition:transform 220ms cubic-bezier(0.22,1,0.36,1)}" +
@@ -119,8 +112,70 @@
       ".mably-early-offer-frame{width:100%;height:100%;border:0;background:transparent;border-radius:1.75rem;display:block;color-scheme:dark}" +
       ".mably-early-offer-fallback-close{position:absolute;top:-44px;right:-4px;padding:6px 12px;border-radius:9999px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.12);cursor:pointer;font:500 12px/1 system-ui,-apple-system,sans-serif;opacity:0;pointer-events:none;transition:opacity 200ms ease}" +
       ".mably-early-offer-frame-wrap[data-iframe-loaded=false] .mably-early-offer-fallback-close{opacity:1;pointer-events:auto}" +
-      "html.mably-early-offer-no-scroll,body.mably-early-offer-no-scroll{overflow:hidden}";
+      "html.mably-early-offer-no-scroll,body.mably-early-offer-no-scroll{overflow:hidden}" +
+      // Sticky CTA (mirrors components/billing/early-pricing-offer-sticky-cta.jsx)
+      ".mably-eo-sticky{position:fixed;bottom:1.5rem;right:1.5rem;z-index:2147483590;max-width:min(calc(100vw - 3rem),17rem);cursor:pointer;border-radius:9999px;padding:1px;border:0;text-align:left;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-image:linear-gradient(100deg,#e8c9a0 0%,#fde8d4 22%,#b8d4f5 50%,#f5e6d3 78%,#e8c9a0 100%);background-size:220% 100%;box-shadow:0 0 16px rgba(251,191,36,0.12),0 8px 24px rgba(0,0,0,0.3);transition:transform 300ms cubic-bezier(0.22,1,0.36,1),box-shadow 300ms ease,opacity 240ms ease;opacity:0;transform:translateY(12px) scale(0.96);pointer-events:none}" +
+      ".mably-eo-sticky[data-state=visible]{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;animation:mably-eo-border-flow 5s ease-in-out infinite,mably-eo-glow-pulse 3.5s ease-in-out infinite}" +
+      ".mably-eo-sticky[data-state=visible]:hover{transform:translateY(0) scale(1.02);box-shadow:0 0 20px rgba(251,191,36,0.16),0 10px 28px rgba(0,0,0,0.36)}" +
+      ".mably-eo-sticky[data-state=visible]:active{transform:translateY(0) scale(0.98)}" +
+      ".mably-eo-sticky:focus-visible{outline:2px solid rgba(255,255,255,0.4);outline-offset:2px}" +
+      ".mably-eo-sticky-inner{display:flex;align-items:center;gap:0.75rem;border-radius:9999px;padding:0.625rem 1rem 0.625rem 0.75rem;background:#0a0a0f;color:#fff;line-height:1.2}" +
+      ".mably-eo-sticky-badge{flex-shrink:0;width:2.25rem;height:2.25rem;border-radius:9999px;background:linear-gradient(to right,#f5d9b8,#fde8d4,#b8d4f5);display:flex;align-items:center;justify-content:center;color:rgba(0,0,0,0.8);animation:mably-eo-sparkle-pulse 2.2s ease-in-out infinite}" +
+      ".mably-eo-sticky-badge svg{width:1rem;height:1rem;display:block}" +
+      ".mably-eo-sticky-text{min-width:0;flex:1 1 auto}" +
+      ".mably-eo-sticky-label{display:block;font-size:0.875rem;font-weight:700;letter-spacing:-0.005em}" +
+      ".mably-eo-sticky-sub{display:block;font-size:10px;font-weight:600;letter-spacing:0.15em;margin-top:2px;color:rgba(255,255,255,0.55);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
+      "@keyframes mably-eo-border-flow{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}" +
+      "@keyframes mably-eo-glow-pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.06)}}" +
+      "@keyframes mably-eo-sparkle-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:0.92}}" +
+      "@media (prefers-reduced-motion: reduce){.mably-eo-sticky,.mably-eo-sticky-badge{animation:none !important}.mably-eo-sticky{transition:opacity 240ms ease}}";
     (document.head || document.documentElement).appendChild(style);
+  }
+
+  // Lucide "Sparkles" icon — keep identical to the in-app StickyCta.
+  var SPARKLES_SVG =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>' +
+    '<path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>' +
+    "</svg>";
+
+  function ensureStickyMounted() {
+    if (stickyEl) return;
+    injectStyles();
+    stickyEl = document.createElement("button");
+    stickyEl.type = "button";
+    stickyEl.className = "mably-eo-sticky";
+    stickyEl.setAttribute(
+      "aria-label",
+      "Claim 75% off — Early Pricing · Only 50 Spots"
+    );
+    stickyEl.setAttribute("data-state", "hidden");
+    stickyEl.innerHTML =
+      '<span class="mably-eo-sticky-inner">' +
+      '<span class="mably-eo-sticky-badge">' +
+      SPARKLES_SVG +
+      "</span>" +
+      '<span class="mably-eo-sticky-text">' +
+      '<span class="mably-eo-sticky-label">Claim 75% off</span>' +
+      '<span class="mably-eo-sticky-sub">Early Pricing · Only 50 Spots</span>' +
+      "</span>" +
+      "</span>";
+    stickyEl.addEventListener("click", function () {
+      open();
+    });
+    document.body.appendChild(stickyEl);
+  }
+
+  function showSticky() {
+    ensureStickyMounted();
+    if (stickyForceHidden) return;
+    if (isOpen) return;
+    stickyEl.setAttribute("data-state", "visible");
+  }
+
+  function hideSticky() {
+    if (!stickyEl) return;
+    stickyEl.setAttribute("data-state", "hidden");
   }
 
   function lockScroll(lock) {
@@ -192,6 +247,7 @@
 
   function open() {
     ensureMounted();
+    hideSticky();
     if (isOpen) return;
     isOpen = true;
     overlayEl.style.display = "flex";
@@ -214,7 +270,6 @@
     isOpen = false;
     overlayEl.setAttribute("data-state", "closed");
     lockScroll(false);
-    markDismissedThisSession();
     if (keydownHandler) {
       window.removeEventListener("keydown", keydownHandler, true);
       keydownHandler = null;
@@ -222,8 +277,9 @@
     var hideTimer = window.setTimeout(function () {
       if (overlayEl) overlayEl.style.display = "none";
     }, 240);
-    // Store to allow reset of timer if rapidly toggled
     overlayEl.__mablyHideTimer = hideTimer;
+    // Reveal the sticky CTA so the visitor can re-open the popup later.
+    showSticky();
   }
 
   // --- Cross-frame messaging --------------------------------------------
@@ -256,10 +312,18 @@
     close: close,
     reset: reset,
     isSuppressed: isSuppressed,
+    showSticky: function () {
+      stickyForceHidden = false;
+      showSticky();
+    },
+    hideSticky: function () {
+      stickyForceHidden = true;
+      hideSticky();
+    },
   };
   window.MablyEarlyOffer = api;
 
-  // --- Auto-open behaviour ----------------------------------------------
+  // --- Boot mode + auto-open ---------------------------------------------
 
   function readBootMode() {
     try {
@@ -278,17 +342,29 @@
     return "auto";
   }
 
-  function tryAutoOpen() {
-    if (readBootMode() === "manual") return;
-    if (isSuppressed()) return;
-    if (wasDismissedThisSession()) return;
-    // Short delay so the iframe has a chance to start loading before paint.
+  function boot() {
+    var mode = readBootMode();
+    // Always mount the sticky (kept hidden until popup is closed). With
+    // `manual`, the popup never auto-opens but the sticky is the only entry
+    // point — show it immediately.
+    ensureStickyMounted();
+    if (mode === "manual") {
+      // Reveal sticky after a beat so its entrance animation reads cleanly.
+      window.setTimeout(showSticky, 250);
+      return;
+    }
+    if (isSuppressed()) {
+      // Don't auto-open, but keep the sticky so users can re-engage.
+      window.setTimeout(showSticky, 250);
+      return;
+    }
+    // Auto-open the popup; the sticky will appear when the user closes it.
     window.setTimeout(open, 600);
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", tryAutoOpen, { once: true });
+    document.addEventListener("DOMContentLoaded", boot, { once: true });
   } else {
-    tryAutoOpen();
+    boot();
   }
 })();

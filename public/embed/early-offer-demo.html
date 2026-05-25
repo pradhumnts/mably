@@ -55,21 +55,23 @@
     <div class="card">
       <h1>Mably — Early Offer embed</h1>
       <p>
-        This page is a sandbox for the embeddable founding-pricing popup. The
-        same script loaded here can be pasted into Framer (or any HTML page) to
-        get the exact in-app popup.
+        This page is a sandbox for the embeddable founding-pricing popup plus
+        the bottom-right sticky CTA. The popup auto-opens on page load. After
+        closing it, the sticky button appears in the bottom-right and can
+        re-open the popup.
       </p>
       <button onclick="MablyEarlyOffer.open()">Open popup</button>
-      <button onclick="MablyEarlyOffer.reset(); MablyEarlyOffer.open()">
-        Reset &amp; open
+      <button onclick="MablyEarlyOffer.close()">Close popup</button>
+      <button onclick="MablyEarlyOffer.reset(); location.reload()">
+        Reset &amp; reload
       </button>
     </div>
 
-    <!-- The loader script. In production this stays at /embed/early-offer.js -->
-    <script
-      src="/embed/early-offer.js"
-      data-mably-early-offer="manual"
-      async
-    ></script>
+    <!--
+      Default install: popup auto-opens on page load, sticky CTA appears after
+      it is closed. Add data-mably-early-offer="manual" to skip the auto-open
+      and show only the sticky.
+    -->
+    <script src="/embed/early-offer.js" async></script>
   </body>
 </html>
