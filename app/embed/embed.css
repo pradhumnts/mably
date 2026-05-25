@@ -1,0 +1,18 @@
+/*
+ * Embed-only overrides.
+ *
+ * The app root layout applies `bg-background` to <body> via @layer base in
+ * globals.css; in iframed embed routes we want the iframe to be fully
+ * transparent so the parent page (Framer, etc.) shows through around the
+ * popup card. Importing this file from `app/embed/layout.js` scopes the
+ * rule to embed routes only.
+ */
+html.mably-embed,
+html.mably-embed body {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+html.mably-embed {
+  color-scheme: dark;
+}
