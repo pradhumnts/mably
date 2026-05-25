@@ -117,11 +117,15 @@
       // which is what makes the popup render in its landscape two-column
       // layout. Mobile viewports stay below the breakpoint and naturally
       // fall back to the portrait single-column layout.
-      ".mably-early-offer-overlay{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.70);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity 220ms ease;padding:16px;box-sizing:border-box}" +
-      ".mably-early-offer-overlay[data-state=open]{opacity:1}" +
-      ".mably-early-offer-frame-wrap{position:relative;width:100%;max-width:min(64rem,calc(100vw - 1rem));height:min(96vh,520px);display:flex;align-items:center;justify-content:center;transform:scale(0.96);transition:transform 220ms cubic-bezier(0.22,1,0.36,1)}" +
+      //
+      // pointer-events is OFF by default — only enabled while data-state is
+      // "open" so the host page stays fully clickable when the popup is
+      // closing or closed.
+      ".mably-early-offer-overlay{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.70);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity 220ms ease;padding:16px;box-sizing:border-box;pointer-events:none}" +
+      ".mably-early-offer-overlay[data-state=open]{opacity:1;pointer-events:auto}" +
+      ".mably-early-offer-frame-wrap{position:relative;width:100%;max-width:min(64rem,calc(100vw - 1rem));height:min(96vh,520px);display:flex;align-items:center;justify-content:center;transform:scale(0.96);transition:transform 220ms cubic-bezier(0.22,1,0.36,1);pointer-events:none}" +
       "@media (max-width: 767px){.mably-early-offer-frame-wrap{height:min(96vh,720px)}}" +
-      ".mably-early-offer-overlay[data-state=open] .mably-early-offer-frame-wrap{transform:scale(1)}" +
+      ".mably-early-offer-overlay[data-state=open] .mably-early-offer-frame-wrap{transform:scale(1);pointer-events:auto}" +
       ".mably-early-offer-frame{width:100%;height:100%;border:0;background:transparent;border-radius:1.75rem;display:block;color-scheme:dark}" +
       "html.mably-early-offer-no-scroll,body.mably-early-offer-no-scroll{overflow:hidden}" +
       ".mably-early-offer-fallback-close{position:absolute;top:-44px;right:-4px;padding:6px 12px;border-radius:9999px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.12);cursor:pointer;font:500 12px/1 system-ui,-apple-system,sans-serif;opacity:0;pointer-events:none;transition:opacity 200ms ease}" +
@@ -264,6 +268,12 @@
     disarmScrollTrigger();
     if (isOpen) return;
     isOpen = true;
+    // Cancel any in-flight hide timer from a previous close — otherwise it
+    // can fire `display:none` on a freshly-opened popup.
+    if (overlayEl.__mablyHideTimer) {
+      window.clearTimeout(overlayEl.__mablyHideTimer);
+      overlayEl.__mablyHideTimer = null;
+    }
     overlayEl.style.display = "flex";
     // Force reflow before flipping the state to ensure transition fires.
     void overlayEl.offsetWidth;
@@ -288,10 +298,16 @@
       window.removeEventListener("keydown", keydownHandler, true);
       keydownHandler = null;
     }
-    var hideTimer = window.setTimeout(function () {
-      if (overlayEl) overlayEl.style.display = "none";
+    // The overlay is already non-interactive via CSS as soon as data-state
+    // is not "open" — the timer just removes the element from the layout
+    // after the fade-out finishes so it can't leak any focus.
+    if (overlayEl.__mablyHideTimer) {
+      window.clearTimeout(overlayEl.__mablyHideTimer);
+    }
+    overlayEl.__mablyHideTimer = window.setTimeout(function () {
+      if (overlayEl && !isOpen) overlayEl.style.display = "none";
+      if (overlayEl) overlayEl.__mablyHideTimer = null;
     }, 240);
-    overlayEl.__mablyHideTimer = hideTimer;
     // Reveal the sticky CTA so the visitor can re-open the popup later.
     showSticky();
   }
