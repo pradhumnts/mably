@@ -112,16 +112,18 @@
     var style = document.createElement("style");
     style.id = "mably-early-offer-styles";
     style.textContent =
-      // Overlay: 70% black + blur backdrop. Iframe wrap is sized so the
-      // iframe's inner viewport hits Tailwind's `lg` breakpoint (>=1024px),
-      // which is what makes the popup render in its landscape two-column
-      // layout. Mobile viewports stay below the breakpoint and naturally
-      // fall back to the portrait single-column layout.
+      // Overlay: full-viewport modal frame at 70% black + blur backdrop.
+      // Fixed position, top:0 left:0 width:100vw height:100vh — when the
+      // popup is open this layer fully covers and inerts the host page.
+      // Iframe wrap is sized so its inner viewport hits Tailwind's `md`
+      // breakpoint (>=768px), which is what makes the popup render in its
+      // landscape two-column layout. Mobile viewports stay below and fall
+      // back to portrait single-column.
       //
       // pointer-events is OFF by default — only enabled while data-state is
       // "open" so the host page stays fully clickable when the popup is
       // closing or closed.
-      ".mably-early-offer-overlay{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.70);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity 220ms ease;padding:16px;box-sizing:border-box;pointer-events:none}" +
+      ".mably-early-offer-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.70);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity 220ms ease;padding:16px;box-sizing:border-box;pointer-events:none;overscroll-behavior:contain;touch-action:none}" +
       ".mably-early-offer-overlay[data-state=open]{opacity:1;pointer-events:auto}" +
       ".mably-early-offer-frame-wrap{position:relative;width:100%;max-width:min(64rem,calc(100vw - 1rem));height:min(96vh,520px);display:flex;align-items:center;justify-content:center;transform:scale(0.96);transition:transform 220ms cubic-bezier(0.22,1,0.36,1);pointer-events:none}" +
       "@media (max-width: 767px){.mably-early-offer-frame-wrap{height:min(96vh,720px)}}" +
@@ -195,16 +197,59 @@
     stickyEl.setAttribute("data-state", "hidden");
   }
 
+  // Tracks elements we paused for the scroll lock so we can restore their
+  // original `overflow` when the popup closes. Framer Sites in particular
+  // scroll a direct child of <body>, so just locking <html>/<body> isn't
+  // enough — we also freeze any directly-scrollable child.
+  var scrollLockState = null;
+
+  function isScrollable(el) {
+    if (!el || el.nodeType !== 1) return false;
+    if (el.scrollHeight - el.clientHeight <= 0) return false;
+    var style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+    if (!style) return el.scrollHeight > el.clientHeight;
+    var overflowY = style.overflowY;
+    return overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay";
+  }
+
   function lockScroll(lock) {
     var html = document.documentElement;
     var body = document.body;
     if (!body) return;
     if (lock) {
+      if (scrollLockState) return;
+      var entries = [];
+      function freeze(el) {
+        if (!el) return;
+        entries.push({
+          el: el,
+          overflow: el.style.overflow,
+        });
+        el.style.overflow = "hidden";
+      }
+      freeze(html);
+      freeze(body);
+      // Walk direct children of body — Framer's #main and similar wrappers
+      // live here. We only freeze ones that are actually scrollable.
+      if (body.children) {
+        for (var i = 0; i < body.children.length; i++) {
+          var child = body.children[i];
+          if (isScrollable(child)) freeze(child);
+        }
+      }
       html.classList.add("mably-early-offer-no-scroll");
       body.classList.add("mably-early-offer-no-scroll");
+      scrollLockState = entries;
     } else {
       html.classList.remove("mably-early-offer-no-scroll");
       body.classList.remove("mably-early-offer-no-scroll");
+      if (scrollLockState) {
+        for (var j = 0; j < scrollLockState.length; j++) {
+          var entry = scrollLockState[j];
+          entry.el.style.overflow = entry.overflow;
+        }
+        scrollLockState = null;
+      }
     }
   }
 
