@@ -340,28 +340,53 @@
   var scrollTriggerArmed = false;
   var scrollTriggerHandler = null;
 
-  function currentScrollPercent() {
+  var scrollPollTimer = null;
+
+  /**
+   * Largest "scroll percentage" observed across window scroll, the document
+   * scrolling element, and any in-page scroll container we can find. Framer
+   * sites in particular often scroll a div inside <body> (not the window), so
+   * we have to look at multiple sources to get a meaningful reading.
+   */
+  function maxScrollPercent() {
     var docEl = document.documentElement;
     var body = document.body || {};
-    var scrollTop =
-      window.pageYOffset ||
-      window.scrollY ||
-      docEl.scrollTop ||
-      body.scrollTop ||
-      0;
+
+    var best = 0;
+
+    function consider(scrollTop, scrollHeight, clientHeight) {
+      if (!scrollTop) return; // not scrolled (or 0)
+      var scrollable = scrollHeight - clientHeight;
+      if (scrollable <= 0) return;
+      var pct = (scrollTop / scrollable) * 100;
+      if (pct > best) best = pct;
+    }
+
+    // Window / documentElement scroll
+    var winScroll = window.pageYOffset || window.scrollY || 0;
     var viewport = window.innerHeight || docEl.clientHeight || 0;
-    var fullHeight = Math.max(
-      docEl.scrollHeight || 0,
-      body.scrollHeight || 0,
-      docEl.offsetHeight || 0,
-      body.offsetHeight || 0
+    consider(
+      winScroll,
+      Math.max(docEl.scrollHeight || 0, body.scrollHeight || 0),
+      viewport
     );
-    var scrollable = fullHeight - viewport;
-    // Page isn't scrollable (yet, or at all) → report 0% so the trigger stays
-    // armed and waits for an actual scroll event, instead of mistakenly
-    // assuming the user is already past the threshold.
-    if (scrollable <= 0) return 0;
-    return (scrollTop / scrollable) * 100;
+
+    // documentElement / body scroll properties (some browsers report here)
+    consider(docEl.scrollTop || 0, docEl.scrollHeight || 0, docEl.clientHeight || 0);
+    consider(body.scrollTop || 0, body.scrollHeight || 0, body.clientHeight || 0);
+
+    // In-page scroll containers (Framer #main and friends). Walk the body's
+    // direct descendants — that's enough to catch the common single-wrapper
+    // pattern without scanning the whole tree on every tick.
+    if (body && body.children) {
+      for (var i = 0; i < body.children.length; i++) {
+        var el = body.children[i];
+        if (!el) continue;
+        consider(el.scrollTop || 0, el.scrollHeight || 0, el.clientHeight || 0);
+      }
+    }
+
+    return best;
   }
 
   function armScrollTrigger(percent) {
@@ -377,19 +402,7 @@
       window.requestAnimationFrame(function () {
         ticking = false;
         if (!scrollTriggerArmed) return;
-        // Only fire after the user has actually moved past the threshold
-        // (scrollTop must be > 0). Prevents the popup from opening on first
-        // paint when the document has been rendered but not yet scrolled.
-        var docEl = document.documentElement;
-        var body = document.body || {};
-        var scrollTop =
-          window.pageYOffset ||
-          window.scrollY ||
-          docEl.scrollTop ||
-          body.scrollTop ||
-          0;
-        if (scrollTop <= 0) return;
-        if (currentScrollPercent() >= threshold) {
+        if (maxScrollPercent() >= threshold) {
           disarmScrollTrigger();
           if (!isOpen) open();
         }
@@ -397,14 +410,21 @@
     }
 
     scrollTriggerHandler = check;
+
+    // Listen broadly. Scroll events don't bubble, but capture-phase on
+    // document still receives them from any descendant element.
     window.addEventListener("scroll", scrollTriggerHandler, { passive: true });
     window.addEventListener("resize", scrollTriggerHandler, { passive: true });
-    // Some Framer / scroll-container setups dispatch scroll on document
-    // instead of window — listen on both, capture phase catches both.
     document.addEventListener("scroll", scrollTriggerHandler, {
       passive: true,
       capture: true,
     });
+
+    // Belt-and-braces polling fallback (every 400ms). Some custom scroll
+    // containers don't dispatch a `scroll` event we can see (touch-driven,
+    // transform-based, intersection-observer-driven sites), so we also
+    // periodically read the scroll position directly.
+    scrollPollTimer = window.setInterval(check, 400);
   }
 
   function disarmScrollTrigger() {
@@ -415,6 +435,10 @@
       window.removeEventListener("resize", scrollTriggerHandler);
       document.removeEventListener("scroll", scrollTriggerHandler, true);
       scrollTriggerHandler = null;
+    }
+    if (scrollPollTimer) {
+      window.clearInterval(scrollPollTimer);
+      scrollPollTimer = null;
     }
   }
 
