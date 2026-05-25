@@ -144,6 +144,7 @@ export function EarlyOfferEmbedClient({ mode }) {
           onNeverShow={handleNeverShow}
           onClaim={handleClaim}
           claimLoading={claimLoading}
+          landscapeBreakpoint="md"
         />
       </div>
     </>

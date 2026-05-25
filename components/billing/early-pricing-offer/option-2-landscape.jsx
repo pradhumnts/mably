@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
  *   onNeverShow: () => void;
  *   onClaim: () => void;
  *   claimLoading: boolean;
+ *   landscapeBreakpoint?: "lg" | "md";
  * }} props
  */
 export function EarlyPricingOfferCard({
@@ -44,17 +45,29 @@ export function EarlyPricingOfferCard({
   onNeverShow,
   onClaim,
   claimLoading,
+  landscapeBreakpoint = "lg",
 }) {
   const t = getEarlyOfferTheme("dark");
+  const useMd = landscapeBreakpoint === "md";
+  // Full static class strings so Tailwind's purge picks up every variant.
+  const gridColsClass = useMd
+    ? "md:grid-cols-[1fr_1.15fr]"
+    : "lg:grid-cols-[1fr_1.15fr]";
+  const heroColClass = useMd
+    ? "border-b border-white/[0.06] px-8 py-10 text-center md:border-b-0 md:border-r md:px-10 md:py-12"
+    : "border-b border-white/[0.06] px-8 py-10 text-center lg:border-b-0 lg:border-r lg:px-10 lg:py-12";
+  const planColClass = useMd
+    ? "px-6 py-8 sm:px-8 md:px-10 md:py-12"
+    : "px-6 py-8 sm:px-8 lg:px-10 lg:py-12";
 
   return (
     <div className={cn("relative overflow-hidden", t.shell)}>
       <CelestialGlowLandscape />
       <EarlyOfferCloseButton onClick={onClose} />
 
-      <div className="relative z-10 grid min-h-[min(22rem,70vh)] lg:grid-cols-[1fr_1.15fr]">
+      <div className={cn("relative z-10 grid min-h-[min(22rem,70vh)]", gridColsClass)}>
         {/* Left — hero */}
-        <div className="flex flex-col items-center justify-center border-b border-white/[0.06] px-8 py-10 text-center lg:border-b-0 lg:border-r lg:px-10 lg:py-12">
+        <div className={cn("flex flex-col items-center justify-center", heroColClass)}>
           <EarlyOfferHeadline />
 
           <div className="mt-8 flex w-full max-w-sm flex-col items-center gap-4">
@@ -93,7 +106,7 @@ export function EarlyPricingOfferCard({
         </div>
 
         {/* Right — plans + CTA */}
-        <div className="flex w-full flex-col items-center justify-center px-6 py-8 sm:px-8 lg:px-10 lg:py-12">
+        <div className={cn("flex w-full flex-col items-center justify-center", planColClass)}>
           <div className="flex w-full max-w-md flex-col items-center">
             <p className="mb-4 w-full text-center text-sm text-white/50">
               {EARLY_OFFER_COPY.planPickerIntro}

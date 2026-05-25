@@ -104,14 +104,18 @@
     var style = document.createElement("style");
     style.id = "mably-early-offer-styles";
     style.textContent =
-      // Overlay + iframe. Overlay backdrop is fully transparent so the host
-      // page (Framer, etc.) decides what shows behind the popup. Click-through
-      // is blocked only on the popup itself, not the empty area around it.
-      ".mably-early-offer-overlay{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:transparent;opacity:0;transition:opacity 220ms ease;padding:0;box-sizing:border-box;pointer-events:none}" +
+      // Overlay: 70% black + blur backdrop. Iframe wrap is sized so the
+      // iframe's inner viewport hits Tailwind's `lg` breakpoint (>=1024px),
+      // which is what makes the popup render in its landscape two-column
+      // layout. Mobile viewports stay below the breakpoint and naturally
+      // fall back to the portrait single-column layout.
+      ".mably-early-offer-overlay{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.70);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity 220ms ease;padding:16px;box-sizing:border-box}" +
       ".mably-early-offer-overlay[data-state=open]{opacity:1}" +
-      ".mably-early-offer-frame-wrap{position:relative;width:100%;max-width:min(56rem,calc(100vw - 1rem));height:min(96vh,560px);display:flex;align-items:center;justify-content:center;transform:scale(0.96);transition:transform 220ms cubic-bezier(0.22,1,0.36,1);pointer-events:auto}" +
+      ".mably-early-offer-frame-wrap{position:relative;width:100%;max-width:min(64rem,calc(100vw - 1rem));height:min(96vh,520px);display:flex;align-items:center;justify-content:center;transform:scale(0.96);transition:transform 220ms cubic-bezier(0.22,1,0.36,1)}" +
+      "@media (max-width: 767px){.mably-early-offer-frame-wrap{height:min(96vh,720px)}}" +
       ".mably-early-offer-overlay[data-state=open] .mably-early-offer-frame-wrap{transform:scale(1)}" +
       ".mably-early-offer-frame{width:100%;height:100%;border:0;background:transparent;border-radius:1.75rem;display:block;color-scheme:dark}" +
+      "html.mably-early-offer-no-scroll,body.mably-early-offer-no-scroll{overflow:hidden}" +
       ".mably-early-offer-fallback-close{position:absolute;top:-44px;right:-4px;padding:6px 12px;border-radius:9999px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.12);cursor:pointer;font:500 12px/1 system-ui,-apple-system,sans-serif;opacity:0;pointer-events:none;transition:opacity 200ms ease}" +
       ".mably-early-offer-frame-wrap[data-iframe-loaded=false] .mably-early-offer-fallback-close{opacity:1;pointer-events:auto}" +
       // Sticky CTA (mirrors components/billing/early-pricing-offer-sticky-cta.jsx)
@@ -179,6 +183,19 @@
     stickyEl.setAttribute("data-state", "hidden");
   }
 
+  function lockScroll(lock) {
+    var html = document.documentElement;
+    var body = document.body;
+    if (!body) return;
+    if (lock) {
+      html.classList.add("mably-early-offer-no-scroll");
+      body.classList.add("mably-early-offer-no-scroll");
+    } else {
+      html.classList.remove("mably-early-offer-no-scroll");
+      body.classList.remove("mably-early-offer-no-scroll");
+    }
+  }
+
   function ensureMounted() {
     if (overlayEl) return;
 
@@ -226,6 +243,10 @@
     wrap.appendChild(closeBtnEl);
     overlayEl.appendChild(wrap);
 
+    overlayEl.addEventListener("click", function (e) {
+      if (e.target === overlayEl) close();
+    });
+
     document.body.appendChild(overlayEl);
   }
 
@@ -238,6 +259,7 @@
     // Force reflow before flipping the state to ensure transition fires.
     void overlayEl.offsetWidth;
     overlayEl.setAttribute("data-state", "open");
+    lockScroll(true);
 
     keydownHandler = function (e) {
       if (e.key === "Escape") {
@@ -252,6 +274,7 @@
     if (!overlayEl || !isOpen) return;
     isOpen = false;
     overlayEl.setAttribute("data-state", "closed");
+    lockScroll(false);
     if (keydownHandler) {
       window.removeEventListener("keydown", keydownHandler, true);
       keydownHandler = null;
