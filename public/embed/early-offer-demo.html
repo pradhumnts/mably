@@ -62,15 +62,21 @@
       </p>
       <button onclick="MablyEarlyOffer.open()">Open popup</button>
       <button onclick="MablyEarlyOffer.close()">Close popup</button>
+      <button onclick="MablyEarlyOffer.armScrollTrigger(40)">
+        Arm scroll trigger (40%)
+      </button>
       <button onclick="MablyEarlyOffer.reset(); location.reload()">
         Reset &amp; reload
       </button>
     </div>
 
     <!--
-      Default install: popup auto-opens on page load, sticky CTA appears after
-      it is closed. Add data-mably-early-offer="manual" to skip the auto-open
-      and show only the sticky.
+      Install options:
+        • Default (no data attrs): popup auto-opens on page load.
+        • Auto-open after the visitor scrolls 40% of the page:
+            data-mably-early-offer-on-scroll="40"
+        • Sticky CTA only, no auto-open:
+            data-mably-early-offer="manual"
     -->
     <script src="/embed/early-offer.js" async></script>
   </body>

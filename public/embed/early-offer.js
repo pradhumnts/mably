@@ -12,21 +12,29 @@
  *   - Clicking the sticky CTA re-opens the popup.
  *   - "Don't show again" suppresses future auto-opens; the sticky remains.
  *
- * Install (default — popup + sticky):
+ * Install (default — popup + sticky, opens immediately):
  *
  *   <script src="https://app.mably.io/embed/early-offer.js" async></script>
  *
- * Install (sticky-only, no auto-open):
+ * Install (open after the visitor scrolls 40% of the page):
+ *
+ *   <script src="https://app.mably.io/embed/early-offer.js" data-mably-early-offer-on-scroll="40" async></script>
+ *
+ *   The value is the scroll-depth percentage (0-100, default 40). Sticky
+ *   CTA still shows immediately so users can open the popup early.
+ *
+ * Install (sticky-only, no auto-open at all):
  *
  *   <script src="https://app.mably.io/embed/early-offer.js" data-mably-early-offer="manual" async></script>
  *
  * Public API (window.MablyEarlyOffer):
- *   - open()                 → show the popup
- *   - close()                → hide it (reveals the sticky)
- *   - reset()                → clear "don't show again" preference
- *   - isSuppressed()         → boolean
- *   - showSticky()           → force-show the sticky CTA
- *   - hideSticky()           → hide the sticky CTA
+ *   - open()                          → show the popup
+ *   - close()                         → hide it (reveals the sticky)
+ *   - reset()                         → clear "don't show again" preference
+ *   - isSuppressed()                  → boolean
+ *   - showSticky()                    → force-show the sticky CTA
+ *   - hideSticky()                    → hide the sticky CTA
+ *   - armScrollTrigger(percent)       → open the popup once when scrolled N%
  *
  * Storage:
  *   localStorage["mably:early-offer:never"] = "1"  (set by "Don't show this again")
@@ -253,6 +261,7 @@
   function open() {
     ensureMounted();
     hideSticky();
+    disarmScrollTrigger();
     if (isOpen) return;
     isOpen = true;
     overlayEl.style.display = "flex";
@@ -310,6 +319,68 @@
     }
   });
 
+  // --- Scroll trigger ---------------------------------------------------
+
+  var scrollTriggerArmed = false;
+  var scrollTriggerHandler = null;
+
+  function disarmScrollTrigger() {
+    if (!scrollTriggerArmed) return;
+    scrollTriggerArmed = false;
+    if (scrollTriggerHandler) {
+      window.removeEventListener("scroll", scrollTriggerHandler);
+      window.removeEventListener("resize", scrollTriggerHandler);
+      scrollTriggerHandler = null;
+    }
+  }
+
+  function currentScrollPercent() {
+    var docEl = document.documentElement;
+    var body = document.body || {};
+    var scrollTop =
+      window.pageYOffset || docEl.scrollTop || body.scrollTop || 0;
+    var viewport = window.innerHeight || docEl.clientHeight || 0;
+    var fullHeight = Math.max(
+      docEl.scrollHeight || 0,
+      body.scrollHeight || 0,
+      docEl.offsetHeight || 0,
+      body.offsetHeight || 0
+    );
+    var scrollable = Math.max(0, fullHeight - viewport);
+    if (scrollable <= 0) return 100;
+    return (scrollTop / scrollable) * 100;
+  }
+
+  function armScrollTrigger(percent) {
+    disarmScrollTrigger();
+    var threshold = Math.max(0, Math.min(100, Number(percent) || 40));
+    // If the document is already short enough or the user is already past the
+    // threshold, open immediately on the next frame.
+    if (currentScrollPercent() >= threshold) {
+      window.requestAnimationFrame(function () {
+        if (!isOpen && !scrollTriggerArmed) open();
+      });
+      return;
+    }
+    scrollTriggerArmed = true;
+    var ticking = false;
+    scrollTriggerHandler = function () {
+      if (!scrollTriggerArmed) return;
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(function () {
+        ticking = false;
+        if (!scrollTriggerArmed) return;
+        if (currentScrollPercent() >= threshold) {
+          disarmScrollTrigger();
+          if (!isOpen) open();
+        }
+      });
+    };
+    window.addEventListener("scroll", scrollTriggerHandler, { passive: true });
+    window.addEventListener("resize", scrollTriggerHandler, { passive: true });
+  }
+
   // --- Public API -------------------------------------------------------
 
   var api = {
@@ -325,33 +396,47 @@
       stickyForceHidden = true;
       hideSticky();
     },
+    armScrollTrigger: armScrollTrigger,
   };
   window.MablyEarlyOffer = api;
 
   // --- Boot mode + auto-open ---------------------------------------------
 
-  function readBootMode() {
+  function readDataAttr(name) {
     try {
       var script = document.currentScript;
-      if (script && script.dataset && script.dataset.mablyEarlyOffer) {
-        return script.dataset.mablyEarlyOffer;
+      if (script && script.dataset && script.dataset[name] != null) {
+        return script.dataset[name];
       }
     } catch (e) {
       /* ignore */
     }
-    var nodes = document.querySelectorAll("script[data-mably-early-offer]");
+    var attr = "data-" + name.replace(/[A-Z]/g, function (m) {
+      return "-" + m.toLowerCase();
+    });
+    var nodes = document.querySelectorAll("script[" + attr + "]");
     for (var i = 0; i < nodes.length; i++) {
-      var v = nodes[i].getAttribute("data-mably-early-offer");
-      if (v) return v;
+      var v = nodes[i].getAttribute(attr);
+      if (v != null) return v;
     }
-    return "auto";
+    return null;
+  }
+
+  function readBootMode() {
+    return readDataAttr("mablyEarlyOffer") || "auto";
+  }
+
+  function readScrollTriggerPercent() {
+    var raw = readDataAttr("mablyEarlyOfferOnScroll");
+    if (raw == null) return null;
+    var n = Number(raw);
+    if (!isFinite(n) || n < 0) return 40;
+    return Math.min(100, n);
   }
 
   function boot() {
     var mode = readBootMode();
-    // Always mount the sticky (kept hidden until popup is closed). With
-    // `manual`, the popup never auto-opens but the sticky is the only entry
-    // point — show it immediately.
+    // Always mount the sticky (kept hidden until popup is closed).
     ensureStickyMounted();
     if (mode === "manual") {
       // Reveal sticky after a beat so its entrance animation reads cleanly.
@@ -363,7 +448,15 @@
       window.setTimeout(showSticky, 250);
       return;
     }
-    // Auto-open the popup; the sticky will appear when the user closes it.
+    var scrollPercent = readScrollTriggerPercent();
+    if (scrollPercent != null) {
+      // Show the sticky right away so visitors have an entry point before
+      // they hit the scroll threshold; arm the trigger for auto-open.
+      window.setTimeout(showSticky, 250);
+      armScrollTrigger(scrollPercent);
+      return;
+    }
+    // Auto-open the popup immediately; sticky appears when user closes it.
     window.setTimeout(open, 600);
   }
 
