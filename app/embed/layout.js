@@ -19,7 +19,7 @@ export default function EmbedLayout({ children }) {
       <style
         dangerouslySetInnerHTML={{
           __html:
-            "html,body{background:transparent !important;background-color:transparent !important;color-scheme:dark}",
+            "html,body{background:#050508 !important;background-color:#050508 !important;color-scheme:dark}",
         }}
       />
       <script
