@@ -35,6 +35,13 @@
  *   - showSticky()                    → force-show the sticky CTA
  *   - hideSticky()                    → hide the sticky CTA
  *   - armScrollTrigger(percent)       → open the popup once when scrolled N%
+ *   - diagnose()                      → log + return current state (debugging)
+ *
+ * Debug helpers:
+ *   - Visit `?mably-eo-reset=1` on any embedding page to clear the
+ *     "Don't show again" preference before boot runs.
+ *   - Call `MablyEarlyOffer.diagnose()` in the browser console to see
+ *     which boot path ran and the current scroll percentage.
  *
  * Storage:
  *   localStorage["mably:early-offer:never"] = "1"  (set by "Don't show this again")
@@ -434,9 +441,139 @@
     return best;
   }
 
+  var scrollSentinels = [];
+  var scrollObserver = null;
+  var scrollResizeHandler = null;
+  var scrollThreshold = 40;
+
+  function pickScrollContainers() {
+    // Body is always a candidate (for window-scrolled pages). On top of that,
+    // any scrollable direct child (Framer #main, etc.) gets its own sentinel.
+    var containers = [];
+    var body = document.body;
+    if (!body) return containers;
+    containers.push(body);
+    var seen = {};
+    for (var i = 0; i < body.children.length; i++) {
+      var el = body.children[i];
+      if (!el || el.tagName === "SCRIPT" || el.tagName === "STYLE") continue;
+      if (el.scrollHeight - el.clientHeight <= 0) continue;
+      var style = window.getComputedStyle
+        ? window.getComputedStyle(el)
+        : null;
+      if (
+        style &&
+        (style.overflowY === "auto" ||
+          style.overflowY === "scroll" ||
+          style.overflowY === "overlay")
+      ) {
+        var k = el.tagName + ":" + i;
+        if (!seen[k]) {
+          containers.push(el);
+          seen[k] = true;
+        }
+      }
+    }
+    return containers;
+  }
+
+  function makeSentinel(container) {
+    var sentinel = document.createElement("div");
+    sentinel.setAttribute("aria-hidden", "true");
+    sentinel.className = "mably-eo-scroll-sentinel";
+    sentinel.style.cssText =
+      "position:absolute;left:0;width:1px;height:1px;pointer-events:none;opacity:0;z-index:-1;top:0";
+    // Containing block for absolute children needs to be the container itself.
+    // Ensure it has a positioning context — if not, give it one (relative is
+    // visually a no-op).
+    var cs = window.getComputedStyle
+      ? window.getComputedStyle(container)
+      : null;
+    if (cs && cs.position === "static") {
+      sentinel.dataset.mablyAddedPos = "1";
+      container.style.position = "relative";
+    }
+    container.appendChild(sentinel);
+    return sentinel;
+  }
+
+  function positionSentinel(sentinel, container) {
+    var scrollable = container.scrollHeight - container.clientHeight;
+    if (scrollable <= 0) {
+      sentinel.style.top = "999999px"; // effectively never intersect
+      return;
+    }
+    var pos = (scrollThreshold / 100) * scrollable;
+    sentinel.style.top = Math.max(0, pos) + "px";
+  }
+
+  function setupScrollSentinels() {
+    if (typeof IntersectionObserver === "undefined") return false;
+    var containers = pickScrollContainers();
+    if (containers.length === 0) return false;
+
+    scrollObserver = new IntersectionObserver(
+      function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].isIntersecting) {
+            disarmScrollTrigger();
+            if (!isOpen) open();
+            return;
+          }
+        }
+      },
+      // Shrink the root to a sliver at the very top of the viewport so the
+      // sentinel "intersects" only when it crosses the top edge — i.e. the
+      // user has scrolled at least past the sentinel's position.
+      { rootMargin: "0px 0px -100% 0px" }
+    );
+
+    for (var i = 0; i < containers.length; i++) {
+      var c = containers[i];
+      var s = makeSentinel(c);
+      positionSentinel(s, c);
+      scrollSentinels.push({ container: c, sentinel: s });
+      scrollObserver.observe(s);
+    }
+
+    scrollResizeHandler = function () {
+      for (var j = 0; j < scrollSentinels.length; j++) {
+        positionSentinel(scrollSentinels[j].sentinel, scrollSentinels[j].container);
+      }
+    };
+    window.addEventListener("resize", scrollResizeHandler, { passive: true });
+
+    return true;
+  }
+
+  function teardownScrollSentinels() {
+    if (scrollObserver) {
+      scrollObserver.disconnect();
+      scrollObserver = null;
+    }
+    for (var i = 0; i < scrollSentinels.length; i++) {
+      var entry = scrollSentinels[i];
+      if (entry.sentinel && entry.sentinel.parentNode) {
+        entry.sentinel.parentNode.removeChild(entry.sentinel);
+      }
+      if (entry.sentinel && entry.sentinel.dataset.mablyAddedPos === "1") {
+        try {
+          entry.container.style.position = "";
+        } catch (e) {
+          /* ignore */
+        }
+      }
+    }
+    scrollSentinels = [];
+    if (scrollResizeHandler) {
+      window.removeEventListener("resize", scrollResizeHandler);
+      scrollResizeHandler = null;
+    }
+  }
+
   function armScrollTrigger(percent) {
     disarmScrollTrigger();
-    var threshold = Math.max(0, Math.min(100, Number(percent) || 40));
+    scrollThreshold = Math.max(0, Math.min(100, Number(percent) || 40));
     scrollTriggerArmed = true;
 
     var ticking = false;
@@ -447,7 +584,7 @@
       window.requestAnimationFrame(function () {
         ticking = false;
         if (!scrollTriggerArmed) return;
-        if (maxScrollPercent() >= threshold) {
+        if (maxScrollPercent() >= scrollThreshold) {
           disarmScrollTrigger();
           if (!isOpen) open();
         }
@@ -468,8 +605,21 @@
     // Belt-and-braces polling fallback (every 400ms). Some custom scroll
     // containers don't dispatch a `scroll` event we can see (touch-driven,
     // transform-based, intersection-observer-driven sites), so we also
-    // periodically read the scroll position directly.
-    scrollPollTimer = window.setInterval(check, 400);
+    // periodically read the scroll position directly, reposition sentinels,
+    // and pick up any scroll containers that didn't exist at boot.
+    scrollPollTimer = window.setInterval(function () {
+      if (scrollSentinels.length === 0) {
+        setupScrollSentinels();
+      } else if (scrollResizeHandler) {
+        scrollResizeHandler();
+      }
+      check();
+    }, 400);
+
+    // IntersectionObserver fallback — works for transform-based / virtual
+    // scroll containers where neither scroll events nor scrollTop properties
+    // reflect the user's actual scroll position.
+    setupScrollSentinels();
   }
 
   function disarmScrollTrigger() {
@@ -485,9 +635,35 @@
       window.clearInterval(scrollPollTimer);
       scrollPollTimer = null;
     }
+    teardownScrollSentinels();
   }
 
   // --- Public API -------------------------------------------------------
+
+  var bootStateForDiagnose = null;
+
+  function diagnose() {
+    var info = {
+      version: "1.0",
+      bootState: bootStateForDiagnose,
+      suppressed: isSuppressed(),
+      isOpen: isOpen,
+      scrollTriggerArmed: scrollTriggerArmed,
+      scrollThreshold: scrollThreshold,
+      scrollPercent: maxScrollPercent ? maxScrollPercent() : null,
+      scrollSentinels: scrollSentinels.length,
+      stickyVisible: stickyEl ? stickyEl.getAttribute("data-state") : null,
+      origin: APP_ORIGIN,
+      iframeUrl: IFRAME_URL,
+    };
+    try {
+      // eslint-disable-next-line no-console
+      console.info("[MablyEarlyOffer] diagnose:", info);
+    } catch (e) {
+      /* ignore */
+    }
+    return info;
+  }
 
   var api = {
     open: open,
@@ -503,6 +679,7 @@
       hideSticky();
     },
     armScrollTrigger: armScrollTrigger,
+    diagnose: diagnose,
   };
   window.MablyEarlyOffer = api;
 
@@ -541,27 +718,48 @@
   }
 
   function boot() {
+    // URL escape hatch for testing: visit any page with `?mably-eo-reset=1`
+    // to clear the "Don't show again" preference before boot runs.
+    try {
+      if (/[?&]mably-eo-reset=1\b/.test(window.location.search || "")) {
+        safeStorage("remove", STORAGE_KEY);
+      }
+    } catch (e) {
+      /* ignore */
+    }
+
     var mode = readBootMode();
+    var scrollPercent = readScrollTriggerPercent();
+    bootStateForDiagnose = {
+      mode: mode,
+      scrollPercent: scrollPercent,
+      readyState: document.readyState,
+      currentScriptSeen: !!document.currentScript,
+    };
+
     // Always mount the sticky (kept hidden until popup is closed).
     ensureStickyMounted();
     if (mode === "manual") {
+      bootStateForDiagnose.path = "manual";
       // Reveal sticky after a beat so its entrance animation reads cleanly.
       window.setTimeout(showSticky, 250);
       return;
     }
     if (isSuppressed()) {
+      bootStateForDiagnose.path = "suppressed";
       // Don't auto-open, but keep the sticky so users can re-engage.
       window.setTimeout(showSticky, 250);
       return;
     }
-    var scrollPercent = readScrollTriggerPercent();
     if (scrollPercent != null) {
+      bootStateForDiagnose.path = "scroll-trigger";
       // Show the sticky right away so visitors have an entry point before
       // they hit the scroll threshold; arm the trigger for auto-open.
       window.setTimeout(showSticky, 250);
       armScrollTrigger(scrollPercent);
       return;
     }
+    bootStateForDiagnose.path = "auto-open";
     // Auto-open the popup immediately; sticky appears when user closes it.
     window.setTimeout(open, 600);
   }

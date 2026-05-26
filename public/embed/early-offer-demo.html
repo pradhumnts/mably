@@ -49,6 +49,21 @@
         background: transparent;
         color: #18181b;
       }
+      .spacer {
+        height: 320vh;
+        max-width: 40rem;
+        margin: 4rem auto 2rem;
+        padding: 2rem;
+        line-height: 1.6;
+        color: #71717a;
+        text-align: center;
+      }
+      .spacer code {
+        background: #f4f4f5;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+      }
     </style>
   </head>
   <body>
@@ -65,9 +80,20 @@
       <button onclick="MablyEarlyOffer.armScrollTrigger(40)">
         Arm scroll trigger (40%)
       </button>
+      <button onclick="console.log(MablyEarlyOffer.diagnose())">
+        Diagnose (check console)
+      </button>
       <button onclick="MablyEarlyOffer.reset(); location.reload()">
         Reset &amp; reload
       </button>
+    </div>
+
+    <div class="spacer" aria-hidden="true">
+      <p>
+        ↓ Long page to test scroll-triggered open. With
+        <code>data-mably-early-offer-on-scroll="40"</code> the popup opens
+        once you've scrolled ~40% down.
+      </p>
     </div>
 
     <section
