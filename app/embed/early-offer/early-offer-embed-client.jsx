@@ -145,6 +145,7 @@ export function EarlyOfferEmbedClient({ mode }) {
           onClaim={handleClaim}
           claimLoading={claimLoading}
           landscapeBreakpoint="md"
+          inline={mode === "inline"}
         />
       </div>
     </>

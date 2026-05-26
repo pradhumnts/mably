@@ -19,12 +19,19 @@ export default function EmbedLayout({ children }) {
       <style
         dangerouslySetInnerHTML={{
           __html:
-            "html,body{background:#050508 !important;background-color:#050508 !important;color-scheme:dark}",
+            // Popup mode: body matches the card colour so any iframe area
+            // not covered by content still reads as the card.
+            // Inline mode: body stays transparent so the host page (Framer)
+            // shows through any space around the widget.
+            "html,body{background:#050508 !important;background-color:#050508 !important;color-scheme:dark}" +
+            "html.mably-embed-inline,html.mably-embed-inline body{background:transparent !important;background-color:transparent !important}",
         }}
       />
       <script
         dangerouslySetInnerHTML={{
-          __html: `document.documentElement.classList.add("mably-embed");`,
+          __html:
+            "document.documentElement.classList.add('mably-embed');" +
+            "try{if(new URLSearchParams(location.search).get('mode')==='inline')document.documentElement.classList.add('mably-embed-inline');}catch(e){}",
         }}
       />
       <div className="m-0 min-h-screen w-full bg-transparent">{children}</div>

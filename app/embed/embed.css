@@ -1,16 +1,21 @@
 /*
  * Embed-only overrides.
  *
- * The app root layout applies `bg-background` to <body> via @layer base in
- * globals.css. In the embed iframe we paint the body the same near-black
- * the popup card uses so any vertical space not covered by the card content
- * still reads as the popup (the iframe element itself has rounded corners,
- * so the visible shape is the rounded card regardless).
+ * Popup mode: paint the body the same near-black the card uses so any
+ * iframe area not covered by content still reads as the popup card.
+ * Inline mode: keep the body transparent so the host page (Framer)
+ * shows through around the widget.
  */
 html.mably-embed,
 html.mably-embed body {
   background: #050508 !important;
   background-color: #050508 !important;
+}
+
+html.mably-embed.mably-embed-inline,
+html.mably-embed.mably-embed-inline body {
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 html.mably-embed {

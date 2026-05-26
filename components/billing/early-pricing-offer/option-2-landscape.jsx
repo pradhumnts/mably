@@ -24,6 +24,10 @@ import { cn } from "@/lib/utils";
  * footer links from the original popup; only the wrapping frame changes
  * (Dialog vs iframe / inline).
  *
+ * Pass `inline` to use the card as an always-visible widget — hides the X
+ * close button and the "Don't show again" footer link so nothing implies
+ * a dismiss action when there isn't one.
+ *
  * @param {{
  *   active: boolean;
  *   selectedPlan: string;
@@ -34,6 +38,7 @@ import { cn } from "@/lib/utils";
  *   onClaim: () => void;
  *   claimLoading: boolean;
  *   landscapeBreakpoint?: "lg" | "md";
+ *   inline?: boolean;
  * }} props
  */
 export function EarlyPricingOfferCard({
@@ -46,6 +51,7 @@ export function EarlyPricingOfferCard({
   onClaim,
   claimLoading,
   landscapeBreakpoint = "lg",
+  inline = false,
 }) {
   const t = getEarlyOfferTheme("dark");
   const useMd = landscapeBreakpoint === "md";
@@ -63,7 +69,7 @@ export function EarlyPricingOfferCard({
   return (
     <div className={cn("relative overflow-hidden", t.shell)}>
       <CelestialGlowLandscape />
-      <EarlyOfferCloseButton onClick={onClose} />
+      {inline ? null : <EarlyOfferCloseButton onClick={onClose} />}
 
       <div className={cn("relative z-10 grid min-h-[min(22rem,70vh)]", gridColsClass)}>
         {/* Left — hero */}
@@ -127,7 +133,11 @@ export function EarlyPricingOfferCard({
             />
 
             <div className="mt-4 flex w-full flex-col items-center gap-3 text-center">
-              <EarlyOfferFooterLinks onNeverShow={onNeverShow} onDismiss={onClose} />
+              <EarlyOfferFooterLinks
+                onNeverShow={onNeverShow}
+                onDismiss={onClose}
+                showNeverShow={!inline}
+              />
             </div>
           </div>
         </div>

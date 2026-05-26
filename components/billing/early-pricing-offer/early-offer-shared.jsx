@@ -469,9 +469,22 @@ export function EarlyOfferClaimButton({
   );
 }
 
-/** @param {{ onNeverShow: () => void; onDismiss?: () => void; theme?: import("@/lib/billing/early-offer-theme").EarlyOfferTheme }} props */
-export function EarlyOfferFooterLinks({ onNeverShow, onDismiss, theme = "dark" }) {
+/**
+ * @param {{
+ *   onNeverShow?: () => void;
+ *   onDismiss?: () => void;
+ *   theme?: import("@/lib/billing/early-offer-theme").EarlyOfferTheme;
+ *   showNeverShow?: boolean;
+ * }} props
+ */
+export function EarlyOfferFooterLinks({
+  onNeverShow,
+  onDismiss,
+  theme = "dark",
+  showNeverShow = true,
+}) {
   const t = getEarlyOfferTheme(theme);
+  const renderNeverShow = showNeverShow && typeof onNeverShow === "function";
   return (
     <>
       <p className={cn("text-center text-xs", t.footer)}>{EARLY_OFFER_COPY.footerNote}</p>
@@ -483,16 +496,20 @@ export function EarlyOfferFooterLinks({ onNeverShow, onDismiss, theme = "dark" }
         >
           {EARLY_OFFER_COPY.exploreDemoPortal}
         </Link>
-        <span className={cn("hidden sm:inline", t.footer)} aria-hidden>
-          ·
-        </span>
-        <button
-          type="button"
-          onClick={onNeverShow}
-          className={cn("underline-offset-2 transition hover:underline", t.footerLink)}
-        >
-          Don&apos;t show this again
-        </button>
+        {renderNeverShow ? (
+          <>
+            <span className={cn("hidden sm:inline", t.footer)} aria-hidden>
+              ·
+            </span>
+            <button
+              type="button"
+              onClick={onNeverShow}
+              className={cn("underline-offset-2 transition hover:underline", t.footerLink)}
+            >
+              Don&apos;t show this again
+            </button>
+          </>
+        ) : null}
       </div>
     </>
   );
