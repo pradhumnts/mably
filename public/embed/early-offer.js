@@ -2,46 +2,45 @@
  * Mably — Early Offer popup loader
  *
  * Drop-in loader for the founding-pricing popup. Designed for the public
- * Framer landing at mably.io (or any third-party host) — loads the same
- * popup UI shipped inside the Mably app as an iframe with overlay, plus
- * the same bottom-right sticky CTA used in-app.
+ * Framer landing (or any third-party host) — loads the same popup UI
+ * shipped inside the Mably app as an iframe with overlay.
  *
  * Behaviour:
- *   - Popup auto-opens on every page load (unless "Don't show again" set).
- *   - Closing the popup reveals the sticky CTA bottom-right.
- *   - Clicking the sticky CTA re-opens the popup.
- *   - "Don't show again" suppresses future auto-opens; the sticky remains.
+ *   - Popup auto-opens once on every page load.
+ *   - Closing the popup is a one-way action: no sticky CTA, no re-open
+ *     trigger. Use the inline embed (`/embed/early-offer?mode=inline`)
+ *     for persistent on-page visibility after dismissal.
+ *   - "Don't show again" sets localStorage and suppresses future auto-opens.
  *
- * Install (default — popup + sticky, opens immediately):
+ * Install (default — opens on page load, no sticky, no scroll trigger):
  *
  *   <script src="https://app.mably.io/embed/early-offer.js" async></script>
  *
- * Install (open after the visitor scrolls 40% of the page):
- *
- *   <script src="https://app.mably.io/embed/early-offer.js" data-mably-early-offer-on-scroll="40" async></script>
- *
- *   The value is the scroll-depth percentage (0-100, default 40). Sticky
- *   CTA still shows immediately so users can open the popup early.
- *
- * Install (sticky-only, no auto-open at all):
+ * Install (manual — never auto-open; you wire a button to MablyEarlyOffer.open()):
  *
  *   <script src="https://app.mably.io/embed/early-offer.js" data-mably-early-offer="manual" async></script>
  *
+ * Install (drop a host element's z-index to 0 when the popup closes — useful
+ * for Framer pages where the inline embed sits inside a positioned wrapper):
+ *
+ *   <script src="https://app.mably.io/embed/early-offer.js"
+ *           data-mably-early-offer-zero-on-close=".framer-7mg9ub-container"
+ *           async></script>
+ *
  * Public API (window.MablyEarlyOffer):
  *   - open()                          → show the popup
- *   - close()                         → hide it (reveals the sticky)
+ *   - close()                         → hide it
  *   - reset()                         → clear "don't show again" preference
  *   - isSuppressed()                  → boolean
- *   - showSticky()                    → force-show the sticky CTA
- *   - hideSticky()                    → hide the sticky CTA
- *   - armScrollTrigger(percent)       → open the popup once when scrolled N%
+ *   - showSticky() / hideSticky()     → opt-in sticky CTA (no longer mounted by default)
+ *   - armScrollTrigger(percent)       → opt-in scroll-based open
  *   - diagnose()                      → log + return current state (debugging)
  *
  * Debug helpers:
  *   - Visit `?mably-eo-reset=1` on any embedding page to clear the
  *     "Don't show again" preference before boot runs.
  *   - Call `MablyEarlyOffer.diagnose()` in the browser console to see
- *     which boot path ran and the current scroll percentage.
+ *     which boot path ran.
  *
  * Storage:
  *   localStorage["mably:early-offer:never"] = "1"  (set by "Don't show this again")
@@ -341,6 +340,21 @@
     window.addEventListener("keydown", keydownHandler, true);
   }
 
+  function applyZeroZIndexOnClose() {
+    var selector = readDataAttr("mablyEarlyOfferZeroOnClose");
+    if (!selector) return;
+    try {
+      var nodes = document.querySelectorAll(selector);
+      for (var i = 0; i < nodes.length; i++) {
+        // setProperty with !important makes this stick even when the host's
+        // own stylesheet has !important rules of its own.
+        nodes[i].style.setProperty("z-index", "0", "important");
+      }
+    } catch (e) {
+      /* ignore — selector might be invalid */
+    }
+  }
+
   function close() {
     if (!overlayEl || !isOpen) return;
     isOpen = false;
@@ -360,8 +374,10 @@
       if (overlayEl && !isOpen) overlayEl.style.display = "none";
       if (overlayEl) overlayEl.__mablyHideTimer = null;
     }, 240);
-    // Reveal the sticky CTA so the visitor can re-open the popup later.
-    showSticky();
+    // Optional: drop the z-index of a configured host element so it sits in
+    // normal flow once the popup is dismissed (e.g. for stacking the inline
+    // embed beneath other Framer elements after the popup is gone).
+    applyZeroZIndexOnClose();
   }
 
   // --- Cross-frame messaging --------------------------------------------
@@ -729,38 +745,26 @@
     }
 
     var mode = readBootMode();
-    var scrollPercent = readScrollTriggerPercent();
     bootStateForDiagnose = {
       mode: mode,
-      scrollPercent: scrollPercent,
       readyState: document.readyState,
       currentScriptSeen: !!document.currentScript,
     };
 
-    // Always mount the sticky (kept hidden until popup is closed).
-    ensureStickyMounted();
     if (mode === "manual") {
       bootStateForDiagnose.path = "manual";
-      // Reveal sticky after a beat so its entrance animation reads cleanly.
-      window.setTimeout(showSticky, 250);
+      // No auto-open. Host page wires a button to MablyEarlyOffer.open().
       return;
     }
     if (isSuppressed()) {
       bootStateForDiagnose.path = "suppressed";
-      // Don't auto-open, but keep the sticky so users can re-engage.
-      window.setTimeout(showSticky, 250);
-      return;
-    }
-    if (scrollPercent != null) {
-      bootStateForDiagnose.path = "scroll-trigger";
-      // Show the sticky right away so visitors have an entry point before
-      // they hit the scroll threshold; arm the trigger for auto-open.
-      window.setTimeout(showSticky, 250);
-      armScrollTrigger(scrollPercent);
+      // User opted out via "Don't show again" on a previous visit.
       return;
     }
     bootStateForDiagnose.path = "auto-open";
-    // Auto-open the popup immediately; sticky appears when user closes it.
+    // Open the popup once on page load. After close there's no sticky and
+    // no re-open trigger — embedders use the inline widget for persistent
+    // visibility.
     window.setTimeout(open, 600);
   }
 

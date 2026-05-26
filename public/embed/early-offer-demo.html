@@ -49,51 +49,25 @@
         background: transparent;
         color: #18181b;
       }
-      .spacer {
-        height: 320vh;
-        max-width: 40rem;
-        margin: 4rem auto 2rem;
-        padding: 2rem;
-        line-height: 1.6;
-        color: #71717a;
-        text-align: center;
-      }
-      .spacer code {
-        background: #f4f4f5;
-        padding: 0.1rem 0.4rem;
-        border-radius: 4px;
-        font-size: 0.85rem;
-      }
     </style>
   </head>
   <body>
     <div class="card">
       <h1>Mably — Early Offer embed</h1>
       <p>
-        This page is a sandbox for the embeddable founding-pricing popup plus
-        the bottom-right sticky CTA. The popup auto-opens on page load. After
-        closing it, the sticky button appears in the bottom-right and can
-        re-open the popup.
+        This page is a sandbox for the embeddable founding-pricing popup.
+        The popup auto-opens once on page load. After closing there's no
+        sticky CTA and no re-open trigger — use the inline widget below
+        for persistent visibility.
       </p>
       <button onclick="MablyEarlyOffer.open()">Open popup</button>
       <button onclick="MablyEarlyOffer.close()">Close popup</button>
-      <button onclick="MablyEarlyOffer.armScrollTrigger(40)">
-        Arm scroll trigger (40%)
-      </button>
       <button onclick="console.log(MablyEarlyOffer.diagnose())">
         Diagnose (check console)
       </button>
       <button onclick="MablyEarlyOffer.reset(); location.reload()">
         Reset &amp; reload
       </button>
-    </div>
-
-    <div class="spacer" aria-hidden="true">
-      <p>
-        ↓ Long page to test scroll-triggered open. With
-        <code>data-mably-early-offer-on-scroll="40"</code> the popup opens
-        once you've scrolled ~40% down.
-      </p>
     </div>
 
     <section
@@ -126,15 +100,16 @@
 
     <!--
       Install options:
-        • Popup, default: popup auto-opens on page load + sticky CTA
+        • Default: popup auto-opens once on page load, no sticky, no re-open trigger
             <script src="/embed/early-offer.js" async></script>
-        • Popup, scroll-triggered (40%):
-            <script src="/embed/early-offer.js"
-              data-mably-early-offer-on-scroll="40" async></script>
-        • Popup, sticky only (no auto-open):
+        • Manual: never auto-open; wire a button to MablyEarlyOffer.open()
             <script src="/embed/early-offer.js"
               data-mably-early-offer="manual" async></script>
-        • Inline widget (no popup, no sticky, no loader needed):
+        • Reset a host element's z-index on close (e.g. Framer wrapper):
+            <script src="/embed/early-offer.js"
+              data-mably-early-offer-zero-on-close=".framer-7mg9ub-container"
+              async></script>
+        • Inline widget (no popup, persistent on-page card):
             embed as iframe → /embed/early-offer?mode=inline
     -->
     <script src="/embed/early-offer.js" async></script>
