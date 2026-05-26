@@ -343,15 +343,38 @@
   function applyZeroZIndexOnClose() {
     var selector = readDataAttr("mablyEarlyOfferZeroOnClose");
     if (!selector) return;
+
+    // Inject a stylesheet rule rather than setting inline styles. Framer
+    // re-applies element.style on every render frame which strips the
+    // !important flag from inline styles — a stylesheet rule with
+    // !important sits above non-!important inline styles in the cascade
+    // and survives re-renders.
     try {
-      var nodes = document.querySelectorAll(selector);
-      for (var i = 0; i < nodes.length; i++) {
-        // setProperty with !important makes this stick even when the host's
-        // own stylesheet has !important rules of its own.
-        nodes[i].style.setProperty("z-index", "0", "important");
+      var styleId = "mably-early-offer-zoc";
+      var styleEl = document.getElementById(styleId);
+      if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = styleId;
+        styleEl.setAttribute("data-mably-early-offer", "zero-on-close");
+        document.head.appendChild(styleEl);
+      }
+      var rule = selector + "{z-index:0 !important}";
+      if ((styleEl.textContent || "").indexOf(rule) === -1) {
+        styleEl.textContent = (styleEl.textContent || "") + rule;
       }
     } catch (e) {
       /* ignore — selector might be invalid */
+    }
+
+    // Belt-and-braces: also set inline style for immediate effect on the
+    // current frame in case the stylesheet recalc is delayed.
+    try {
+      var nodes = document.querySelectorAll(selector);
+      for (var i = 0; i < nodes.length; i++) {
+        nodes[i].style.setProperty("z-index", "0", "important");
+      }
+    } catch (e) {
+      /* ignore */
     }
   }
 
