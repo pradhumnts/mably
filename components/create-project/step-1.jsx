@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,16 +50,16 @@ export function CreateProjectStep1({
   const [clientError, setClientError] = useState("");
 
   const clientId = formData.clientId || "";
-  const selectedClient = clients.find((c) => String(c.id) === String(clientId));
-
-  useEffect(() => {
-    if (clientId) setClientError("");
-  }, [clientId]);
+  const effectiveClientId = String(clientId) === "new" ? "" : clientId;
+  const selectedClient = clients.find((c) => String(c.id) === String(effectiveClientId));
+  // Keep Select controlled even when no client is chosen; using undefined lets
+  // Radix keep internal state and can accidentally retain the "new" option.
+  const selectValue = selectedClient ? String(selectedClient.id) : "";
 
   const handleNext = (e) => {
     e.preventDefault();
 
-    if (!String(clientId).trim()) {
+    if (!String(effectiveClientId).trim()) {
       setClientError("Please choose a client for this project.");
       return;
     }
@@ -70,7 +70,7 @@ export function CreateProjectStep1({
       startDate,
       dueDate,
       projectScope,
-      clientId,
+      clientId: effectiveClientId,
     });
     nextStep();
   };
@@ -238,7 +238,7 @@ export function CreateProjectStep1({
               <FieldLabel htmlFor="client">
                 Who you&apos;re working with{" "}
               </FieldLabel>
-              <Select value={clientId || undefined} onValueChange={handleClientSelect}>
+              <Select value={selectValue} onValueChange={handleClientSelect}>
                 <SelectTrigger
                   id="client"
                   aria-invalid={clientError ? true : undefined}
