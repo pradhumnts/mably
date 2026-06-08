@@ -2,8 +2,8 @@ import { LoginScreen } from "@/components/login-screen";
 import { sanitizeNextPath } from "@/lib/auth/safe-next-path";
 
 export const metadata = {
-  title: "Sign In",
-  description: "Sign in to your Mably account",
+  title: "Sign in or create account",
+  description: "Sign in to Mably or create a new account",
 };
 
 export default async function Home({ searchParams }) {
@@ -11,7 +11,7 @@ export default async function Home({ searchParams }) {
   const rawNext = Array.isArray(sp.next) ? sp.next[0] : sp.next;
   const next = sanitizeNextPath(typeof rawNext === "string" ? rawNext : undefined) ?? null;
   const rawIntent = Array.isArray(sp.intent) ? sp.intent[0] : sp.intent;
-  const intent = rawIntent === "portal" ? "portal" : null;
+  const intent = rawIntent === "portal" || rawIntent === "signup" ? rawIntent : null;
 
   return <LoginScreen next={next} intent={intent} />;
 }

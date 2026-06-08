@@ -93,6 +93,7 @@ export function LoginForm({ className, next = null, intent = null, ...props }) {
 
   const portalFlow =
     intent === "portal" || (typeof next === "string" && next.startsWith("/project/"));
+  const signupFlow = intent === "signup";
 
   return (
     <div className={cn("flex flex-col gap-[24px] animate-in fade-in slide-in-from-bottom-4 duration-500 z-3 relative", className)} {...props}>
@@ -100,16 +101,22 @@ export function LoginForm({ className, next = null, intent = null, ...props }) {
         <FieldGroup className="gap-[40px]">
           <div className="flex flex-col items-center gap-[8px] text-center">
             <p className="text-sm text-primary font-semibold uppercase">
-              {portalFlow ? "Project portal" : "Welcome back"}
+              {portalFlow ? "Project portal" : signupFlow ? "Create account" : "Welcome back"}
             </p>
             <h1 className="text-2xl font-semibold">
-              {portalFlow ? "Sign in to continue" : "Sign in to your account"}
+              {portalFlow
+                ? "Sign in to continue"
+                : signupFlow
+                  ? "Create your account"
+                  : "Sign in to your account"}
             </h1>
             <FieldDescription className="text-center text-sm">
               {!showOtpInput
                 ? portalFlow
                   ? "Use the same email your freelancer invited — we will email you a one-time code."
-                  : "Enter your email to sign in"
+                  : signupFlow
+                    ? "Enter your email to create your account. If you already have one, we will sign you in."
+                    : "Enter your email to sign in. New here? We will create your account."
                 : `We sent a 6-digit code to ${email}`}
             </FieldDescription>
           </div>
@@ -136,7 +143,7 @@ export function LoginForm({ className, next = null, intent = null, ...props }) {
               )}
               <Field>
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Sending code..." : "Continue with Email"}
+                  {isLoading ? "Sending code..." : signupFlow ? "Create account with email" : "Continue with Email"}
                 </Button>
               </Field>
             </>
@@ -224,7 +231,7 @@ export function LoginForm({ className, next = null, intent = null, ...props }) {
                   fill="#EA4335"
                 />
               </svg>
-              Continue with Google
+              {signupFlow ? "Create account with Google" : "Continue with Google"}
             </Button>
           </Field>
           </div>

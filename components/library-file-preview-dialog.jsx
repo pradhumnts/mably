@@ -10,7 +10,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LibraryPdfMobilePreview } from "@/components/library-pdf-mobile-preview";
 import { getLibraryFileDownloadUrl } from "@/lib/actions/project-library";
+import { useNarrowViewport } from "@/lib/hooks/use-narrow-viewport";
 import { getLibraryFilePreviewMode } from "@/lib/library/file-preview";
 import { cn } from "@/lib/utils";
 
@@ -83,9 +85,16 @@ export function LibraryFilePreviewDialog({
     )
   );
 
+  const isNarrowViewport = useNarrowViewport();
   const mode = file ? getLibraryFilePreviewMode(file.type, file.mimeType) : null;
   const isImagePreview = mode === "image";
   const isVideoPreview = mode === "video";
+  const isPdfPreview = mode === "pdf";
+  const useMobilePdfPreview = isPdfPreview && isNarrowViewport;
+  const pdfPreviewUrl =
+    open && isPdfPreview && !useMobilePdfPreview && file?.fileId && projectId
+      ? `/api/project-library/preview?projectId=${encodeURIComponent(String(projectId))}&fileId=${encodeURIComponent(String(file.fileId))}`
+      : null;
 
   const loadUrl = useCallback(async () => {
     if (!file?.fileId || !projectId) return;
@@ -122,6 +131,15 @@ export function LibraryFilePreviewDialog({
     setIsPanDragging(false);
     pointerDragRef.current = null;
     wheelAccumRef.current = { zoom: 0, panX: 0, panY: 0 };
+    const fileMode = getLibraryFilePreviewMode(file.type, file.mimeType);
+
+    if (fileMode === "pdf") {
+      setLoading(false);
+      setError(null);
+      setUrl(null);
+      return;
+    }
+
     void loadUrl();
   }, [open, file, loadUrl]);
 
@@ -295,11 +313,13 @@ export function LibraryFilePreviewDialog({
             "relative flex min-h-0 w-full flex-1 flex-col rounded-lg border border-border/80 bg-muted/30",
             isImagePreview && "overflow-hidden",
             isVideoPreview && "overflow-auto",
-            !isImagePreview && !isVideoPreview && "items-center justify-center overflow-hidden"
+            (isPdfPreview && !useMobilePdfPreview) && "overflow-hidden",
+            useMobilePdfPreview && "overflow-hidden",
+            !isImagePreview && !isVideoPreview && !isPdfPreview && "items-center justify-center overflow-hidden"
           )}
           onWheel={isImagePreview ? handleImageWheel : undefined}
         >
-          {loading ? (
+          {loading && !useMobilePdfPreview && !pdfPreviewUrl ? (
             <div className="flex flex-col items-center gap-3 py-24 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
               <p className="text-sm">Loading preview…</p>
@@ -378,11 +398,19 @@ export function LibraryFilePreviewDialog({
             </>
           ) : null}
 
-          {!loading && !error && url && mode === "pdf" ? (
+          {useMobilePdfPreview && file?.fileId ? (
+            <LibraryPdfMobilePreview
+              projectId={projectId}
+              fileId={String(file.fileId)}
+              fileName={file.name}
+            />
+          ) : null}
+
+          {!error && pdfPreviewUrl ? (
             <iframe
               title={file?.name ?? "PDF preview"}
-              src={url}
-              className="h-full min-h-0 w-full flex-1 bg-white"
+              src={pdfPreviewUrl}
+              className="h-full min-h-0 w-full flex-1 border-0 bg-white"
             />
           ) : null}
 
