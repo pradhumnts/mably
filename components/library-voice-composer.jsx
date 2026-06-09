@@ -73,6 +73,7 @@ export function LibraryVoiceMicTrigger({
   canRecord,
   onStart,
   className,
+  disabledLabel,
 }) {
   const recordDisabled = disabled || !canRecord;
 
@@ -94,7 +95,9 @@ export function LibraryVoiceMicTrigger({
         </span>
       </TooltipTrigger>
       <TooltipContent side="top">
-        {recordDisabled ? "Voice note unavailable" : "Record voice note"}
+        {recordDisabled
+          ? disabledLabel || "Voice note unavailable"
+          : "Record voice note"}
       </TooltipContent>
     </Tooltip>
   );
@@ -104,7 +107,13 @@ export function LibraryVoiceMicTrigger({
  * @param {Parameters<typeof useLibraryVoiceComposer>[0] & { suppressPreview?: boolean; previewDisabled?: boolean; compact?: boolean }} options
  */
 export function useLibraryVoiceComposerState(options) {
-  const { suppressPreview = false, previewDisabled = false, compact = false, ...hookOptions } = options;
+  const {
+    suppressPreview = false,
+    previewDisabled = false,
+    compact = false,
+    micDisabledLabel,
+    ...hookOptions
+  } = options;
   const voice = useLibraryVoiceComposer(hookOptions);
   const panelVisible =
     voice.recording || Boolean(hookOptions.pendingVoice?.blob && !suppressPreview);
@@ -134,6 +143,7 @@ export function useLibraryVoiceComposerState(options) {
   const micButton = (
     <LibraryVoiceMicTrigger
       disabled={hookOptions.disabled}
+      disabledLabel={micDisabledLabel}
       canRecord={voice.canRecord}
       onStart={voice.startRecording}
     />

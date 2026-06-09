@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Breadcrumb,
@@ -144,18 +144,21 @@ export default function LibraryFiles() {
    */
   const [libraryQuota, setLibraryQuota] = useState(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options = {}) => {
+    const silent = options.silent === true;
     if (!projectId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     const [filesRes, usageRes] = await Promise.all([
       listLibraryFiles(String(projectId)),
       getLibraryStorageUsageForProject(String(projectId)),
     ]);
-    setLoading(false);
+    if (!silent) setLoading(false);
     if (!filesRes.ok) {
-      toast.error(filesRes.error || "Could not load files");
-      setItems([]);
-      setLibraryQuota(null);
+      if (!silent) {
+        toast.error(filesRes.error || "Could not load files");
+        setItems([]);
+        setLibraryQuota(null);
+      }
       return;
     }
     setItems(filesRes.items || []);
@@ -170,11 +173,15 @@ export default function LibraryFiles() {
         planKey: usageRes.planKey,
         percentUsed: usageRes.percentUsed,
       });
-    } else {
+    } else if (!silent) {
       setLibraryQuota(null);
       toast.error(usageRes.error || "Could not load library upload limits");
     }
   }, [projectId]);
+
+  const refreshLibrary = useCallback(() => {
+    void load({ silent: true });
+  }, [load]);
 
   useEffect(() => {
     void load();
@@ -285,10 +292,16 @@ export default function LibraryFiles() {
     }));
   };
 
+  const nameById = new Map(items.map((row) => [String(row.id), row.display_name || "File"]));
+
   const mapped = items.map((row) => {
     const kind = inferFileKindFromMime(row.mime_type, row.original_filename || row.display_name);
     const needsApproval = Boolean(row.needs_approval);
     const approvalStatus = needsApproval ? row.approval_status || "pending" : null;
+    const fromDiscussion =
+      row.upload_origin === "discussion" && row.origin_discussion_file_id
+        ? nameById.get(String(row.origin_discussion_file_id)) || null
+        : null;
     return {
       id: row.id,
       name: row.display_name,
@@ -303,6 +316,7 @@ export default function LibraryFiles() {
       mimeType: row.mime_type || null,
       needsApproval,
       approvalStatus,
+      fromDiscussion,
       unreadCommentCount: Number(row.unread_comment_count || 0),
       sizeBytes: Number.isFinite(Number(row.size_bytes)) ? Number(row.size_bytes) : null,
       sizeLabel:
@@ -346,6 +360,26 @@ export default function LibraryFiles() {
     });
   }
 
+  const handleFileRenamed = useCallback((fileId, newName) => {
+    const id = String(fileId);
+    const name = String(newName || "").trim();
+    if (!name) return;
+    setItems((prev) =>
+      prev.map((row) => (String(row.id) === id ? { ...row, display_name: name } : row))
+    );
+    setPreviewFile((prev) =>
+      prev && String(prev.fileId) === id ? { ...prev, name } : prev
+    );
+  }, []);
+
+  const fileDisplayNameById = useMemo(
+    () =>
+      Object.fromEntries(
+        items.map((row) => [String(row.id), row.display_name || "File"])
+      ),
+    [items]
+  );
+
   const handleDownload = async (fileId) => {
     setDownloadingId(fileId);
     const r = await getLibraryFileDownloadUrl(String(projectId), fileId);
@@ -387,7 +421,7 @@ export default function LibraryFiles() {
     toast.success(
       status === "approved" ? "File approved" : status === "revision_requested" ? "Revision requested" : "Updated"
     );
-    void load();
+    void refreshLibrary();
   };
 
   return (
@@ -581,6 +615,14 @@ export default function LibraryFiles() {
                             {approvalBadge ? (
                               <Badge variant="outline" className={approvalBadge.className}>
                                 {approvalBadge.label}
+                              </Badge>
+                            ) : null}
+                            {file.fromDiscussion ? (
+                              <Badge
+                                variant="outline"
+                                className="border-sky-200 bg-sky-50 text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100"
+                              >
+                                From discussion · {file.fromDiscussion}
                               </Badge>
                             ) : null}
                           </div>
@@ -777,6 +819,11 @@ export default function LibraryFiles() {
                     uploadedByAvatar={file.uploadedByAvatar}
                     uploadedAt={file.uploadedAtFull}
                     isFreelancer={isFreelancer}
+                    maxFileBytes={libraryQuota?.maxFileBytes}
+                    maxFileLabel={libraryQuota?.maxFileLabel}
+                    onLibraryChanged={refreshLibrary}
+                    fileDisplayNameById={fileDisplayNameById}
+                    onPreviewAttachedFile={(attached) => setPreviewFile(attached)}
                     open={discussionFileId === file.fileId}
                     onOpenChange={(nextOpen) => {
                       if (nextOpen) {
@@ -839,7 +886,7 @@ export default function LibraryFiles() {
         isFreelancer={isFreelancer}
         maxFileBytes={libraryQuota?.maxFileBytes}
         maxFileLabel={libraryQuota?.maxFileLabel}
-        onUploaded={() => void load()}
+        onUploaded={refreshLibrary}
       />
 
       <DeleteLibraryItemDialog
@@ -850,7 +897,7 @@ export default function LibraryFiles() {
         projectId={String(projectId)}
         kind="file"
         item={deleteTarget}
-        onDeleted={() => void load()}
+        onDeleted={refreshLibrary}
       />
 
       <LibraryFilePreviewDialog
@@ -861,6 +908,7 @@ export default function LibraryFiles() {
         projectId={String(projectId)}
         file={previewFile}
         onDownload={(fileId) => void handleDownload(fileId)}
+        onRenamed={handleFileRenamed}
       />
     </>
   );

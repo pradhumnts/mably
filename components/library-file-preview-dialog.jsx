@@ -11,7 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LibraryPdfMobilePreview } from "@/components/library-pdf-mobile-preview";
-import { getLibraryFileDownloadUrl } from "@/lib/actions/project-library";
+import { getLibraryFileDownloadUrl, renameLibraryFile } from "@/lib/actions/project-library";
+import { LibraryInlineFileName } from "@/components/library-inline-file-name";
 import { useNarrowViewport } from "@/lib/hooks/use-narrow-viewport";
 import { getLibraryFilePreviewMode } from "@/lib/library/file-preview";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,7 @@ function normalizeWheelDelta(event) {
  *     description?: string;
  *   };
  *   onDownload?: (fileId: string) => void;
+ *   onRenamed?: (fileId: string, displayName: string) => void;
  * }} props
  */
 export function LibraryFilePreviewDialog({
@@ -70,7 +72,9 @@ export function LibraryFilePreviewDialog({
   projectId,
   file,
   onDownload,
+  onRenamed,
 }) {
+  const [displayName, setDisplayName] = useState("");
   const [url, setUrl] = useState(/** @type {string | null} */ (null));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(/** @type {string | null} */ (null));
@@ -112,6 +116,7 @@ export function LibraryFilePreviewDialog({
 
   useEffect(() => {
     if (!open || !file) {
+      setDisplayName("");
       setUrl(null);
       setError(null);
       setLoading(false);
@@ -126,6 +131,8 @@ export function LibraryFilePreviewDialog({
       }
       return;
     }
+
+    setDisplayName(file.name || "File");
     setImageZoom(1);
     setImagePan({ x: 0, y: 0 });
     setIsPanDragging(false);
@@ -280,8 +287,34 @@ export function LibraryFilePreviewDialog({
         showCloseButton
       >
         <DialogHeader className="shrink-0 gap-3 pr-10 text-left">
-          <DialogTitle className="text-lg font-semibold leading-snug sm:text-xl">
-            {file?.name ?? "File preview"}
+          <DialogTitle className="text-lg font-semibold leading-snug sm:text-xl" asChild>
+            {file?.fileId ? (
+              <div className="min-w-0">
+                <LibraryInlineFileName
+                  name={displayName || file.name || "File"}
+                  disabled={!open}
+                  onSave={async (nextName) => {
+                    const previous = displayName || file.name || "File";
+                    setDisplayName(nextName);
+                    const result = await renameLibraryFile(
+                      String(projectId),
+                      String(file.fileId),
+                      nextName
+                    );
+                    if (!result.ok) {
+                      setDisplayName(previous);
+                      return { ok: false, error: result.error || "Could not rename file" };
+                    }
+                    const saved = result.displayName || nextName;
+                    setDisplayName(saved);
+                    onRenamed?.(String(file.fileId), saved);
+                    return { ok: true };
+                  }}
+                />
+              </div>
+            ) : (
+              <span>File preview</span>
+            )}
           </DialogTitle>
 
           {file ? (

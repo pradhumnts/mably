@@ -230,11 +230,13 @@ export function LibraryVoiceRecorder({
       String(fileId),
       caption.trim(),
       {
-        storagePath: prep.objectPath,
-        durationMs,
-        mimeType: blob.type || prep.mimeType || null,
-        sizeBytes: prep.sizeBytes || blob.size,
-        waveform,
+        voice: {
+          storagePath: prep.objectPath,
+          durationMs,
+          mimeType: blob.type || prep.mimeType || null,
+          sizeBytes: prep.sizeBytes || blob.size,
+          waveform,
+        },
       }
     );
 

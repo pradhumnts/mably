@@ -217,6 +217,7 @@ export function UploadFileDialog({
   });
   /** @type {React.MutableRefObject<XMLHttpRequest | null>} */
   const xhrRef = useRef(null);
+  const submitLockRef = useRef(false);
   /** @type {[null | { phase: 'sending' | 'finishing'; percent: number; loaded: number; total: number }, React.Dispatch<any>]} */
   const [progress, setProgress] = useState(null);
 
@@ -282,6 +283,8 @@ export function UploadFileDialog({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting || submitLockRef.current) return;
+
     const file = formData.file;
     if (!file) {
       toast.error("No file selected", {
@@ -296,9 +299,11 @@ export function UploadFileDialog({
       return;
     }
 
+    submitLockRef.current = true;
     setSubmitting(true);
     setProgress({ phase: "sending", percent: 0, loaded: 0, total: file.size });
 
+    try {
     const voiceExtra = pendingVoice?.blob?.size ? pendingVoice.blob.size : 0;
     const prepared = await prepareLibraryFileUpload({
       projectId,
@@ -308,8 +313,6 @@ export function UploadFileDialog({
       sizeBytes: file.size + voiceExtra,
     });
     if (!prepared.ok || !prepared.objectPath) {
-      setSubmitting(false);
-      setProgress(null);
       toast.error("Upload failed", {
         description: prepared.error || "Could not prepare upload.",
       });
@@ -321,8 +324,6 @@ export function UploadFileDialog({
       data: { session },
     } = await supabase.auth.getSession();
     if (!session?.access_token) {
-      setSubmitting(false);
-      setProgress(null);
       toast.error("Upload failed", {
         description: "Your session expired. Please refresh and sign in again.",
       });
@@ -342,8 +343,6 @@ export function UploadFileDialog({
     });
 
     xhrRef.current = null;
-    setSubmitting(false);
-    setProgress(null);
 
     if (!uploadRes.ok) {
       const msg = uploadRes.error || "Something went wrong. Please try again.";
@@ -356,6 +355,8 @@ export function UploadFileDialog({
       });
       return;
     }
+
+    setProgress({ phase: "finishing", percent: 100, loaded: file.size, total: file.size });
 
     const completed = await completeLibraryFileUpload({
       projectId,
@@ -410,6 +411,11 @@ export function UploadFileDialog({
     setSelectedFileName("");
     setPendingVoice(null);
     onUploaded?.();
+    } finally {
+      submitLockRef.current = false;
+      setSubmitting(false);
+      setProgress(null);
+    }
   };
 
   const phaseLabel =
