@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { sanitizeNextPath } from '@/lib/auth/safe-next-path'
 import { fetchProfileOnboardingRow } from '@/lib/auth/resolve-after-auth-redirect'
 import { resolveClientLandingPath } from '@/lib/auth/resolve-client-landing'
-import { isMarketingHost } from '@/lib/site-hosts'
+import { isMarketingHost, shouldSkipHostRouting } from '@/lib/site-hosts'
 import { applyHostRouting, isPublicMarketingRequest } from '@/lib/site-host-routing'
 
 export async function middleware(request) {
@@ -14,6 +14,10 @@ export async function middleware(request) {
   const path = request.nextUrl.pathname
 
   if (path.startsWith('/embed/') || path === '/embed') {
+    return NextResponse.next({ request })
+  }
+
+  if (shouldSkipHostRouting(request) && (path === '/landing' || path.startsWith('/legal'))) {
     return NextResponse.next({ request })
   }
 
