@@ -240,10 +240,10 @@ export function ProjectActivityTimeline({ project }) {
                               {activity.voiceNote.caption}
                             </p>
                           ) : null}
-                          {activity.destinationHref && activity.destinationLabel ? (
+                          {activity.destinationHref ? (
                             <p>
                               <Link href={activity.destinationHref} className={linkActionClass}>
-                                {activity.destinationLabel}
+                                {activity.destinationLabel || "Open Discussion"}
                               </Link>
                             </p>
                           ) : null}
@@ -260,16 +260,18 @@ export function ProjectActivityTimeline({ project }) {
                           </Avatar>
                           <div className="min-w-0 flex-1">
                             <p className="mb-1 text-sm font-semibold">{activity.user.name}</p>
-                            <p className="text-sm whitespace-pre-wrap break-words text-foreground">
-                              {activity.comment}
-                            </p>
-                            {activity.destinationHref && activity.destinationLabel ? (
-                              <p className="mt-3">
-                                <Link href={activity.destinationHref} className={linkActionClass}>
-                                  {activity.destinationLabel}
+                            <p className="flex min-w-0 items-baseline text-sm text-foreground">
+                              <span className="min-w-0 truncate">{activity.comment}</span>
+                              {activity.destinationHref ? (
+                                <Link
+                                  href={activity.destinationHref}
+                                  className={cn(linkActionClass, "shrink-0 whitespace-nowrap text-sm font-medium")}
+                                >
+                                 Open Discussion
                                 </Link>
-                              </p>
-                            ) : null}
+                           
+                              ) : null}
+                            </p>
                           </div>
                         </div>
                       </Card>

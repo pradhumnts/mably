@@ -16,24 +16,19 @@ export function LegalFooterLinks({ className }) {
       )}
       aria-label="Legal"
     >
-      <a href={LEGAL_LINKS.terms} target="_blank" rel="noopener noreferrer" className={linkClass}>
+      <a href={LEGAL_LINKS.terms} className={linkClass}>
         Terms
       </a>
       <span className="text-border select-none" aria-hidden>
         ·
       </span>
-      <a
-        href={LEGAL_LINKS.privacy}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={linkClass}
-      >
+      <a href={LEGAL_LINKS.privacy} className={linkClass}>
         Privacy
       </a>
       <span className="text-border select-none" aria-hidden>
         ·
       </span>
-      <a href={LEGAL_LINKS.refund} target="_blank" rel="noopener noreferrer" className={linkClass}>
+      <a href={LEGAL_LINKS.refund} className={linkClass}>
         Refund
       </a>
     </nav>

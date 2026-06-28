@@ -25,30 +25,15 @@ export function LoginScreen({ next = null, intent = null }) {
         </div>
         <FieldDescription className="absolute bottom-8 left-0 right-0 mx-auto max-w-full px-4 text-center text-xs leading-relaxed">
           By continuing, you agree to our{" "}
-          <a
-            href={LEGAL_LINKS.terms}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-4"
-          >
+          <a href={LEGAL_LINKS.terms} className="underline underline-offset-4">
             Terms
           </a>
           ,{" "}
-          <a
-            href={LEGAL_LINKS.privacy}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-4"
-          >
+          <a href={LEGAL_LINKS.privacy} className="underline underline-offset-4">
             Privacy
           </a>
           , and{" "}
-          <a
-            href={LEGAL_LINKS.refund}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-4"
-          >
+          <a href={LEGAL_LINKS.refund} className="underline underline-offset-4">
             Refund
           </a>{" "}
           policy.

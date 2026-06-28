@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Download, Loader2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Download, History, Loader2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,10 +11,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LibraryPdfMobilePreview } from "@/components/library-pdf-mobile-preview";
-import { getLibraryFileDownloadUrl, renameLibraryFile } from "@/lib/actions/project-library";
+import {
+  getLibraryFileDownloadUrl,
+  listLibraryFileVersions,
+  renameLibraryFile,
+} from "@/lib/actions/project-library";
 import { LibraryInlineFileName } from "@/components/library-inline-file-name";
+import { LibraryFileRevisionsPanel } from "@/components/library-file-revisions-panel";
 import { useNarrowViewport } from "@/lib/hooks/use-narrow-viewport";
+import { formatLibraryDateTime, formatRevisionCountLabel } from "@/lib/library/file-versions";
 import { getLibraryFilePreviewMode } from "@/lib/library/file-preview";
+import { inferFileKindFromMime } from "@/lib/library/infer-types";
 import { cn } from "@/lib/utils";
 
 const IMAGE_ZOOM_MIN = 0.5;
@@ -60,9 +67,13 @@ function normalizeWheelDelta(event) {
  *     uploadedBy?: string;
  *     uploadedByAvatar?: string | null;
  *     uploadedAt?: string;
+ *     uploadedAtFull?: string;
  *     description?: string;
+ *     versionId?: string | null;
+ *     versionNumber?: number | null;
+ *     versionCount?: number;
  *   };
- *   onDownload?: (fileId: string) => void;
+ *   onDownload?: (fileId: string, versionId?: string | null) => void;
  *   onRenamed?: (fileId: string, displayName: string) => void;
  * }} props
  */
@@ -75,6 +86,11 @@ export function LibraryFilePreviewDialog({
   onRenamed,
 }) {
   const [displayName, setDisplayName] = useState("");
+  const [selectedVersionId, setSelectedVersionId] = useState(/** @type {string | null} */ (null));
+  const [selectedVersionNumber, setSelectedVersionNumber] = useState(1);
+  const [versions, setVersions] = useState(/** @type {any[]} */ ([]));
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [revisionsOpen, setRevisionsOpen] = useState(false);
   const [url, setUrl] = useState(/** @type {string | null} */ (null));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(/** @type {string | null} */ (null));
@@ -90,14 +106,43 @@ export function LibraryFilePreviewDialog({
   );
 
   const isNarrowViewport = useNarrowViewport();
-  const mode = file ? getLibraryFilePreviewMode(file.type, file.mimeType) : null;
+
+  const selectedVersion = useMemo(() => {
+    if (!versions.length) return null;
+    if (selectedVersionId) {
+      return versions.find((row) => String(row.id) === String(selectedVersionId)) ?? null;
+    }
+    return versions.find((row) => row.is_current) ?? versions[0] ?? null;
+  }, [versions, selectedVersionId]);
+
+  const previewSource = useMemo(() => {
+    if (selectedVersion) {
+      return {
+        kind: inferFileKindFromMime(
+          selectedVersion.mime_type,
+          selectedVersion.original_filename || undefined
+        ),
+        mime: selectedVersion.mime_type ?? null,
+      };
+    }
+    return {
+      kind: file?.type ?? "other",
+      mime: file?.mimeType ?? null,
+    };
+  }, [selectedVersion, file?.type, file?.mimeType]);
+
+  const mode = file ? getLibraryFilePreviewMode(previewSource.kind, previewSource.mime) : null;
   const isImagePreview = mode === "image";
   const isVideoPreview = mode === "video";
   const isPdfPreview = mode === "pdf";
   const useMobilePdfPreview = isPdfPreview && isNarrowViewport;
   const pdfPreviewUrl =
     open && isPdfPreview && !useMobilePdfPreview && file?.fileId && projectId
-      ? `/api/project-library/preview?projectId=${encodeURIComponent(String(projectId))}&fileId=${encodeURIComponent(String(file.fileId))}`
+      ? `/api/project-library/preview?projectId=${encodeURIComponent(String(projectId))}&fileId=${encodeURIComponent(String(file.fileId))}${
+          selectedVersionId
+            ? `&versionId=${encodeURIComponent(String(selectedVersionId))}`
+            : ""
+        }`
       : null;
 
   const loadUrl = useCallback(async () => {
@@ -105,18 +150,27 @@ export function LibraryFilePreviewDialog({
     setLoading(true);
     setError(null);
     setUrl(null);
-    const res = await getLibraryFileDownloadUrl(String(projectId), String(file.fileId));
+    const res = await getLibraryFileDownloadUrl(
+      String(projectId),
+      String(file.fileId),
+      selectedVersionId || undefined
+    );
     setLoading(false);
     if (!res.ok || !res.url) {
       setError(res.error || "Could not load preview");
       return;
     }
     setUrl(res.url);
-  }, [file?.fileId, projectId]);
+  }, [file?.fileId, projectId, selectedVersionId]);
 
   useEffect(() => {
     if (!open || !file) {
       setDisplayName("");
+      setSelectedVersionId(null);
+      setSelectedVersionNumber(1);
+      setVersions([]);
+      setVersionsLoading(false);
+      setRevisionsOpen(false);
       setUrl(null);
       setError(null);
       setLoading(false);
@@ -133,22 +187,66 @@ export function LibraryFilePreviewDialog({
     }
 
     setDisplayName(file.name || "File");
+    setSelectedVersionId(file.versionId ? String(file.versionId) : null);
+    setSelectedVersionNumber(Number(file.versionNumber) || 1);
     setImageZoom(1);
     setImagePan({ x: 0, y: 0 });
     setIsPanDragging(false);
     pointerDragRef.current = null;
     wheelAccumRef.current = { zoom: 0, panX: 0, panY: 0 };
-    const fileMode = getLibraryFilePreviewMode(file.type, file.mimeType);
+  }, [open, file]);
 
-    if (fileMode === "pdf") {
+  useEffect(() => {
+    if (!open || !file?.fileId) return;
+    if (mode === "pdf" || mode === null) {
       setLoading(false);
       setError(null);
       setUrl(null);
       return;
     }
-
     void loadUrl();
-  }, [open, file, loadUrl]);
+  }, [open, file?.fileId, selectedVersionId, mode, loadUrl]);
+
+  useEffect(() => {
+    if (!open || !file?.fileId || !projectId) {
+      setVersions([]);
+      return;
+    }
+
+    let cancelled = false;
+    setVersionsLoading(true);
+    void (async () => {
+      const res = await listLibraryFileVersions(String(projectId), String(file.fileId));
+      if (cancelled) return;
+      setVersionsLoading(false);
+      if (!res.ok) {
+        setVersions([]);
+        return;
+      }
+      const items = res.items || [];
+      setVersions(items);
+      if (items.length && !file.versionId) {
+        const current = items.find((row) => row.is_current) || items[0];
+        if (current?.id) {
+          setSelectedVersionId(String(current.id));
+          setSelectedVersionNumber(Math.max(1, Number(current.version_number) || 1));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, file?.fileId, file?.versionId, projectId]);
+
+  const handleVersionChange = useCallback((versionId, versionNumber) => {
+    setSelectedVersionId(versionId);
+    setSelectedVersionNumber(versionNumber);
+    setImageZoom(1);
+    setImagePan({ x: 0, y: 0 });
+    setUrl(null);
+    setError(null);
+  }, []);
 
   const zoomIn = useCallback(() => {
     setImageZoom((z) => clampImageZoom(z + IMAGE_ZOOM_STEP));
@@ -278,6 +376,157 @@ export function LibraryFilePreviewDialog({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, isImagePreview, zoomIn, zoomOut, resetZoom]);
 
+  const revisionCount = Math.max(
+    versions.length,
+    Number(file?.versionCount) || 0,
+    selectedVersionNumber
+  );
+  const hasMultipleRevisions = revisionCount > 1;
+
+  const previewDateTimeLabel = useMemo(() => {
+    if (selectedVersion?.created_at) {
+      return formatLibraryDateTime(selectedVersion.created_at);
+    }
+    return file?.uploadedAtFull || file?.uploadedAt || "";
+  }, [selectedVersion, file?.uploadedAtFull, file?.uploadedAt]);
+
+  const previewPane = (
+      <div
+        className={cn(
+          "relative flex min-h-0 w-full flex-1 flex-col rounded-lg border border-border/80 bg-muted/30",
+          isImagePreview && "overflow-hidden",
+          isVideoPreview && "overflow-auto",
+          isPdfPreview && !useMobilePdfPreview && "overflow-hidden",
+          useMobilePdfPreview && "overflow-hidden",
+          !isImagePreview && !isVideoPreview && !isPdfPreview && "items-center justify-center overflow-hidden"
+        )}
+        onWheel={isImagePreview ? handleImageWheel : undefined}
+      >
+        {loading && !useMobilePdfPreview && !pdfPreviewUrl ? (
+          <div className="flex flex-col items-center gap-3 py-24 text-muted-foreground">
+            <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
+            <p className="text-sm">Loading preview…</p>
+          </div>
+        ) : null}
+
+        {!loading && error ? (
+          <p className="px-6 py-16 text-center text-sm text-destructive">{error}</p>
+        ) : null}
+
+        {!loading && !error && url && isImagePreview ? (
+          <>
+            <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-full border border-border/80 bg-background/95 p-1 shadow-md backdrop-blur-sm">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="h-8 w-8 rounded-full"
+                aria-label="Zoom out"
+                disabled={imageZoom <= IMAGE_ZOOM_MIN}
+                onClick={zoomOut}
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <span className="min-w-[3.25rem] select-none text-center text-xs font-medium tabular-nums text-muted-foreground">
+                {Math.round(imageZoom * 100)}%
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="h-8 w-8 rounded-full"
+                aria-label="Zoom in"
+                disabled={imageZoom >= IMAGE_ZOOM_MAX}
+                onClick={zoomIn}
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="h-8 w-8 rounded-full"
+                aria-label="Reset zoom"
+                disabled={imageZoom === 1}
+                onClick={resetZoom}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+
+            <div
+              className={cn(
+                "flex min-h-full min-w-full touch-none select-none items-center justify-center p-6",
+                imageZoom > 1 && (isPanDragging ? "cursor-grabbing" : "cursor-grab")
+              )}
+              onPointerDown={handlePanPointerDown}
+              onPointerMove={handlePanPointerMove}
+              onPointerUp={endPanPointer}
+              onPointerCancel={endPanPointer}
+            >
+              <img
+                key={selectedVersionId || "default"}
+                src={url}
+                alt={file?.name ?? "Preview"}
+                draggable={false}
+                className={cn(
+                  "max-w-none origin-center object-contain will-change-transform",
+                  !isPanDragging && "transition-transform duration-300 ease-out"
+                )}
+                style={{
+                  transform: `translate(${imagePan.x}px, ${imagePan.y}px) scale(${imageZoom})`,
+                  maxHeight: PREVIEW_MAX_HEIGHT,
+                }}
+              />
+            </div>
+          </>
+        ) : null}
+
+        {useMobilePdfPreview && file?.fileId ? (
+          <LibraryPdfMobilePreview
+            projectId={projectId}
+            fileId={String(file.fileId)}
+            versionId={selectedVersionId}
+            fileName={file.name}
+          />
+        ) : null}
+
+        {!error && pdfPreviewUrl ? (
+          <iframe
+            key={selectedVersionId || "default"}
+            title={file?.name ?? "PDF preview"}
+            src={pdfPreviewUrl}
+            className="h-full min-h-0 w-full flex-1 border-0 bg-white"
+          />
+        ) : null}
+
+        {!loading && !error && url && isVideoPreview ? (
+          <div className="flex w-full min-h-0 flex-1 items-center justify-center p-4 pb-8">
+            <video
+              key={selectedVersionId || "default"}
+              src={url}
+              controls
+              playsInline
+              preload="metadata"
+              className="h-auto w-full max-w-full bg-black object-contain"
+              style={{ maxHeight: VIDEO_PREVIEW_MAX_HEIGHT }}
+            >
+              <track kind="captions" />
+            </video>
+          </div>
+        ) : null}
+
+        {!loading && !error && url && mode === "audio" ? (
+          <div className="flex w-full max-w-2xl flex-col items-center gap-4 px-8 py-16">
+            <p className="text-center text-sm text-muted-foreground">Audio preview</p>
+            <audio key={selectedVersionId || "default"} src={url} controls className="w-full">
+              <track kind="captions" />
+            </audio>
+          </div>
+        ) : null}
+      </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -332,7 +581,26 @@ export function LibraryFilePreviewDialog({
                 {file.uploadedBy || "Member"}
               </span>
               <span className="text-sm text-muted-foreground">•</span>
-              <span className="text-sm text-muted-foreground">{file.uploadedAt}</span>
+              <span className="text-sm text-muted-foreground">{previewDateTimeLabel}</span>
+              {hasMultipleRevisions ? (
+                <>
+                  <span className="text-sm text-muted-foreground">•</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "h-7 gap-1.5 px-2 text-muted-foreground hover:text-foreground",
+                      revisionsOpen && "bg-muted text-foreground"
+                    )}
+                    aria-expanded={revisionsOpen}
+                    onClick={() => setRevisionsOpen((open) => !open)}
+                  >
+                    <History className="h-3.5 w-3.5" aria-hidden />
+                    {formatRevisionCountLabel(revisionCount)}
+                  </Button>
+                </>
+              ) : null}
             </div>
           ) : null}
 
@@ -341,144 +609,26 @@ export function LibraryFilePreviewDialog({
           ) : null}
         </DialogHeader>
 
-        <div
-          className={cn(
-            "relative flex min-h-0 w-full flex-1 flex-col rounded-lg border border-border/80 bg-muted/30",
-            isImagePreview && "overflow-hidden",
-            isVideoPreview && "overflow-auto",
-            (isPdfPreview && !useMobilePdfPreview) && "overflow-hidden",
-            useMobilePdfPreview && "overflow-hidden",
-            !isImagePreview && !isVideoPreview && !isPdfPreview && "items-center justify-center overflow-hidden"
-          )}
-          onWheel={isImagePreview ? handleImageWheel : undefined}
-        >
-          {loading && !useMobilePdfPreview && !pdfPreviewUrl ? (
-            <div className="flex flex-col items-center gap-3 py-24 text-muted-foreground">
-              <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
-              <p className="text-sm">Loading preview…</p>
-            </div>
-          ) : null}
-
-          {!loading && error ? (
-            <p className="px-6 py-16 text-center text-sm text-destructive">{error}</p>
-          ) : null}
-
-          {!loading && !error && url && isImagePreview ? (
-            <>
-              <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-full border border-border/80 bg-background/95 p-1 shadow-md backdrop-blur-sm">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="h-8 w-8 rounded-full"
-                  aria-label="Zoom out"
-                  disabled={imageZoom <= IMAGE_ZOOM_MIN}
-                  onClick={zoomOut}
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <span className="min-w-[3.25rem] select-none text-center text-xs font-medium tabular-nums text-muted-foreground">
-                  {Math.round(imageZoom * 100)}%
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="h-8 w-8 rounded-full"
-                  aria-label="Zoom in"
-                  disabled={imageZoom >= IMAGE_ZOOM_MAX}
-                  onClick={zoomIn}
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="h-8 w-8 rounded-full"
-                  aria-label="Reset zoom"
-                  disabled={imageZoom === 1}
-                  onClick={resetZoom}
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-
-              <div
-                className={cn(
-                  "flex min-h-full min-w-full touch-none select-none items-center justify-center p-6",
-                  imageZoom > 1 && (isPanDragging ? "cursor-grabbing" : "cursor-grab")
-                )}
-                onPointerDown={handlePanPointerDown}
-                onPointerMove={handlePanPointerMove}
-                onPointerUp={endPanPointer}
-                onPointerCancel={endPanPointer}
-              >
-                <img
-                  src={url}
-                  alt={file?.name ?? "Preview"}
-                  draggable={false}
-                  className={cn(
-                    "max-w-none origin-center object-contain will-change-transform",
-                    !isPanDragging && "transition-transform duration-300 ease-out"
-                  )}
-                  style={{
-                    transform: `translate(${imagePan.x}px, ${imagePan.y}px) scale(${imageZoom})`,
-                    maxHeight: PREVIEW_MAX_HEIGHT,
-                  }}
-                />
-              </div>
-            </>
-          ) : null}
-
-          {useMobilePdfPreview && file?.fileId ? (
-            <LibraryPdfMobilePreview
-              projectId={projectId}
-              fileId={String(file.fileId)}
-              fileName={file.name}
-            />
-          ) : null}
-
-          {!error && pdfPreviewUrl ? (
-            <iframe
-              title={file?.name ?? "PDF preview"}
-              src={pdfPreviewUrl}
-              className="h-full min-h-0 w-full flex-1 border-0 bg-white"
-            />
-          ) : null}
-
-          {!loading && !error && url && isVideoPreview ? (
-            <div className="flex w-full min-h-0 flex-1 items-center justify-center p-4 pb-8">
-              <video
-                src={url}
-                controls
-                playsInline
-                preload="metadata"
-                className="h-auto w-full max-w-full bg-black object-contain"
-                style={{ maxHeight: VIDEO_PREVIEW_MAX_HEIGHT }}
-              >
-                <track kind="captions" />
-              </video>
-            </div>
-          ) : null}
-
-          {!loading && !error && url && mode === "audio" ? (
-            <div className="flex w-full max-w-2xl flex-col items-center gap-4 px-8 py-16">
-              <p className="text-center text-sm text-muted-foreground">Audio preview</p>
-              <audio src={url} controls className="w-full">
-                <track kind="captions" />
-              </audio>
-            </div>
-          ) : null}
+        <div className="relative flex min-h-0 flex-1 gap-3 overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">{previewPane}</div>
+          <LibraryFileRevisionsPanel
+            open={revisionsOpen && hasMultipleRevisions}
+            onClose={() => setRevisionsOpen(false)}
+            loading={versionsLoading}
+            versions={versions}
+            selectedVersionId={selectedVersionId}
+            onSelect={handleVersionChange}
+            overlay={isNarrowViewport}
+          />
         </div>
 
         {file ? (
-          <div className="flex shrink-0 justify-end border-t border-border/60 pt-3">
+          <div className="flex shrink-0 justify-end">
             <Button
               type="button"
               variant="outline"
               className="gap-2"
-              onClick={() => onDownload?.(file.fileId)}
+              onClick={() => onDownload?.(file.fileId, selectedVersionId)}
             >
               <Download className="h-4 w-4" />
               Download

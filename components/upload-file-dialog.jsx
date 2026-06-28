@@ -362,7 +362,7 @@ export function UploadFileDialog({
       projectId,
       objectPath: prepared.objectPath,
       displayName: formData.fileName.trim(),
-      description: formData.comment,
+      description: pendingVoice ? null : formData.comment,
       needsApproval: formData.needsApproval,
       originalFilename: prepared.normalizedOriginalFilename || file.name,
       mimeType: prepared.mimeType || file.type || null,

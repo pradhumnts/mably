@@ -3,8 +3,24 @@ import { NextResponse } from 'next/server'
 import { sanitizeNextPath } from '@/lib/auth/safe-next-path'
 import { fetchProfileOnboardingRow } from '@/lib/auth/resolve-after-auth-redirect'
 import { resolveClientLandingPath } from '@/lib/auth/resolve-client-landing'
+import { isMarketingHost } from '@/lib/site-hosts'
+import { applyHostRouting, isPublicMarketingRequest } from '@/lib/site-host-routing'
 
 export async function middleware(request) {
+  const hostRoute = applyHostRouting(request)
+  if (hostRoute) return hostRoute
+
+  const host = request.headers.get('host') || ''
+  const path = request.nextUrl.pathname
+
+  if (path.startsWith('/embed/') || path === '/embed') {
+    return NextResponse.next({ request })
+  }
+
+  if (isPublicMarketingRequest(host, path)) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -34,16 +50,10 @@ export async function middleware(request) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const path = request.nextUrl.pathname
-
-  // Public embed routes (loaded inside iframes on marketing sites). Never
-  // require auth, never redirect — they ship the same UI components but with
-  // no app shell or session.
-  if (path.startsWith('/embed/') || path === '/embed') {
-    return supabaseResponse
-  }
-
-  const isAuthPage = path === '/' || path.startsWith('/login') || path.startsWith('/signup')
+  const onMarketingHost = isMarketingHost(host)
+  const isAuthPage =
+    !onMarketingHost &&
+    (path === '/' || path.startsWith('/login') || path.startsWith('/signup'))
   const isProtectedPage = path.startsWith('/dashboard') ||
                          path.startsWith('/notifications') ||
                          path.startsWith('/projects') ||

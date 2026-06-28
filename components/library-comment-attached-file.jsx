@@ -4,6 +4,7 @@ import { Download, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fileLogoForKind } from "@/lib/library/infer-types";
 import { isLibraryFilePreviewable } from "@/lib/library/file-preview";
+import { formatLibraryVersionLabel } from "@/lib/library/file-versions";
 import { cn } from "@/lib/utils";
 
 /**
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
  *     display_name: string;
  *     type: string;
  *     mime_type?: string | null;
+ *     version_number?: number | null;
  *   };
  *   onPreview?: () => void;
  *   onDownload?: () => void;
@@ -45,7 +47,12 @@ export function LibraryCommentAttachedFile({
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">{attachedFile.display_name}</p>
-        <p className="text-xs text-muted-foreground">Added to project library</p>
+        <p className="text-xs text-muted-foreground">
+          Added to project library
+          {attachedFile.version_number
+            ? ` · ${formatLibraryVersionLabel(attachedFile.version_number)}`
+            : ""}
+        </p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
         {canPreview && onPreview ? (

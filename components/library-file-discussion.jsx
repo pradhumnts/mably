@@ -38,6 +38,7 @@ import { useLibraryVoiceComposerState } from "@/components/library-voice-compose
 import { DeleteLibraryVoiceNoteConfirm } from "@/components/delete-library-voice-note-dialog";
 import { LibraryVoiceMessageDeleted } from "@/components/library-voice-message-deleted";
 import { isDemoVoiceNoteStoragePath } from "@/lib/library/demo-voice-note";
+import { getDemoBlockedResponse, isDemoProjectId } from "@/lib/data/demo-project";
 import { usePortalBrand, usePortalBrandSurfaceStyles } from "@/components/portal-brand";
 import { LinkifiedText } from "@/components/linkified-text";
 
@@ -101,11 +102,14 @@ function formatCommentTime(iso) {
  *   maxFileLabel?: string;
  *   onLibraryChanged?: () => void;
  *   fileDisplayNameById?: Record<string, string>;
+ *   currentVersionNumber?: number;
  *   onPreviewAttachedFile?: (file: {
  *     fileId: string;
  *     name: string;
  *     type: string;
  *     mimeType: string | null;
+ *     versionId?: string | null;
+ *     versionNumber?: number | null;
  *   }) => void;
  * }}
  */
@@ -113,6 +117,7 @@ export function LibraryFileDiscussion({
   projectId,
   fileId,
   fileName,
+  currentVersionNumber = 1,
   fileLogo = null,
   uploadedByName = null,
   uploadedByAvatar = null,
@@ -258,7 +263,7 @@ export function LibraryFileDiscussion({
             let fileIds = [];
             const { data: junctionRows } = await supabase
               .from("project_library_file_comment_attachments")
-              .select("file_id, sort_order")
+              .select("file_id, sort_order, version_id")
               .eq("comment_id", row.id)
               .order("sort_order", { ascending: true });
             if (junctionRows?.length) {
@@ -271,15 +276,46 @@ export function LibraryFileDiscussion({
             if (fileIds.length) {
               const { data: fileRows } = await supabase
                 .from("project_library_files")
-                .select("id, display_name, mime_type, original_filename")
+                .select("id, display_name, mime_type, original_filename, current_version_number")
                 .in("id", fileIds);
-              const byId = new Map(
-                (fileRows ?? []).map((fileRow) => [
-                  String(fileRow.id),
-                  mapAttachedLibraryFile(fileRow),
-                ])
-              );
-              attached_files = fileIds.map((id) => byId.get(id)).filter(Boolean);
+              const versionIds = (junctionRows ?? [])
+                .map((link) => link.version_id)
+                .filter(Boolean);
+              /** @type {Map<string, number>} */
+              const versionNumberById = new Map();
+              if (versionIds.length) {
+                const { data: versionRows } = await supabase
+                  .from("project_library_file_versions")
+                  .select("id, version_number")
+                  .in("id", versionIds);
+                for (const versionRow of versionRows ?? []) {
+                  versionNumberById.set(
+                    String(versionRow.id),
+                    Number(versionRow.version_number)
+                  );
+                }
+              }
+              const byId = new Map((fileRows ?? []).map((fileRow) => [String(fileRow.id), fileRow]));
+              const links = junctionRows?.length
+                ? junctionRows
+                : fileIds.map((id) => ({ file_id: id, version_id: null }));
+              attached_files = links
+                .map((link) => {
+                  const fileRow = byId.get(String(link.file_id));
+                  if (!fileRow) return null;
+                  const mapped = mapAttachedLibraryFile(fileRow);
+                  if (!mapped) return null;
+                  const versionId = link.version_id ? String(link.version_id) : null;
+                  const version_number = versionId
+                    ? versionNumberById.get(versionId) ?? null
+                    : fileRow.current_version_number ?? null;
+                  return {
+                    ...mapped,
+                    version_id: versionId,
+                    version_number: version_number ?? null,
+                  };
+                })
+                .filter(Boolean);
             }
 
             const mapped = {
@@ -438,6 +474,11 @@ export function LibraryFileDiscussion({
     const voice = pendingVoice;
     const files = [...pendingFiles];
     if ((!text && !voice && !files.length) || sending || !viewer) return;
+
+    if (files.length && isDemoProjectId(String(projectId))) {
+      toast.error(getDemoBlockedResponse().error);
+      return;
+    }
 
     setSending(true);
     const tempId = `local:${crypto.randomUUID()}`;
@@ -769,6 +810,11 @@ export function LibraryFileDiscussion({
                 <LibraryDiscussionPendingFiles
                   files={pendingFiles}
                   disabled={sending}
+                  nextVersionNumber={
+                    pendingFiles.length === 1
+                      ? Math.max(1, Number(currentVersionNumber) || 1) + 1
+                      : null
+                  }
                   onRemove={removePendingFile}
                 />
               ) : null}

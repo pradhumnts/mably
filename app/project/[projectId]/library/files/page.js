@@ -17,7 +17,30 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, Download, Search, FileX, Trash2, MessageCircle, Check, FileWarning } from "lucide-react";
+import {
+  Upload,
+  Download,
+  Search,
+  FileX,
+  Trash2,
+  MessageCircle,
+  Check,
+  FileWarning,
+  MoreVertical,
+  History,
+  BadgeCheck,
+  Clock,
+  Repeat,
+  LayoutGrid,
+  List,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -40,6 +63,7 @@ import { LibraryFileDiscussion } from "@/components/library-file-discussion";
 import { fileLogoForKind, inferFileKindFromMime } from "@/lib/library/infer-types";
 import { isLibraryFilePreviewable } from "@/lib/library/file-preview";
 import { LibraryFilePreviewDialog } from "@/components/library-file-preview-dialog";
+import { UploadLibraryVersionDialog } from "@/components/upload-library-version-dialog";
 import { toast } from "sonner";
 import {
   stickyPageHeaderClass,
@@ -51,6 +75,7 @@ import {
 } from "@/lib/ui/page-chrome";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 function formatUploadedAt(iso) {
   try {
@@ -91,31 +116,112 @@ function isLibraryFileActionTarget(target) {
   return Boolean(target.closest("[data-library-file-action]"));
 }
 
-function fileApprovalBadge(needsApproval, approvalStatus, isFreelancer) {
-  if (!needsApproval) return null;
-  const status = approvalStatus || "pending";
-  if (status === "pending") {
-    return {
-      label: isFreelancer ? "Awaiting client approval" : "Needs your approval",
-      className:
-        "border-amber-300 bg-amber-50 text-amber-950 dark:bg-amber-950/30 dark:text-amber-100 dark:border-amber-800",
-    };
-  }
-  if (status === "approved") {
-    return {
-      label: "Approved",
-      className:
-        "border-emerald-300 bg-emerald-600 text-white dark:bg-emerald-700 dark:border-emerald-600",
-    };
-  }
-  if (status === "revision_requested") {
-    return {
-      label: "Revision requested",
-      className: "border-orange-300 bg-orange-50 text-orange-950 dark:bg-orange-950/40 dark:text-orange-100",
-    };
-  }
-  return null;
+/** @param {number} count */
+function formatRevisionCountLabel(count) {
+  const n = Math.max(1, Number(count) || 1);
+  return n === 1 ? "1 Revision" : `${n} Revisions`;
 }
+
+const LIBRARY_CARD_FILE_NAME_MAX_CHARS = 36;
+
+/** @param {string} name */
+function formatLibraryCardFileName(name) {
+  const text = String(name || "File").trim() || "File";
+  if (text.length <= LIBRARY_CARD_FILE_NAME_MAX_CHARS) return text;
+  return `${text.slice(0, LIBRARY_CARD_FILE_NAME_MAX_CHARS)}...`;
+}
+
+/** @param {{ name: string }} props */
+function FileDiscussionSourceIcon({ name }) {
+  const label = `From discussion · ${name}`;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          data-library-file-action
+          className="inline-flex shrink-0 items-center text-muted-foreground/75 transition-colors hover:text-foreground dark:text-muted-foreground/80 dark:hover:text-foreground"
+          aria-label={label}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Repeat className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+/** @param {{ count: number }} props */
+function FileRevisionIndicator({ count }) {
+  if (count <= 1) return null;
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-100 bg-amber-50/70 px-2 py-0.5 text-[11px] font-medium leading-none text-amber-900/70 tabular-nums dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200/80">
+      <History className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
+      {formatRevisionCountLabel(count)}
+    </span>
+  );
+}
+
+/**
+ * @param {{
+ *   needsApproval: boolean;
+ *   approvalStatus: string | null;
+ *   isFreelancer: boolean;
+ * }} props
+ */
+function FileApprovalStatusIndicator({ needsApproval, approvalStatus, isFreelancer }) {
+  if (!needsApproval) return null;
+
+  const status = approvalStatus || "pending";
+  /** @type {{ label: string; icon: React.ReactNode; className: string } | null} */
+  let config = null;
+
+  if (status === "pending") {
+    config = {
+      label: isFreelancer ? "Awaiting client approval" : "Needs your approval",
+      icon: <Clock className="h-3.5 w-3.5" aria-hidden />,
+      className:
+        "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/25 dark:text-amber-200",
+    };
+  } else if (status === "approved") {
+    config = {
+      label: "Approved",
+      icon: <BadgeCheck className="h-3.5 w-3.5" aria-hidden />,
+      className:
+        "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/25 dark:text-emerald-200",
+    };
+  } else if (status === "revision_requested") {
+    config = {
+      label: "Revision requested",
+      icon: <FileWarning className="h-3.5 w-3.5" aria-hidden />,
+      className:
+        "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800/60 dark:bg-orange-950/25 dark:text-orange-200",
+    };
+  }
+
+  if (!config) return null;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          data-library-file-action
+          className={cn(
+            "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border",
+            config.className
+          )}
+          aria-label={config.label}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {config.icon}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{config.label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+const LIBRARY_FILES_VIEW_KEY = "mably:library-files-view";
 
 export default function LibraryFiles() {
   const params = useParams();
@@ -127,7 +233,6 @@ export default function LibraryFiles() {
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedFiles, setExpandedFiles] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [fileTypeFilter, setFileTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
@@ -136,6 +241,7 @@ export default function LibraryFiles() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [discussionFileId, setDiscussionFileId] = useState(null);
   const [previewFile, setPreviewFile] = useState(null);
+  const [uploadVersionTarget, setUploadVersionTarget] = useState(null);
   const [approvalBusyKey, setApprovalBusyKey] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   /**
@@ -143,6 +249,25 @@ export default function LibraryFiles() {
    * @type {[null | { showBanner: boolean; usedBytes: number; totalBytes: number; maxFileBytes: number; maxFileLabel: string; planKey: string | null; percentUsed: number }, import('react').Dispatch<any>]}
    */
   const [libraryQuota, setLibraryQuota] = useState(null);
+  const [filesView, setFilesView] = useState(/** @type {"grid" | "list"} */ ("grid"));
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(LIBRARY_FILES_VIEW_KEY);
+      if (stored === "grid" || stored === "list") setFilesView(stored);
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  const setFilesViewMode = useCallback((mode) => {
+    setFilesView(mode);
+    try {
+      window.localStorage.setItem(LIBRARY_FILES_VIEW_KEY, mode);
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
 
   const load = useCallback(async (options = {}) => {
     const silent = options.silent === true;
@@ -285,13 +410,6 @@ export default function LibraryFiles() {
     };
   }, [currentUserId, discussionFileId, markDiscussionRead, projectId]);
 
-  const toggleExpanded = (fileId) => {
-    setExpandedFiles((prev) => ({
-      ...prev,
-      [fileId]: !prev[fileId],
-    }));
-  };
-
   const nameById = new Map(items.map((row) => [String(row.id), row.display_name || "File"]));
 
   const mapped = items.map((row) => {
@@ -323,6 +441,8 @@ export default function LibraryFiles() {
         Number.isFinite(Number(row.size_bytes)) && Number(row.size_bytes) > 0
           ? formatStorageShort(Number(row.size_bytes))
           : null,
+      versionCount: Number(row.version_count ?? 1),
+      currentVersionNumber: Number(row.current_version_number ?? 1),
     };
   });
 
@@ -380,9 +500,13 @@ export default function LibraryFiles() {
     [items]
   );
 
-  const handleDownload = async (fileId) => {
+  const handleDownload = async (fileId, versionId) => {
     setDownloadingId(fileId);
-    const r = await getLibraryFileDownloadUrl(String(projectId), fileId);
+    const r = await getLibraryFileDownloadUrl(
+      String(projectId),
+      fileId,
+      versionId ? String(versionId) : undefined
+    );
     setDownloadingId(null);
     if (!r.ok || !r.url) {
       toast.error(r.error || "Could not download");
@@ -516,6 +640,7 @@ export default function LibraryFiles() {
                 className="pl-9 h-10"
               />
             </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
             <div className={libraryFiltersClass}>
               <Select value={fileTypeFilter} onValueChange={setFileTypeFilter}>
                 <SelectTrigger className={libraryFilterSelectTriggerClass}>
@@ -548,20 +673,59 @@ export default function LibraryFiles() {
                   <SelectItem value="smallest">Smallest</SelectItem>
                 </SelectContent>
               </Select>
+            <div
+              className="flex h-full shrink-0 items-center gap-0.5 rounded-lg border border-slate-200 p-0.5"
+              role="group"
+              aria-label="Files view"
+            >
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant={filesView === "grid" ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-8 w-8 shrink-0 rounded-md"
+                    aria-label="Grid view"
+                    aria-pressed={filesView === "grid"}
+                    onClick={() => setFilesViewMode("grid")}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Grid view</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant={filesView === "list" ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-8 w-8 shrink-0 rounded-md"
+                    aria-label="List view"
+                    aria-pressed={filesView === "list"}
+                    onClick={() => setFilesViewMode("list")}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">List view</TooltipContent>
+              </Tooltip>
+            </div>
+            </div>
             </div>
           </div>
 
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading files…</p>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div
+              className={cn(
+                "grid grid-cols-1",
+                filesView === "grid" ? "gap-6 lg:grid-cols-2" : "gap-4"
+              )}
+            >
               {filteredFiles.length > 0 ? (
                 filteredFiles.map((file) => {
-                  const approvalBadge = fileApprovalBadge(
-                    file.needsApproval,
-                    file.approvalStatus,
-                    isFreelancer
-                  );
                   return (
                   <Fragment key={file.id}>
                   <Card
@@ -582,11 +746,10 @@ export default function LibraryFiles() {
                     }}
                   >
                     <CardContent className="p-0">
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                        <div className="flex min-w-0 flex-1 items-start gap-4">
+                      <div className="grid grid-cols-[auto_1fr_auto] items-start gap-x-4">
                         <button
                           type="button"
-                          className="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="col-start-1 row-start-1 shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           aria-label={
                             isLibraryFilePreviewable(file.type, file.mimeType)
                               ? `Preview ${file.name}`
@@ -600,31 +763,27 @@ export default function LibraryFiles() {
                           {getFileIcon(file.logo)}
                         </button>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-1 flex min-w-0 flex-wrap items-center gap-2">
+                        <div className="col-start-2 row-start-1 min-w-0">
+                          <div className="mb-1 flex min-w-0 flex-nowrap items-center gap-1.5">
+                            {file.fromDiscussion ? (
+                              <FileDiscussionSourceIcon name={file.fromDiscussion} />
+                            ) : null}
                             <button
                               type="button"
-                              className="min-w-0 truncate text-left text-base font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                              title={file.name}
+                              className="min-w-0 flex-1 truncate text-left text-base font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 handleFilePrimaryAction(file);
                               }}
                             >
-                              {file.name}
+                              {formatLibraryCardFileName(file.name)}
                             </button>
-                            {approvalBadge ? (
-                              <Badge variant="outline" className={approvalBadge.className}>
-                                {approvalBadge.label}
-                              </Badge>
-                            ) : null}
-                            {file.fromDiscussion ? (
-                              <Badge
-                                variant="outline"
-                                className="border-sky-200 bg-sky-50 text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100"
-                              >
-                                From discussion · {file.fromDiscussion}
-                              </Badge>
-                            ) : null}
+                            <FileApprovalStatusIndicator
+                              needsApproval={file.needsApproval}
+                              approvalStatus={file.approvalStatus}
+                              isFreelancer={isFreelancer}
+                            />
                           </div>
 
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
@@ -646,68 +805,9 @@ export default function LibraryFiles() {
                               </>
                             ) : null}
                           </div>
-
-                          {expandedFiles[file.id] ? (
-                            <p className="text-sm text-muted-foreground">
-                              {file.description || "No comment on file."}{" "}
-                              {file.description ? (
-                                <button
-                                  type="button"
-                                  data-library-file-action
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    toggleExpanded(file.id);
-                                  }}
-                                  className="text-primary hover:underline focus:outline-none inline"
-                                >
-                                  Show Less
-                                </button>
-                              ) : null}
-                            </p>
-                          ) : (
-                            <div className="flex items-baseline gap-1">
-                              <p className="text-sm text-muted-foreground truncate flex-1 min-w-0">
-                                {file.description || "No comment on file."}
-                              </p>
-                              {file.description && file.description.length > 80 ? (
-                                <button
-                                  type="button"
-                                  data-library-file-action
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    toggleExpanded(file.id);
-                                  }}
-                                  className="text-primary hover:underline focus:outline-none text-sm whitespace-nowrap flex-shrink-0"
-                                >
-                                  Read More
-                                </button>
-                              ) : null}
-                            </div>
-                          )}
-                        </div>
                         </div>
 
-                        <div className="flex shrink-0 items-center justify-end gap-1.5">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="border border-slate-200 shrink-0"
-                                disabled={downloadingId === file.fileId}
-                                data-library-file-action
-                                aria-label="Download file"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  void handleDownload(file.fileId);
-                                }}
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">Download file</TooltipContent>
-                          </Tooltip>
+                        <div className="col-start-3 row-start-1 flex shrink-0 items-center justify-end gap-1.5">
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
@@ -749,26 +849,103 @@ export default function LibraryFiles() {
                                 : "Open discussion"}
                             </TooltipContent>
                           </Tooltip>
-                          {isFreelancer ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  className="border border-slate-200 text-destructive hover:text-destructive shrink-0"
-                                  aria-label="Delete file"
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="border border-slate-200 shrink-0"
+                                data-library-file-action
+                                aria-label={`More actions for ${file.name}`}
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="w-auto min-w-44 border border-slate-200"
+                              data-library-file-action
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              {isFreelancer ? (
+                                <DropdownMenuItem
                                   data-library-file-action
+                                  className="whitespace-nowrap"
                                   onClick={(event) => {
                                     event.stopPropagation();
-                                    openDeleteFile(file.fileId, file.name);
+                                    setUploadVersionTarget({
+                                      fileId: file.fileId,
+                                      name: file.name,
+                                      currentVersionNumber: file.currentVersionNumber,
+                                      needsApproval: file.needsApproval,
+                                    });
                                   }}
                                 >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom">Delete this file</TooltipContent>
-                            </Tooltip>
+                                  <History className="h-4 w-4" />
+                                  Upload new revision
+                                </DropdownMenuItem>
+                              ) : null}
+                              <DropdownMenuItem
+                                data-library-file-action
+                                className="whitespace-nowrap"
+                                disabled={downloadingId === file.fileId}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void handleDownload(file.fileId);
+                                }}
+                              >
+                                <Download className="h-4 w-4" />
+                                Download file
+                              </DropdownMenuItem>
+                              {isFreelancer ? (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    data-library-file-action
+                                    className="whitespace-nowrap text-destructive focus:text-destructive"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      openDeleteFile(file.fileId, file.name);
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete file
+                                  </DropdownMenuItem>
+                                </>
+                              ) : null}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        <div className="col-span-2 col-start-2 row-start-2 flex min-w-0 items-baseline gap-2">
+                          <p
+                            className={cn(
+                              "min-w-0 flex-1 text-sm text-muted-foreground",
+                              file.versionCount > 1 && "pr-2",
+                              file.description && file.description.length > 80 && "truncate"
+                            )}
+                          >
+                            {file.description || "No comment on file."}
+                          </p>
+                          {file.description && file.description.length > 80 ? (
+                            <button
+                              type="button"
+                              data-library-file-action
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setDiscussionFileId(file.fileId);
+                              }}
+                              className="shrink-0 text-sm text-primary hover:underline focus:outline-none whitespace-nowrap"
+                            >
+                              Read More
+                            </button>
+                          ) : null}
+                          {file.versionCount > 1 ? (
+                            <span className="ml-auto shrink-0">
+                              <FileRevisionIndicator count={file.versionCount} />
+                            </span>
                           ) : null}
                         </div>
                       </div>
@@ -814,6 +991,7 @@ export default function LibraryFiles() {
                     projectId={String(projectId)}
                     fileId={String(file.fileId)}
                     fileName={file.name}
+                    currentVersionNumber={file.currentVersionNumber}
                     fileLogo={file.logo}
                     uploadedByName={file.uploadedBy}
                     uploadedByAvatar={file.uploadedByAvatar}
@@ -900,6 +1078,22 @@ export default function LibraryFiles() {
         onDeleted={refreshLibrary}
       />
 
+      <UploadLibraryVersionDialog
+        open={Boolean(uploadVersionTarget)}
+        onOpenChange={(open) => {
+          if (!open) setUploadVersionTarget(null);
+        }}
+        projectId={String(projectId)}
+        fileId={uploadVersionTarget?.fileId ?? ""}
+        fileName={uploadVersionTarget?.name ?? "File"}
+        currentVersionNumber={uploadVersionTarget?.currentVersionNumber ?? 1}
+        isFreelancer={isFreelancer}
+        needsApproval={Boolean(uploadVersionTarget?.needsApproval)}
+        maxFileBytes={libraryQuota?.maxFileBytes}
+        maxFileLabel={libraryQuota?.maxFileLabel}
+        onUploaded={refreshLibrary}
+      />
+
       <LibraryFilePreviewDialog
         open={Boolean(previewFile)}
         onOpenChange={(open) => {
@@ -907,7 +1101,7 @@ export default function LibraryFiles() {
         }}
         projectId={String(projectId)}
         file={previewFile}
-        onDownload={(fileId) => void handleDownload(fileId)}
+        onDownload={(fileId, versionId) => void handleDownload(fileId, versionId)}
         onRenamed={handleFileRenamed}
       />
     </>

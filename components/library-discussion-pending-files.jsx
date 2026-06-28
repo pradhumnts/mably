@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fileLogoForKind, inferFileKindFromMime } from "@/lib/library/infer-types";
+import { formatLibraryVersionLabel } from "@/lib/library/file-versions";
 import { cn } from "@/lib/utils";
 
 /** @param {File} file */
@@ -20,9 +21,10 @@ function isLocalImageFile(file) {
  *   disabled?: boolean;
  *   size?: "sm" | "md";
  *   showName?: boolean;
+ *   versionHint?: string | null;
  * }} props
  */
-function PendingFileThumb({ file, previewUrl, onRemove, disabled, size = "sm", showName }) {
+function PendingFileThumb({ file, previewUrl, onRemove, disabled, size = "sm", showName, versionHint }) {
   const kind = inferFileKindFromMime(file.type, file.name);
   const logo = fileLogoForKind(kind);
   const dim = size === "md" ? "h-14 w-14" : "h-[52px] w-[52px]";
@@ -64,7 +66,9 @@ function PendingFileThumb({ file, previewUrl, onRemove, disabled, size = "sm", s
       {thumb}
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{file.name}</p>
-        <p className="text-xs text-muted-foreground">Will be added to the library</p>
+        <p className="text-xs text-muted-foreground">
+          {versionHint || "Will be added to the library"}
+        </p>
       </div>
     </div>
   );
@@ -75,9 +79,10 @@ function PendingFileThumb({ file, previewUrl, onRemove, disabled, size = "sm", s
  *   files: File[];
  *   onRemove: (index: number) => void;
  *   disabled?: boolean;
+ *   nextVersionNumber?: number | null;
  * }} props
  */
-export function LibraryDiscussionPendingFiles({ files, onRemove, disabled }) {
+export function LibraryDiscussionPendingFiles({ files, onRemove, disabled, nextVersionNumber }) {
   const [previewUrls, setPreviewUrls] = useState(/** @type {string[]} */ ([]));
 
   const imageFlags = useMemo(() => files.map((file) => isLocalImageFile(file)), [files]);
@@ -114,6 +119,11 @@ export function LibraryDiscussionPendingFiles({ files, onRemove, disabled }) {
     );
   }
 
+  const versionHint =
+    nextVersionNumber && nextVersionNumber > 0
+      ? `Will be added as ${formatLibraryVersionLabel(nextVersionNumber)}`
+      : null;
+
   return (
     <PendingFileThumb
       file={files[0]}
@@ -121,6 +131,7 @@ export function LibraryDiscussionPendingFiles({ files, onRemove, disabled }) {
       disabled={disabled}
       size="md"
       showName
+      versionHint={versionHint}
       onRemove={() => onRemove(0)}
     />
   );

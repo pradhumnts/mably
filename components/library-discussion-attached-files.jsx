@@ -11,12 +11,16 @@ import { LibraryCommentAttachedFile } from "@/components/library-comment-attache
  *     display_name: string;
  *     type: string;
  *     mime_type?: string | null;
+ *     version_id?: string | null;
+ *     version_number?: number | null;
  *   }>;
  *   onPreview?: (file: {
  *     fileId: string;
  *     name: string;
  *     type: string;
  *     mimeType: string | null;
+ *     versionId?: string | null;
+ *     versionNumber?: number | null;
  *   }) => void;
  *   onDownload: (file: { id: string; display_name: string }) => void;
  * }} props
@@ -42,6 +46,8 @@ export function LibraryDiscussionAttachedFiles({
                     name: file.display_name,
                     type: file.type,
                     mimeType: file.mime_type ?? null,
+                    versionId: file.version_id ? String(file.version_id) : null,
+                    versionNumber: file.version_number ?? null,
                   })
               : undefined
           }

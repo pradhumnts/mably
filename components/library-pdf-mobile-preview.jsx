@@ -34,10 +34,11 @@ async function loadPdfBytes(previewPath) {
  * @param {{
  *   projectId: string;
  *   fileId: string;
+ *   versionId?: string | null;
  *   fileName?: string;
  * }} props
  */
-export function LibraryPdfMobilePreview({ projectId, fileId, fileName }) {
+export function LibraryPdfMobilePreview({ projectId, fileId, versionId, fileName }) {
   const [zoom, setZoom] = useState(1);
   const [loading, setLoading] = useState(true);
   const [rendering, setRendering] = useState(false);
@@ -54,7 +55,9 @@ export function LibraryPdfMobilePreview({ projectId, fileId, fileName }) {
   );
   const renderPagesRef = useRef(/** @type {() => Promise<void>} */ (async () => {}));
 
-  const previewUrl = `/api/project-library/preview?projectId=${encodeURIComponent(projectId)}&fileId=${encodeURIComponent(fileId)}`;
+  const previewUrl = `/api/project-library/preview?projectId=${encodeURIComponent(projectId)}&fileId=${encodeURIComponent(fileId)}${
+    versionId ? `&versionId=${encodeURIComponent(String(versionId))}` : ""
+  }`;
 
   useEffect(() => {
     zoomRef.current = zoom;
