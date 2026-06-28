@@ -59,6 +59,7 @@ const APP_DEMO = appPath("/?next=%2Fproject%2Fdemo-mably");
  * -------------------------------------------------------------------------- */
 const LANDING = {
   heroBg: "/images/landing/hero-bg.webp",
+  heroVideoThumbnail: "/images/landing/hero-video-thumbnail.webp",
   heroVideo: "/images/landing/women-working.mp4",
   bgVideo: "/images/landing/bg-video.mp4",
   testimonials: "/images/landing/testimonials.webp",
@@ -100,7 +101,7 @@ const OFFER_BANNER_HOW_OFFSET_PX = 100;
 
 const ASSETS = {
   heroVideo: "/videos/hero.mp4",
-  heroPoster: LANDING.heroBg,
+  heroPoster: LANDING.heroVideoThumbnail,
   storyVideo: "/videos/freelancer-story.mp4",
   storyPoster: LANDING.heroBg,
   screenshots: {
@@ -1864,7 +1865,7 @@ export function MablyLandingPage() {
               data-hero-media
               className="h-full w-full object-cover"
               src={LANDING.heroVideo}
-              poster={LANDING.heroBg}
+              poster={LANDING.heroVideoThumbnail}
               autoPlay
               muted
               loop
