@@ -2416,12 +2416,6 @@ export function MablyLandingPage() {
             </p>
           </div>
           <nav className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-zinc-500">
-            <a href="#features" className="transition hover:text-orange-600">
-              Features
-            </a>
-            <a href="#pricing" className="transition hover:text-orange-600">
-              Pricing
-            </a>
             <Link href="/whats-new" className="transition hover:text-orange-600">
               What&apos;s new
             </Link>
