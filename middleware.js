@@ -17,7 +17,7 @@ export async function middleware(request) {
     return NextResponse.next({ request })
   }
 
-  if (shouldSkipHostRouting(request) && (path === '/landing' || path.startsWith('/legal'))) {
+  if (shouldSkipHostRouting(request) && (path === '/landing' || path.startsWith('/legal') || path === '/whats-new' || path.startsWith('/whats-new/'))) {
     return NextResponse.next({ request })
   }
 

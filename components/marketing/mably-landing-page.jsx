@@ -60,7 +60,7 @@ const APP_DEMO = appPath("/?next=%2Fproject%2Fdemo-mably");
 const LANDING = {
   heroBg: "/images/landing/hero-bg.webp",
   heroVideoThumbnail: "/images/landing/hero-video-thumbnail.webp",
-  heroVideo: "/images/landing/women-working.mp4",
+  heroVideo: "/images/landing/women-working.webm",
   bgVideo: "/images/landing/bg-video.mp4",
   testimonials: "/images/landing/testimonials.webp",
   finalCta: "/images/landing/testimonials.webp",
@@ -2422,6 +2422,9 @@ export function MablyLandingPage() {
             <a href="#pricing" className="transition hover:text-orange-600">
               Pricing
             </a>
+            <Link href="/whats-new" className="transition hover:text-orange-600">
+              What&apos;s new
+            </Link>
             <Link href={LEGAL_LINKS.terms} className="transition hover:text-orange-600">
               Terms
             </Link>
