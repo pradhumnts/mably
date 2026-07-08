@@ -2,9 +2,9 @@ import { MablyLandingPage } from "@/components/marketing/mably-landing-page";
 import { LANDING_FAQ } from "@/lib/marketing/landing-faq";
 
 export const metadata = {
-  title: "Mably — Client workspace for freelancers",
+  title: "Mably — Simple client portal for freelancers",
   description:
-    "Stop running client projects from scattered messages. Mably gives freelancers one branded link for updates, files, feedback, and approvals — from $9/month.",
+    "A simple client portal for freelancers — manage client communication, files, feedback, approvals, and project handoff in one branded link. From $9/month.",
 };
 
 const faqJsonLd = {
@@ -20,12 +20,37 @@ const faqJsonLd = {
   })),
 };
 
+const softwareJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Mably",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  description:
+    "Simple client portal for freelancers to manage client communication, files, feedback, approvals, and project handoff in one branded workspace.",
+  offers: {
+    "@type": "Offer",
+    price: "9",
+    priceCurrency: "USD",
+    priceSpecification: {
+      "@type": "UnitPriceSpecification",
+      price: "9",
+      priceCurrency: "USD",
+      unitText: "month",
+    },
+  },
+};
+
 export default function LandingPage() {
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
       />
       <MablyLandingPage />
     </>

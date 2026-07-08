@@ -423,14 +423,14 @@ const OVERLAY_STATS = [
 
 /** Swap `image` paths to replace showcase screenshots. */
 const HORIZONTAL_SHOWCASE = {
-  eyebrow: "Client workspace",
-  headline: "Give every client a workspace that matches the quality of your work.",
+  eyebrow: "Client portal",
+  headline: "Give every client a portal that matches the quality of your work.",
   subheadline:
     "One simple link where clients see what changed, what needs review, and where everything lives — without email, WhatsApp, or folder hunts.",
   slides: [
     {
       image: LANDING.showcase.branding,
-      imageAlt: "Branded client workspace",
+      imageAlt: "Branded client portal",
       title: "Branding",
       description:
         "Custom logo and welcome message on every project — clients see a premium process, not a generic tool.",
@@ -709,8 +709,8 @@ function LandingFaqSection() {
     });
   };
 
-  const leftColumn = LANDING_FAQ.slice(0, 3);
-  const rightColumn = LANDING_FAQ.slice(3);
+  const leftColumn = LANDING_FAQ.slice(0, 4);
+  const rightColumn = LANDING_FAQ.slice(4);
 
   return (
     <section id="faq" className="scroll-mt-24 bg-zinc-100 px-4 py-24 sm:px-5 sm:py-32">
@@ -2036,8 +2036,8 @@ export function MablyLandingPage() {
                 data-hero-fade
                 className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-white/80 sm:mt-7 sm:text-xl"
               >
-                Mably gives every client one simple workspace — so they always know
-                what changed, what needs review, and where everything is.
+                Mably gives every client one simple portal — a branded workspace where they
+                always know what changed, what needs review, and where everything is.
               </p>
 
               <div
@@ -2070,8 +2070,8 @@ export function MablyLandingPage() {
           </div>
 
           <div className="pointer-events-none relative z-10 hidden items-end justify-between px-8 pb-7 text-xs font-medium text-white/70 sm:flex">
-            <p data-hero-fade>The client-facing layer for freelancers.</p>
-            <p data-hero-fade>Clear projects. Recorded approvals.</p>
+            <p data-hero-fade>A simple client portal for freelancers.</p>
+            <p data-hero-fade>Files, feedback, and approvals in one place.</p>
           </div>
         </div>
       </section>
@@ -2089,8 +2089,8 @@ export function MablyLandingPage() {
               How it works
             </h2>
             <p data-reveal className="mt-4 text-base text-zinc-500 sm:text-lg">
-              Set up a branded workspace, send one link, and keep updates, files,
-              feedback, and approvals in one place clients understand.
+              Set up a branded client portal, send one link, and keep client collaboration,
+              files, feedback, and approvals in one place clients understand.
             </p>
           </div>
 
@@ -2332,7 +2332,7 @@ export function MablyLandingPage() {
                 <span className="font-normal text-zinc-400"> One honest price for you.</span>
               </h2>
               <p data-reveal className="mt-4 text-base leading-relaxed text-zinc-500 sm:mt-5 sm:text-lg">
-                Stop stitching together email, Drive, and invoices. Send one branded link —
+                Stop stitching together email, Drive, and invoices. Send one branded client portal —
                 clients know what to review, what changed, and what was approved. Cancel anytime.
               </p>
             </div>
@@ -2516,7 +2516,7 @@ export function MablyLandingPage() {
               draggable={false}
             />
             <p className="mt-2 text-xs text-zinc-400">
-              Client workspace software for freelancers.
+              Simple client portal software for freelancers.
             </p>
           </div>
           <nav className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-zinc-500">
