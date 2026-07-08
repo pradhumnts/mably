@@ -127,11 +127,11 @@ const FREELANCER_CAROUSEL_SLIDES = [
     image: LANDING.roles.uxDesigner,
     widget: {
       type: "client",
-      label: "Designer",
-      name: "Maya Chen",
-      avatar: ASSETS.avatars[0],
+      label: "Virtual assistant",
+      name: "Megan",
+      avatar: LANDING.testimonialMegan,
       rating: "5.0",
-      subtitle: "Brand designer",
+      subtitle: "Savvy VA",
     },
   },
   {
@@ -178,11 +178,11 @@ const FREELANCER_CAROUSEL_SLIDES = [
     widget: {
       type: "testimonial",
       quote:
-        "Clients stopped asking where things were. Approvals are logged, feedback stays on the file, and I spend less unpaid time chasing updates.",
-      name: "James Whitfield",
-      avatar: ASSETS.avatars[3],
+        "Having conversations, files, and links all in one place has made collaborating with my client much easier.",
+      name: "Megan",
+      avatar: LANDING.testimonialMegan,
       rating: "5.0",
-      subtitle: "Studio owner",
+      subtitle: "Savvy VA",
     },
   },
 ];
@@ -579,16 +579,46 @@ const TESTIMONIAL = {
     "Having conversations, files, and links all in one place has made collaborating with my client much easier.",
   name: "Megan Chapman",
   role: "Savvy VA",
+  website: "https://savvy-va.com/",
   avatar: LANDING.testimonialMegan,
   image: LANDING.testimonials,
 };
+
+const TESTIMONIAL_SPOTLIGHT = {
+  headline:
+    "Having conversations, files, and links all in one place has made collaborating with my client much easier.",
+  subline:
+    "One branded workspace instead of scattered messages — so clients always know where to look.",
+};
+
+/** Toggle testimonial layout: "spotlight" (editorial) | "classic" (card). */
+const TESTIMONIAL_LAYOUT = "spotlight";
+
+function TestimonialAttribution({ className }) {
+  return (
+    <div className={className}>
+      <p className="text-lg font-bold tracking-tight text-zinc-900 sm:text-xl">{TESTIMONIAL.name}</p>
+      <p className="mt-1 text-base text-zinc-500">
+        <a
+          href={TESTIMONIAL.website}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-zinc-500 no-underline transition-colors duration-300 ease-out hover:text-zinc-900"
+        >
+          {TESTIMONIAL.role}
+        </a>
+      </p>
+    </div>
+  );
+}
 
 const PRICING = [
   {
     name: "Starter",
     description:
       "One active client project with a branded workspace — the one link your client actually remembers.",
-    price: "$9",
+    originalPrice: "$9",
+    price: "$2.25",
     period: "/ month",
     note: "Cancel anytime",
     features: [
@@ -607,7 +637,8 @@ const PRICING = [
     name: "Growth",
     description:
       "For freelancers juggling multiple clients — one clear home for every project, review, and approval.",
-    price: "$19",
+    originalPrice: "$19",
+    price: "$4.75",
     period: "/ month",
     note: "Cancel anytime",
     badge: "Most popular",
@@ -1084,6 +1115,11 @@ function FreelancerCarouselWidget({ widget }) {
   }
 
   if (widget.type === "testimonial") {
+    const starCount = Math.min(
+      5,
+      Math.max(0, Math.round(Number.parseFloat(widget.rating) || 5))
+    );
+
     return (
       <div className={cn(cardClass, "w-[280px] max-w-[78vw] p-4")}>
         <div className="flex gap-0.5">
@@ -1092,7 +1128,7 @@ function FreelancerCarouselWidget({ widget }) {
               key={index}
               className={cn(
                 "h-3.5 w-3.5",
-                index < 4 ? "fill-zinc-900 text-zinc-900" : "text-zinc-300"
+                index < starCount ? "fill-zinc-900 text-zinc-900" : "text-zinc-300"
               )}
               strokeWidth={1.5}
             />
@@ -1334,6 +1370,118 @@ function TestimonialImageWidgets() {
         </p>
       </div>
     </div>
+  );
+}
+
+function TestimonialSectionClassic() {
+  return (
+    <section className="px-4 py-16 sm:px-5 sm:py-20">
+      <div className="mx-auto max-w-7xl">
+        <div className="mx-auto mb-10 max-w-2xl text-center sm:mb-12">
+          <h2
+            data-split
+            className="text-3xl font-semibold tracking-[-0.03em] text-zinc-900 sm:text-4xl"
+          >
+            Trusted by freelancers.
+            <span className="font-normal text-zinc-400">
+              {" "}
+              Who refuse to run projects from scattered messages.
+            </span>
+          </h2>
+        </div>
+
+        <figure
+          data-reveal
+          className="mx-auto flex max-w-2xl flex-col justify-between rounded-2xl bg-[#f4f4f2] p-6 sm:rounded-3xl sm:p-7 lg:p-8"
+        >
+          <div>
+            <span
+              className="select-none font-serif text-5xl leading-none text-zinc-300 sm:text-6xl"
+              aria-hidden
+            >
+              &ldquo;
+            </span>
+            <blockquote className="mt-2 text-pretty text-lg font-medium leading-relaxed text-zinc-700 sm:text-xl sm:leading-relaxed">
+              {TESTIMONIAL.quote}
+            </blockquote>
+          </div>
+          <figcaption className="mt-6 flex items-center gap-3 sm:mt-8">
+            <img
+              src={TESTIMONIAL.avatar}
+              alt={TESTIMONIAL.name}
+              className="h-10 w-10 shrink-0 rounded-full object-cover"
+              draggable={false}
+            />
+            <div>
+              <p className="text-sm font-semibold text-zinc-900">{TESTIMONIAL.name}</p>
+              <p className="mt-0.5 text-xs text-zinc-600 sm:text-sm">
+                <a
+                  href={TESTIMONIAL.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-zinc-600 no-underline transition-colors duration-300 ease-out hover:text-zinc-900"
+                >
+                  {TESTIMONIAL.role}
+                </a>
+              </p>
+            </div>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+  );
+}
+
+function TestimonialSectionSpotlight() {
+  return (
+    <section className="px-4 py-16 sm:px-5 sm:py-24">
+      <div className="mx-auto max-w-7xl">
+        <div className="mx-auto mb-12 max-w-2xl text-center sm:mb-16">
+          <h2
+            data-split
+            className="text-3xl font-semibold tracking-[-0.03em] text-zinc-900 sm:text-4xl"
+          >
+            Trusted by freelancers.
+            <span className="font-normal text-zinc-400">
+              {" "}
+              Who refuse to run projects from scattered messages.
+            </span>
+          </h2>
+        </div>
+
+        <figure
+          data-reveal
+          className="mx-auto grid max-w-5xl items-center gap-8 sm:gap-10 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1fr)] lg:gap-14"
+        >
+          <div className="relative mx-auto w-full max-w-xs lg:max-w-none">
+            <img
+              src={TESTIMONIAL.avatar}
+              alt={TESTIMONIAL.name}
+              className="aspect-[3/4] w-full rounded-2xl object-cover sm:rounded-3xl"
+              draggable={false}
+            />
+          </div>
+
+          <div>
+            <span
+              className="block font-serif text-6xl leading-none text-orange-500 sm:text-7xl"
+              aria-hidden
+            >
+              &ldquo;
+            </span>
+            <blockquote className="mt-3 text-pretty text-2xl font-bold leading-[1.15] tracking-[-0.03em] text-zinc-900 sm:mt-4 sm:text-3xl sm:leading-[1.12] lg:text-[2.25rem] lg:leading-[1.1]">
+              {TESTIMONIAL_SPOTLIGHT.headline}
+            </blockquote>
+            <p className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-zinc-500 sm:mt-7 sm:text-lg">
+              {TESTIMONIAL_SPOTLIGHT.subline}
+            </p>
+            <div className="mt-8 border-t border-zinc-200 pt-6 sm:mt-9 sm:pt-7">
+              <TestimonialAttribution />
+            </div>
+          </div>
+        </figure>
+      </div>
+    </section>
   );
 }
 
@@ -2162,86 +2310,37 @@ export function MablyLandingPage() {
         </div>
       </section>
 
-      {/* Testimonial */}
-      <section className="px-4 py-16 sm:px-5 sm:py-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto mb-10 max-w-2xl text-center sm:mb-12">
-            <h2
-              data-split
-              className="text-3xl font-semibold tracking-[-0.03em] text-zinc-900 sm:text-4xl"
-            >
-              Trusted by freelancers.
-              <span className="font-normal text-zinc-400"> Who refuse to run projects from scattered messages.</span>
-            </h2>
-          </div>
-
-          <div className="grid items-stretch gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
-            <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl">
-              <img
-                data-reveal
-                src={TESTIMONIAL.image}
-                alt=""
-                className="aspect-[3/2] w-full object-cover"
-                draggable={false}
-              />
-              <TestimonialImageWidgets />
-            </div>
-
-            <figure
-              data-reveal
-              className="flex min-h-0 flex-col justify-between rounded-2xl bg-[#f4f4f2] p-6 sm:rounded-3xl sm:p-7 lg:p-8"
-            >
-              <div>
-                <span
-                  className="select-none font-serif text-5xl leading-none text-zinc-300 sm:text-6xl"
-                  aria-hidden
-                >
-                  &ldquo;
-                </span>
-                <blockquote className="mt-2 text-pretty text-lg font-medium leading-relaxed text-zinc-700 sm:text-xl sm:leading-relaxed">
-                  {TESTIMONIAL.quote}
-                </blockquote>
-              </div>
-              <figcaption className="mt-6 flex items-center gap-3 sm:mt-8">
-                <img
-                  src={TESTIMONIAL.avatar}
-                  alt={TESTIMONIAL.name}
-                  className="h-10 w-10 shrink-0 rounded-full object-cover"
-                  draggable={false}
-                />
-                <div>
-                  <p className="text-sm font-semibold text-zinc-900">{TESTIMONIAL.name}</p>
-                  <p className="mt-0.5 text-xs text-zinc-600 sm:text-sm">{TESTIMONIAL.role}</p>
-                </div>
-              </figcaption>
-            </figure>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="relative scroll-mt-24 overflow-hidden px-4 py-24 sm:px-5 sm:py-32">
+      <div className="relative overflow-hidden">
         <div
-          className="pointer-events-none absolute -left-32 top-0 h-72 w-72 rounded-full bg-orange-200/40 blur-3xl"
+          className="pointer-events-none absolute -left-32 top-[38%] h-[32rem] w-[32rem] -translate-y-1/2 rounded-full bg-orange-200/40 blur-3xl"
           aria-hidden
         />
-        <div className="relative mx-auto max-w-6xl">
-          <div className="mx-auto mb-14 max-w-2xl text-center sm:mb-16">
-            <p data-reveal className="text-sm font-medium text-zinc-500">
-              Pricing
-            </p>
-            <h2
-              data-split
-              className="mt-3 text-balance text-3xl font-semibold tracking-[-0.03em] text-zinc-900 sm:text-4xl lg:text-[2.75rem]"
-            >
-              One workspace for your clients.
-              <span className="font-normal text-zinc-400"> One honest price for you.</span>
-            </h2>
-            <p data-reveal className="mt-4 text-base leading-relaxed text-zinc-500 sm:mt-5 sm:text-lg">
-              Stop stitching together email, Drive, and invoices. Send one branded link —
-              clients know what to review, what changed, and what was approved. Cancel anytime.
-            </p>
-          </div>
+
+        {TESTIMONIAL_LAYOUT === "spotlight" ? (
+          <TestimonialSectionSpotlight />
+        ) : (
+          <TestimonialSectionClassic />
+        )}
+
+        {/* Pricing */}
+        <section id="pricing" className="relative scroll-mt-24 px-4 py-24 sm:px-5 sm:py-32">
+          <div className="relative mx-auto max-w-6xl">
+            <div className="mx-auto mb-14 max-w-2xl text-center sm:mb-16">
+              <p data-reveal className="text-sm font-medium text-zinc-500">
+                Pricing
+              </p>
+              <h2
+                data-split
+                className="mt-3 text-balance text-3xl font-semibold tracking-[-0.03em] text-zinc-900 sm:text-4xl lg:text-[2.75rem]"
+              >
+                One workspace for your clients.
+                <span className="font-normal text-zinc-400"> One honest price for you.</span>
+              </h2>
+              <p data-reveal className="mt-4 text-base leading-relaxed text-zinc-500 sm:mt-5 sm:text-lg">
+                Stop stitching together email, Drive, and invoices. Send one branded link —
+                clients know what to review, what changed, and what was approved. Cancel anytime.
+              </p>
+            </div>
 
           <div
             data-reveal-group
@@ -2279,7 +2378,17 @@ export function MablyLandingPage() {
                   </p>
                 </div>
 
-                <div className="mt-8 flex items-baseline gap-1.5">
+                <div className="mt-8 flex items-baseline gap-2">
+                  {plan.originalPrice ? (
+                    <span
+                      className={cn(
+                        "text-2xl font-medium line-through sm:text-3xl",
+                        plan.highlight ? "text-white/50" : "text-zinc-400"
+                      )}
+                    >
+                      {plan.originalPrice}
+                    </span>
+                  ) : null}
                   <span className="text-5xl font-semibold tracking-tight sm:text-[3.25rem]">
                     {plan.price}
                   </span>
@@ -2342,13 +2451,13 @@ export function MablyLandingPage() {
             data-reveal
             className="mx-auto mt-12 max-w-xl text-center text-sm leading-relaxed text-zinc-500 sm:text-[15px]"
           >
-            Custom client systems cost hundreds a month.
-            We&apos;re offering the first 50 founding members{" "}
+            We&apos;re offering the first 50 early members{" "}
             <span className="font-medium text-zinc-700">75% off locked in forever</span> —
             for freelancers who want clearer projects without the chaos. Spots are filling fast.
           </p>
         </div>
       </section>
+      </div>
 
       {/* FAQ */}
       <LandingFaqSection />
