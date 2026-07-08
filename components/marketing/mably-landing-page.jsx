@@ -2311,11 +2311,6 @@ export function MablyLandingPage() {
       </section>
 
       <div className="relative overflow-hidden">
-        <div
-          className="pointer-events-none absolute -left-32 top-[38%] h-[32rem] w-[32rem] -translate-y-1/2 rounded-full bg-orange-200/40 blur-3xl"
-          aria-hidden
-        />
-
         {TESTIMONIAL_LAYOUT === "spotlight" ? (
           <TestimonialSectionSpotlight />
         ) : (
