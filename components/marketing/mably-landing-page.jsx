@@ -63,6 +63,7 @@ const LANDING = {
   heroVideo: "/images/landing/women-working.webm",
   bgVideo: "/images/landing/bg-video.mp4",
   testimonials: "/images/landing/testimonials.webp",
+  testimonialMegan: "/images/landing/testimonial-megan.webp",
   finalCta: "/images/landing/testimonials.webp",
   everyRevision: "/images/landing/Carousel%20-%20Every%20Revision%20in%20one%20thread.webp",
   signOff: "/images/landing/Carousel-Sign%20Off%20Without%20chase.webp",
@@ -575,11 +576,10 @@ function HowItWorksPreview({ type }) {
 
 const TESTIMONIAL = {
   quote:
-    "Mably finally gave me a client workspace that feels as considered as the work I deliver. Fewer confused clients, fewer revision loops, and less time chasing feedback.",
-  name: "Maya Chen",
-  role: "Brand designer",
-  company: "Independent studio",
-  avatar: ASSETS.avatars[0],
+    "Having conversations, files, and links all in one place has made collaborating with my client much easier.",
+  name: "Megan Chapman",
+  role: "Savvy VA",
+  avatar: LANDING.testimonialMegan,
   image: LANDING.testimonials,
 };
 
@@ -2205,7 +2205,7 @@ export function MablyLandingPage() {
               <figcaption className="mt-6 flex items-center gap-3 sm:mt-8">
                 <img
                   src={TESTIMONIAL.avatar}
-                  alt=""
+                  alt={TESTIMONIAL.name}
                   className="h-10 w-10 shrink-0 rounded-full object-cover"
                   draggable={false}
                 />
