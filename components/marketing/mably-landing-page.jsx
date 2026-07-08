@@ -2451,7 +2451,7 @@ export function MablyLandingPage() {
             data-reveal
             className="mx-auto mt-12 max-w-xl text-center text-sm leading-relaxed text-zinc-500 sm:text-[15px]"
           >
-            We&apos;re offering the first 50 early members{" "}
+            We&apos;re offering the first 50 members{" "}
             <span className="font-medium text-zinc-700">75% off locked in forever</span> —
             for freelancers who want clearer projects without the chaos. Spots are filling fast.
           </p>
