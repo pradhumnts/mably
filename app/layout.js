@@ -17,9 +17,18 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: {
     template: "%s | Mably",
-    default: "Mably - Client Experience Made Easy",
+    default: "Mably — Simple client portal for freelancers",
   },
-  description: "Manage your clients and their information with ease",
+  description:
+    "A simple client portal for freelancers — manage client communication, files, feedback, approvals, and project handoff in one branded link.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({ children }) {
