@@ -3,6 +3,10 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PostHogProvider } from "@/components/posthog-provider";
 import { MobileAccessGate } from "@/components/mobile-access-gate";
+import {
+  getMetadataBaseUrl,
+  getSocialShareMetadata,
+} from "@/lib/marketing/social-share-metadata";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,13 +18,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const defaultTitle = "Mably — Simple client portal for freelancers";
+const defaultDescription =
+  "A simple client portal for freelancers — manage client communication, files, feedback, approvals, and project handoff in one branded link.";
+
 export const metadata = {
+  metadataBase: getMetadataBaseUrl(),
   title: {
     template: "%s | Mably",
-    default: "Mably — Simple client portal for freelancers",
+    default: defaultTitle,
   },
-  description:
-    "A simple client portal for freelancers — manage client communication, files, feedback, approvals, and project handoff in one branded link.",
+  description: defaultDescription,
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -29,6 +37,10 @@ export const metadata = {
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/site.webmanifest",
+  ...getSocialShareMetadata({
+    title: defaultTitle,
+    description: defaultDescription,
+  }),
 };
 
 export default function RootLayout({ children }) {

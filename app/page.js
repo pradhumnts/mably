@@ -1,9 +1,15 @@
 import { LoginScreen } from "@/components/login-screen";
 import { sanitizeNextPath } from "@/lib/auth/safe-next-path";
+import { getSocialShareMetadata } from "@/lib/marketing/social-share-metadata";
+
+const title = "Mably — Simple client portal for freelancers";
+const description =
+  "Sign in to Mably or create an account. One branded client portal for files, feedback, approvals, and project handoff.";
 
 export const metadata = {
   title: "Sign in or create account",
-  description: "Sign in to Mably or create a new account",
+  description,
+  ...getSocialShareMetadata({ title, description }),
 };
 
 export default async function Home({ searchParams }) {

@@ -1,10 +1,15 @@
 import { MablyLandingPage } from "@/components/marketing/mably-landing-page";
 import { LANDING_FAQ } from "@/lib/marketing/landing-faq";
+import { getSocialShareMetadata } from "@/lib/marketing/social-share-metadata";
+
+const title = "Mably — Simple client portal for freelancers";
+const description =
+  "A simple client portal for freelancers — manage client communication, files, feedback, approvals, and project handoff in one branded link. From $9/month.";
 
 export const metadata = {
-  title: "Mably — Simple client portal for freelancers",
-  description:
-    "A simple client portal for freelancers — manage client communication, files, feedback, approvals, and project handoff in one branded link. From $9/month.",
+  title,
+  description,
+  ...getSocialShareMetadata({ title, description }),
 };
 
 const faqJsonLd = {
