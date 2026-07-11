@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { PostHogProvider } from "@/components/posthog-provider";
 import { MobileAccessGate } from "@/components/mobile-access-gate";
 import {
+  getCanonicalMarketingUrl,
   getMetadataBaseUrl,
   getSocialShareMetadata,
 } from "@/lib/marketing/social-share-metadata";
@@ -40,6 +41,7 @@ export const metadata = {
   ...getSocialShareMetadata({
     title: defaultTitle,
     description: defaultDescription,
+    url: getCanonicalMarketingUrl(),
   }),
 };
 

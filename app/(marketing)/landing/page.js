@@ -1,6 +1,9 @@
 import { MablyLandingPage } from "@/components/marketing/mably-landing-page";
 import { LANDING_FAQ } from "@/lib/marketing/landing-faq";
-import { getSocialShareMetadata } from "@/lib/marketing/social-share-metadata";
+import {
+  getCanonicalMarketingUrl,
+  getSocialShareMetadata,
+} from "@/lib/marketing/social-share-metadata";
 
 const title = "Mably — Simple client portal for freelancers";
 const description =
@@ -9,7 +12,11 @@ const description =
 export const metadata = {
   title,
   description,
-  ...getSocialShareMetadata({ title, description }),
+  ...getSocialShareMetadata({
+    title,
+    description,
+    url: getCanonicalMarketingUrl(),
+  }),
 };
 
 const faqJsonLd = {
