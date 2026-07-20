@@ -7,7 +7,6 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import { SplitText } from "gsap/SplitText";
 import { Button } from "@/components/ui/button";
-import { LEGAL_LINKS } from "@/lib/constants/legal-links";
 import {
   Dialog,
   DialogClose,
@@ -42,6 +41,9 @@ import {
 import { cn } from "@/lib/utils";
 import { LANDING_FAQ } from "@/lib/marketing/landing-faq";
 import { appPath } from "@/lib/site-urls";
+import { MarketingHeader } from "@/components/marketing/marketing-header";
+import { MarketingFooter } from "@/components/marketing/marketing-footer";
+import { HowItWorksSection } from "@/components/marketing/how-it-works-section";
 import {
   EARLY_OFFER_COPY,
   EARLY_OFFER_DISCOUNT_PERCENT,
@@ -50,7 +52,6 @@ import {
   earlyOfferPrice,
 } from "@/lib/billing/early-offer";
 
-const APP_SIGN_IN = appPath("/");
 const APP_SIGN_UP = appPath("/?intent=signup");
 const APP_DEMO = appPath("/?next=%2Fproject%2Fdemo-mably");
 
@@ -95,9 +96,6 @@ const LANDING = {
   },
 };
 
-const NAV_MAX_WIDTH_REM = 72;
-const NAV_SCROLL_RANGE_PX = 120;
-const NAV_WIDTH_SHRINK = 0.2;
 const OFFER_BANNER_HOW_OFFSET_PX = 100;
 
 const ASSETS = {
@@ -465,114 +463,6 @@ const HORIZONTAL_SHOWCASE = {
     },
   ],
 };
-
-const HOW_IT_WORKS = [
-  {
-    step: "1",
-    title: "Create a project.",
-    copy: "Add your branding and welcome message — a client-ready workspace in minutes.",
-    icon: Palette,
-    iconClass: "bg-rose-400",
-    preview: "branding",
-  },
-  {
-    step: "2",
-    title: "Send one link.",
-    copy: "No walkthrough, no \"check your email,\" no explaining which folder is which.",
-    icon: Link2,
-    iconClass: "bg-blue-500",
-    preview: "invite",
-  },
-  {
-    step: "3",
-    title: "Share, review, approve.",
-    copy: "Deliver files, collect feedback, and get sign-off with a clear record of what was approved.",
-    icon: FileCheck,
-    iconClass: "bg-orange-500",
-    preview: "library",
-  },
-];
-
-/** @param {{ type: string }} props */
-function HowItWorksPreview({ type }) {
-  if (type === "branding") {
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 text-xs font-bold text-orange-600">
-            AC
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-zinc-800">Acme Brand Workspace</p>
-            <p className="text-[10px] text-zinc-400">Project name</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {["#f97316", "#18181b", "#3b82f6"].map((color) => (
-            <span
-              key={color}
-              className="h-6 w-6 rounded-full ring-2 ring-white"
-              style={{ backgroundColor: color }}
-            />
-          ))}
-        </div>
-        <div className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2 text-xs text-zinc-400">
-          Welcome to your project workspace…
-        </div>
-      </div>
-    );
-  }
-
-  if (type === "invite") {
-    return (
-      <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-400">
-          Client invite link
-        </p>
-        <p className="mt-1 truncate text-xs font-medium text-zinc-700">
-          mably.app/project/acme-brand
-        </p>
-        <div className="mt-3 flex justify-end">
-          <span className="rounded-lg bg-zinc-900 px-3 py-1.5 text-[10px] font-medium text-white">
-            Copy link
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  if (type === "library") {
-    return (
-      <div className="space-y-2">
-        {[
-          { name: "Brand guidelines.pdf", status: "Approved", statusClass: "bg-emerald-100 text-emerald-700" },
-          { name: "Homepage mockup.png", status: "Pending", statusClass: "bg-amber-100 text-amber-700" },
-        ].map((file) => (
-          <div
-            key={file.name}
-            className="flex items-center justify-between gap-2 rounded-lg bg-zinc-50 px-3 py-2"
-          >
-            <span className="truncate text-xs font-medium text-zinc-700">{file.name}</span>
-            <span
-              className={cn(
-                "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
-                file.statusClass
-              )}
-            >
-              {file.status}
-            </span>
-          </div>
-        ))}
-        <div className="flex items-center gap-2 rounded-lg border border-dashed border-zinc-200 px-3 py-2 text-[10px] text-zinc-400">
-          <MessageSquare className="h-3.5 w-3.5" />
-          3 comments on latest revision
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-}
 
 const TESTIMONIAL = {
   quote:
@@ -1220,6 +1110,15 @@ function FreelancerCarouselSection() {
               <Link href={APP_DEMO}>Explore the demo workspace</Link>
             </Button>
           </div>
+          <p data-reveal className="mt-5 text-sm text-zinc-500">
+            <Link
+              href="/for/freelancers"
+              className="font-medium text-zinc-700 underline-offset-4 transition hover:text-orange-600 hover:underline"
+            >
+              See Mably for freelancers
+            </Link>
+            <span className="text-zinc-400"> — client portal, files, and approvals.</span>
+          </p>
         </div>
 
         <div
@@ -1576,7 +1475,6 @@ function LandingEarlyOfferBanner({ visible }) {
 export function MablyLandingPage() {
   const rootRef = useRef(null);
   const galleryRef = useRef(null);
-  const [navScrollProgress, setNavScrollProgress] = useState(0);
   const [offerBannerVisible, setOfferBannerVisible] = useState(false);
   const [galleryDetailIndex, setGalleryDetailIndex] = useState(null);
   const [galleryScroll, setGalleryScroll] = useState({ canLeft: false, canRight: true });
@@ -1709,22 +1607,6 @@ export function MablyLandingPage() {
       window.removeEventListener("resize", updateBannerVisibility);
     };
   }, []);
-
-  useEffect(() => {
-    const onScroll = () => {
-      const progress = Math.min(
-        1,
-        Math.max(0, window.scrollY / NAV_SCROLL_RANGE_PX)
-      );
-      setNavScrollProgress(progress);
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  const scrolled = navScrollProgress > 0.12;
-  const navMaxWidthRem = NAV_MAX_WIDTH_REM * (1 - NAV_WIDTH_SHRINK * navScrollProgress);
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger, ScrollToPlugin, SplitText);
@@ -1927,83 +1809,7 @@ export function MablyLandingPage() {
       )}
     >
       {/* Nav */}
-      <header
-        className={cn(
-          "fixed inset-x-0 top-0 z-50 px-0 pt-4 transition-[padding] duration-500",
-          scrolled && "max-sm:px-6"
-        )}
-      >
-        <div
-          className="mx-auto flex h-14 items-center justify-between rounded-full border border-solid px-4 sm:px-0 sm:pl-7 sm:pr-3"
-          style={{
-            maxWidth: `min(${navMaxWidthRem}rem, calc(100% - 2rem))`,
-            backgroundColor:
-              navScrollProgress > 0
-                ? `rgba(255, 255, 255, ${navScrollProgress * 0.75})`
-                : "transparent",
-            borderColor: `rgba(0, 0, 0, ${navScrollProgress * 0.06})`,
-            boxShadow:
-              navScrollProgress > 0
-                ? `0 8px 40px -12px rgba(0, 0, 0, ${navScrollProgress * 0.16})`
-                : "none",
-            backdropFilter:
-              navScrollProgress > 0
-                ? `blur(${navScrollProgress * 24}px)`
-                : "none",
-          }}
-        >
-          <Link href="/" className="flex shrink-0 items-center">
-            <img
-              src="/images/Logo-SVG.svg"
-              alt="Mably"
-              className={cn(
-                "h-7 w-auto transition duration-500",
-                !scrolled && "brightness-0 invert"
-              )}
-              draggable={false}
-            />
-          </Link>
-          <nav
-            className={cn(
-              "hidden items-center gap-8 text-sm font-medium transition-colors duration-500 md:flex",
-              scrolled ? "text-zinc-600" : "text-white/80"
-            )}
-          >
-            <a href="#features" className="transition hover:opacity-70">
-              Features
-            </a>
-            <a href="#who" className="transition hover:opacity-70">
-              Who it&apos;s for
-            </a>
-            <a href="#pricing" className="transition hover:opacity-70">
-              Pricing
-            </a>
-            <a href="#faq" className="transition hover:opacity-70">
-              FAQ
-            </a>
-          </nav>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              asChild
-              className={cn(
-                "hidden rounded-full transition-colors duration-500 sm:inline-flex",
-                scrolled
-                  ? "text-zinc-700 hover:bg-zinc-100"
-                  : "text-white hover:bg-white/15 hover:text-white"
-              )}
-            >
-              <Link href={APP_SIGN_IN}>Sign in</Link>
-            </Button>
-            <Button
-              asChild
-              className="rounded-full bg-orange-500 px-5 text-white transition-colors duration-500 hover:bg-orange-600"
-            >
-              <Link href={APP_SIGN_UP}>Get started</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <MarketingHeader />
 
       {/* Hero */}
       <section data-hero className="p-1.5 sm:p-2">
@@ -2079,56 +1885,9 @@ export function MablyLandingPage() {
       <HorizontalScrollShowcase />
 
       {/* How it works */}
-      <section id="how" className="scroll-mt-24 px-4 py-24 sm:px-5 sm:py-32">
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto mb-14 max-w-lg text-center sm:mb-16">
-            <h2
-              data-split
-              className="text-3xl font-semibold tracking-[-0.03em] text-zinc-900 sm:text-4xl lg:text-[2.75rem]"
-            >
-              How it works
-            </h2>
-            <p data-reveal className="mt-4 text-base text-zinc-500 sm:text-lg">
-              Set up a branded client portal, send one link, and keep client collaboration,
-              files, feedback, and approvals in one place clients understand.
-            </p>
-          </div>
-
-          <div
-            data-reveal-group
-            className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6"
-          >
-            {HOW_IT_WORKS.map((step) => {
-              const Icon = step.icon;
-              return (
-                <article
-                  key={step.step}
-                  data-reveal-item
-                  className="flex flex-col rounded-[1.75rem] bg-[#f9f8f3] p-6 sm:p-7"
-                >
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-sm",
-                      step.iconClass
-                    )}
-                  >
-                    <Icon className="h-5 w-5" strokeWidth={1.75} />
-                  </div>
-                  <h3 className="mt-5 text-lg font-semibold leading-snug text-zinc-900">
-                    {step.title}
-                  </h3>
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">
-                    {step.copy}
-                  </p>
-                  <div className="mt-6 rounded-2xl bg-white p-4 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] ring-1 ring-black/[0.04]">
-                    <HowItWorksPreview type={step.preview} />
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      <HowItWorksSection
+        intro="Set up a branded client portal, send one link, and keep client collaboration, files, feedback, and approvals in one place clients understand."
+      />
 
       {/* Horizontal gallery — Oura-style */}
       <section id="features" className="scroll-mt-24 overflow-hidden bg-[#f5f2ed] py-24 sm:py-32">
@@ -2505,39 +2264,7 @@ export function MablyLandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-zinc-100 px-4 py-14 sm:px-5">
-        <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-8 sm:grid-cols-3">
-          <div className="text-center sm:text-left">
-            <img
-              src="/images/Logo-SVG.svg"
-              alt="Mably"
-              className="mx-auto h-6 w-auto opacity-80 sm:mx-0"
-              draggable={false}
-            />
-            <p className="mt-2 text-xs text-zinc-400">
-              Simple client portal software for freelancers.
-            </p>
-          </div>
-          <nav className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-zinc-500">
-            <Link href="/whats-new" className="transition hover:text-orange-600">
-              What&apos;s new
-            </Link>
-            <Link href={LEGAL_LINKS.terms} className="transition hover:text-orange-600">
-              Terms
-            </Link>
-            <Link href={LEGAL_LINKS.privacy} className="transition hover:text-orange-600">
-              Privacy
-            </Link>
-            <Link href={LEGAL_LINKS.refund} className="transition hover:text-orange-600">
-              Refund
-            </Link>
-          </nav>
-          <p className="text-center text-sm text-zinc-400 sm:text-right">
-            © {new Date().getFullYear()} Mably
-          </p>
-        </div>
-      </footer>
+      <MarketingFooter blurb="A calmer client experience for freelancers." />
 
       <LandingEarlyOfferBanner visible={offerBannerVisible} />
     </div>
