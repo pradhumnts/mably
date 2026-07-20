@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { LegalPage } from "@/components/marketing/legal-page";
 import { getLegalPage, LEGAL_SLUGS } from "@/lib/marketing/legal-pages";
+import {
+  getCanonicalMarketingUrl,
+  getSocialShareMetadata,
+} from "@/lib/marketing/social-share-metadata";
 
 export function generateStaticParams() {
   return LEGAL_SLUGS.map((slug) => ({ slug }));
@@ -14,9 +18,14 @@ export async function generateMetadata({ params }) {
     return { title: "Not found" };
   }
 
+  const title = `${page.title} - Mably`;
+  const description = page.description;
+  const pageUrl = `${getCanonicalMarketingUrl()}/legal/${slug}`;
+
   return {
-    title: `${page.title} - Mably`,
-    description: page.description,
+    title,
+    description,
+    ...getSocialShareMetadata({ title, description, url: pageUrl }),
   };
 }
 

@@ -4,7 +4,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { PostHogProvider } from "@/components/posthog-provider";
 import { MobileAccessGate } from "@/components/mobile-access-gate";
 import {
-  getCanonicalMarketingUrl,
   getMetadataBaseUrl,
   getSocialShareMetadata,
 } from "@/lib/marketing/social-share-metadata";
@@ -38,10 +37,12 @@ export const metadata = {
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/site.webmanifest",
+  // Share image defaults only — do NOT set a homepage canonical here.
+  // Child pages that omit their own canonical would inherit the homepage URL
+  // and look like duplicates in Search Console.
   ...getSocialShareMetadata({
     title: defaultTitle,
     description: defaultDescription,
-    url: getCanonicalMarketingUrl(),
   }),
 };
 
