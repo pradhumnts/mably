@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bell, ClipboardList, Home, Users, Settings } from "lucide-react";
+import { Bell, ClipboardList, Home, MessageCircle, Users, Settings } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { NavUser } from "@/components/nav-user";
@@ -29,6 +29,12 @@ const navData = {
       title: "Projects",
       url: "/projects",
       icon: ClipboardList,
+      isActive: false,
+    },
+    {
+      title: "Messages",
+      url: "/messages",
+      icon: MessageCircle,
       isActive: false,
     },
     {

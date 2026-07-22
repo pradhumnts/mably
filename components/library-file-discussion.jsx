@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileUp, Paperclip, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -40,7 +39,10 @@ import { LibraryVoiceMessageDeleted } from "@/components/library-voice-message-d
 import { isDemoVoiceNoteStoragePath } from "@/lib/library/demo-voice-note";
 import { getDemoBlockedResponse, isDemoProjectId } from "@/lib/data/demo-project";
 import { usePortalBrand, usePortalBrandSurfaceStyles } from "@/components/portal-brand";
-import { LinkifiedText } from "@/components/linkified-text";
+import { ChatMessageBody } from "@/components/chat-message-body";
+import { ChatMentionInput } from "@/components/chat-mention-input";
+import { ChatLibraryMentionPicker } from "@/components/chat-library-mention-picker";
+import { useLibraryMentionPicker } from "@/hooks/use-library-mention-picker";
 
 /** @param {object} comment */
 function mapCommentAfterVoiceRemoval(comment) {
@@ -150,9 +152,14 @@ export function LibraryFileDiscussion({
   const { brandCss } = usePortalBrand();
   const brandSurface = usePortalBrandSurfaceStyles();
   const listRef = useRef(null);
-  const textareaRef = useRef(null);
+  const mentionInputRef = useRef(/** @type {import("@/components/chat-mention-input").ChatMentionInputHandle | null} */ (null));
   const fileInputRef = useRef(/** @type {HTMLInputElement | null} */ (null));
   const supabase = useMemo(() => createClient(), []);
+
+  const mentionPicker = useLibraryMentionPicker({
+    projectId: String(projectId),
+    enabled: open && !isDemoProjectId(String(projectId)),
+  });
 
   const voiceComposer = useLibraryVoiceComposerState({
     disabled: sending || !viewer || pendingFiles.length > 0,
@@ -236,7 +243,7 @@ export function LibraryFileDiscussion({
 
   useEffect(() => {
     if (!open) return;
-    const id = requestAnimationFrame(() => textareaRef.current?.focus());
+    const id = requestAnimationFrame(() => mentionInputRef.current?.focus());
     return () => cancelAnimationFrame(id);
   }, [open]);
 
@@ -508,6 +515,7 @@ export function LibraryFileDiscussion({
     const approvalForUpload = isFreelancer && needsApproval && files.length === 1;
 
     setDraft("");
+    mentionInputRef.current?.clear();
     setPendingVoice(null);
     setPendingFiles([]);
     setNeedsApproval(false);
@@ -789,9 +797,11 @@ export function LibraryFileDiscussion({
                         </div>
                       ) : null}
                       {c.body?.trim() ? (
-                        <LinkifiedText
+                        <ChatMessageBody
                           text={c.body}
-                          className="text-sm whitespace-pre-wrap break-words"
+                          projectId={String(projectId)}
+                          linkify
+                          className="text-sm"
                         />
                       ) : null}
                     </div>
@@ -837,21 +847,49 @@ export function LibraryFileDiscussion({
                 </Label>
               </div>
             ) : null}
-            <Textarea
-              ref={textareaRef}
-              placeholder={viewer ? "Write a comment…" : "Loading profile…"}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              rows={pendingFiles.length || pendingVoice ? 2 : 3}
-              className="resize-none text-sm"
-              disabled={sending || !viewer || voiceComposer.recording || voiceComposer.processing}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  if (canSend) void handleSend();
+            <div className="relative">
+              <ChatLibraryMentionPicker
+                open={mentionPicker.pickerOpen}
+                loading={mentionPicker.pickerLoading}
+                items={mentionPicker.filteredMentions}
+                activeIndex={mentionPicker.mentionIndex}
+                onActiveIndexChange={mentionPicker.setMentionIndex}
+                onSelect={(item) => {
+                  mentionInputRef.current?.insertMention(item);
+                  mentionPicker.setMentionState(null);
+                }}
+                query={mentionPicker.mentionState?.query || ""}
+              />
+              <ChatMentionInput
+                ref={mentionInputRef}
+                multiline
+                value={draft}
+                onValueChange={setDraft}
+                onMentionQueryChange={mentionPicker.onMentionQueryChange}
+                placeholder={
+                  viewer
+                    ? "Write a comment… · type @ for files & links"
+                    : "Loading profile…"
                 }
-              }}
-            />
+                disabled={
+                  sending || !viewer || voiceComposer.recording || voiceComposer.processing
+                }
+                className="resize-none text-sm"
+                onKeyDown={(e) => {
+                  if (
+                    mentionPicker.handleMentionKeyDown(e, (item) => {
+                      mentionInputRef.current?.insertMention(item);
+                    })
+                  ) {
+                    return;
+                  }
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (canSend) void handleSend();
+                  }
+                }}
+              />
+            </div>
             <input
               ref={fileInputRef}
               type="file"

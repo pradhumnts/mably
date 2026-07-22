@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { EarlyPricingOfferHost } from "@/components/billing/early-pricing-offer-host";
+import { cn } from "@/lib/utils";
 // import { LegalFooterLinks } from "@/components/legal-footer-links"; // hidden until legal pages are live
 
 /**
@@ -18,6 +19,7 @@ import { EarlyPricingOfferHost } from "@/components/billing/early-pricing-offer-
 export function MainAppShell({ user, children, hasSubscription = false }) {
   const pathname = usePathname();
   const isCreateProjectWizard = pathname.startsWith("/projects/new");
+  const isMessagesInbox = pathname === "/messages" || pathname.startsWith("/messages/");
 
   if (isCreateProjectWizard) {
     return (
@@ -35,8 +37,20 @@ export function MainAppShell({ user, children, hasSubscription = false }) {
       <Toaster />
       <EarlyPricingOfferHost hasSubscription={hasSubscription} />
       <AppSidebar user={user} />
-      <SidebarInset className="flex min-h-screen flex-col">
-        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+      <SidebarInset
+        className={cn(
+          "flex flex-col",
+          isMessagesInbox ? "h-svh overflow-hidden" : "min-h-screen"
+        )}
+      >
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col",
+            isMessagesInbox && "overflow-hidden"
+          )}
+        >
+          {children}
+        </div>
         {/* <footer className="shrink-0 border-t border-border/50 bg-background/95 py-2 backdrop-blur-sm supports-[backdrop-filter]:bg-background/90">
           <LegalFooterLinks />
         </footer> */}

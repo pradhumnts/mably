@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   Calendar,
+  CheckSquare2,
   Link as LinkIcon,
   AlertTriangle,
   CheckCircle,
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { DescriptionClamp } from "@/components/description-clamp";
 import { LibraryVoiceNotePlayer } from "@/components/library-voice-note-player";
 import { DEMO_PROJECT_ID } from "@/lib/data/demo-project";
+import { PROJECT_ACTIVITY_EVENT_TYPES } from "@/lib/activity/project-activity-event-types";
 
 const linkActionClass =
   "inline-flex items-center gap-1 text-xs font-medium text-foreground underline-offset-2 hover:underline";
@@ -101,6 +103,10 @@ export function ProjectActivityTimeline({ project }) {
                     !inlineResourceLinked &&
                     !activity.voiceNote
                 );
+              const isActionEvent =
+                activity.eventType === PROJECT_ACTIVITY_EVENT_TYPES.ACTION_CREATED ||
+                activity.eventType === PROJECT_ACTIVITY_EVENT_TYPES.ACTION_COMPLETED;
+              const FileLinkIcon = isActionEvent ? CheckSquare2 : LinkIcon;
 
               return (
                 <div
@@ -135,7 +141,7 @@ export function ProjectActivityTimeline({ project }) {
                       {activity.fileLink && (
                         <>
                           <div className="flex items-center gap-2 text-sm font-medium min-w-0">
-                            <LinkIcon className="h-4 w-4 shrink-0" />
+                            <FileLinkIcon className="h-4 w-4 shrink-0" />
                             {activity.destinationHref ? (
                               <Link
                                 href={activity.destinationHref}

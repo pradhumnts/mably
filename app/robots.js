@@ -17,6 +17,7 @@ export default function robots() {
           "/portal",
           "/projects",
           "/project/",
+          "/messages",
           "/settings",
           "/billing",
           "/dashboard",

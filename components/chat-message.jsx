@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ChatMessageBody } from "@/components/chat-message-body";
 import { LibraryVoiceNotePlayer } from "@/components/library-voice-note-player";
 import { normalizeVoiceWaveformPeaks } from "@/lib/library/normalize-voice-waveform";
 
@@ -25,6 +26,7 @@ import { normalizeVoiceWaveformPeaks } from "@/lib/library/normalize-voice-wavef
  *   isOwnMessage: boolean;
  *   showHeader: boolean;
  *   avatar?: string | null;
+ *   projectLogo?: string | null;
  *   projectId?: string;
  *   currentUserId?: string | null;
  *   canModerateVoice?: boolean;
@@ -40,6 +42,7 @@ export function ChatMessageItem({
   isOwnMessage,
   showHeader,
   avatar,
+  projectLogo = null,
   projectId = "",
   currentUserId = null,
   canModerateVoice = false,
@@ -63,14 +66,24 @@ export function ChatMessageItem({
         (message.authorId === currentUserId || canModerateVoice)
     );
 
-  return (
-    <div className={`flex gap-2 mb-4 ${isOwnMessage ? "justify-end" : "justify-start"}`}>
-      {!isOwnMessage ? (
-        <Avatar className="h-8 w-8 flex-shrink-0">
-          <AvatarImage src={avatar || undefined} alt={message.user.name} />
-          <AvatarFallback>{message.user.name?.[0]}</AvatarFallback>
+  const peerAvatar = (
+    <div className="relative h-8 w-8 flex-shrink-0">
+      <Avatar className="h-8 w-8">
+        <AvatarImage src={avatar || undefined} alt={message.user.name} />
+        <AvatarFallback>{message.user.name?.[0]}</AvatarFallback>
+      </Avatar>
+      {projectLogo ? (
+        <Avatar className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 border-[1.5px] border-background">
+          <AvatarImage src={projectLogo} alt="" className="object-cover" />
+          <AvatarFallback className="rounded-full bg-muted text-[6px]">P</AvatarFallback>
         </Avatar>
       ) : null}
+    </div>
+  );
+
+  return (
+    <div className={`flex gap-2 mb-4 ${isOwnMessage ? "justify-end" : "justify-start"}`}>
+      {!isOwnMessage ? peerAvatar : null}
 
       <div
         className={cn("flex min-w-0 flex-1 flex-col gap-1 max-w-[min(85vw,320px)]", {
@@ -104,7 +117,7 @@ export function ChatMessageItem({
             showVoice ? "w-full min-w-0 overflow-hidden py-3 px-3" : "w-fit py-3 px-4",
             isOwnMessage
               ? "bg-primary text-primary-foreground rounded-[24px]"
-              : "bg-white text-foreground rounded-[24px]"
+              : "bg-muted/80 text-foreground rounded-[24px]"
           )}
         >
           {showVoice && projectId ? (
@@ -140,7 +153,13 @@ export function ChatMessageItem({
               />
             </div>
           ) : null}
-          {text ? <p className="whitespace-pre-wrap break-words">{text}</p> : null}
+          {text ? (
+            <ChatMessageBody
+              text={text}
+              projectId={projectId}
+              isOwnMessage={isOwnMessage}
+            />
+          ) : null}
         </div>
       </div>
 

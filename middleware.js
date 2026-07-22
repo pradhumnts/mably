@@ -68,6 +68,7 @@ export async function middleware(request) {
     (path === '/' || path.startsWith('/login') || path.startsWith('/signup'))
   const isProtectedPage = path.startsWith('/dashboard') ||
                          path.startsWith('/notifications') ||
+                         path.startsWith('/messages') ||
                          path.startsWith('/projects') ||
                          path.startsWith('/clients') ||
                          path.startsWith('/features') ||

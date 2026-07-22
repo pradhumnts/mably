@@ -114,6 +114,12 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
   }, []);
 
   useEffect(() => {
+    const onOpen = () => handleOpenChat();
+    window.addEventListener("mably:open-portal-chat", onOpen);
+    return () => window.removeEventListener("mably:open-portal-chat", onOpen);
+  }, [handleOpenChat]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("openChat") !== "1") return;
@@ -198,6 +204,7 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
                 userRole={userRole}
                 clientAvatar={clientAvatar}
                 freelancerAvatar={freelancerAvatar}
+                projectLogo={projectLogo}
                 senderDisplayName={senderDisplayName}
                 selfAvatarUrl={selfAvatarUrl}
                 onRemoteMessage={onRemoteMessage}

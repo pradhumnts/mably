@@ -8,6 +8,7 @@ import {
   CreditCard,
   Settings,
   Link as LinkIcon,
+  CheckSquare2,
 } from "lucide-react";
 import { usePathname, useParams } from "next/navigation";
 
@@ -86,6 +87,12 @@ export function ProjectAppSidebar({ projectData, freelancerData, isFreelancer = 
           url: `/project/${projectId}/library/links`,
         },
       ],
+    },
+    {
+      title: "Actions",
+      url: `/project/${projectId}/actions`,
+      icon: CheckSquare2,
+      isActive: false,
     },
     {
       title: "Payments",

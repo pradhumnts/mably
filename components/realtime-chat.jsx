@@ -2,15 +2,24 @@
 
 import { cn } from "@/lib/utils";
 import { ChatMessageItem } from "@/components/chat-message";
+import {
+  ChatLibraryMentionPicker,
+  buildLibraryMentionItems,
+  filterLibraryMentionItems,
+} from "@/components/chat-library-mention-picker";
 import { useChatScroll } from "@/hooks/use-chat-scroll";
 import { useProjectMessages } from "@/hooks/use-project-messages";
 import { useLibraryVoiceComposerState } from "@/components/library-voice-composer";
 import { DeleteChatVoiceMessageDialog } from "@/components/delete-chat-voice-message-dialog";
+import { ChatMentionInput } from "@/components/chat-mention-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Send } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isDemoProjectId } from "@/lib/data/demo-project";
+import {
+  listLibraryFiles,
+  listLibraryLinks,
+} from "@/lib/actions/project-library";
 
 export function RealtimeChat({
   projectId,
@@ -20,6 +29,7 @@ export function RealtimeChat({
   userRole,
   clientAvatar,
   freelancerAvatar,
+  projectLogo = null,
   senderDisplayName,
   selfAvatarUrl,
   onRemoteMessage,
@@ -27,6 +37,8 @@ export function RealtimeChat({
 }) {
   const { containerRef, scrollToBottom } = useChatScroll();
   const isDemoChat = isDemoProjectId(String(projectId));
+  /** @type {React.MutableRefObject<import("@/components/chat-mention-input").ChatMentionInputHandle | null>} */
+  const mentionInputRef = useRef(null);
 
   const { messages, sendMessage, sendVoiceMessage, removeMessage, replaceMessage, isConnected } =
     useProjectMessages({
@@ -46,6 +58,14 @@ export function RealtimeChat({
   /** @type {[null | { messageId: string; durationMs: number; hasMessageText: boolean }, React.Dispatch<any>]} */
   const [deleteVoiceTarget, setDeleteVoiceTarget] = useState(null);
 
+  /** @type {[any[], React.Dispatch<any>]} */
+  const [libraryItems, setLibraryItems] = useState([]);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryLoaded, setLibraryLoaded] = useState(false);
+  /** @type {[{ start: number; query: string } | null, React.Dispatch<any>]} */
+  const [mentionState, setMentionState] = useState(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+
   const voiceComposer = useLibraryVoiceComposerState({
     disabled: disabled || sending || isDemoChat,
     pendingVoice,
@@ -63,6 +83,58 @@ export function RealtimeChat({
   useEffect(() => {
     scrollToBottom();
   }, [sortedMessages, scrollToBottom, pendingVoice, voiceComposer.recording]);
+
+  const ensureLibraryLoaded = useCallback(async () => {
+    if (libraryLoaded || libraryLoading || !projectId || isDemoChat) return;
+    setLibraryLoading(true);
+    try {
+      const [filesRes, linksRes] = await Promise.all([
+        listLibraryFiles(String(projectId)),
+        listLibraryLinks(String(projectId)),
+      ]);
+      setLibraryItems(
+        buildLibraryMentionItems(
+          filesRes.ok ? filesRes.items : [],
+          linksRes.ok ? linksRes.items : []
+        )
+      );
+      setLibraryLoaded(true);
+    } finally {
+      setLibraryLoading(false);
+    }
+  }, [libraryLoaded, libraryLoading, projectId, isDemoChat]);
+
+  const filteredMentions = useMemo(
+    () =>
+      filterLibraryMentionItems(
+        libraryItems,
+        mentionState?.query || "",
+        8
+      ),
+    [libraryItems, mentionState?.query]
+  );
+
+  useEffect(() => {
+    setMentionIndex(0);
+  }, [mentionState?.query, mentionState?.start, filteredMentions.length]);
+
+  const syncMentionFromInput = useCallback(
+    (active) => {
+      if (isDemoChat) {
+        setMentionState(null);
+        return;
+      }
+      setMentionState(active);
+      if (active) void ensureLibraryLoaded();
+    },
+    [ensureLibraryLoaded, isDemoChat]
+  );
+
+  const insertMention = useCallback((item) => {
+    if (!item) return;
+    mentionInputRef.current?.insertMention(item);
+    setMentionState(null);
+  }, []);
 
   const avatarFor = useCallback(
     (message, isOwn) => {
@@ -95,7 +167,9 @@ export function RealtimeChat({
       setSending(true);
       const draftText = newMessage;
       setNewMessage("");
+      mentionInputRef.current?.clear();
       setPendingVoice(null);
+      setMentionState(null);
 
       let ok;
       if (voice) {
@@ -113,6 +187,7 @@ export function RealtimeChat({
       setSending(false);
       if (!ok) {
         setNewMessage(draftText);
+        // Restore plain text only; chips are re-typed if send fails (rare).
         if (voice) setPendingVoice(voice);
       }
     },
@@ -149,46 +224,52 @@ export function RealtimeChat({
       <div className="relative min-h-0 flex-1">
         <div
           ref={containerRef}
-          className="relative z-10 h-full min-h-0 overflow-y-auto p-3 backdrop-blur-sm sm:p-4"
+          className="relative z-10 flex h-full min-h-0 flex-col overflow-y-auto p-3 backdrop-blur-sm sm:p-4"
         >
           {!conversationId ? (
-            <div className="text-center text-sm text-muted-foreground">Loading chat…</div>
+            <div className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">
+              Loading chat…
+            </div>
           ) : sortedMessages.length === 0 ? (
-            <div className="text-center text-sm text-muted-foreground">
+            <div className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">
               No messages yet. Start the conversation!
             </div>
-          ) : null}
-          <div>
-            {sortedMessages.map((message, index) => {
-              const prevMessage = index > 0 ? sortedMessages[index - 1] : null;
-              const showHeader = !prevMessage || prevMessage.user.name !== message.user.name;
-              const isOwnMessage = currentUserId ? message.authorId === currentUserId : false;
+          ) : (
+            <div className="mt-auto flex w-full flex-col justify-end">
+              {sortedMessages.map((message, index) => {
+                const prevMessage = index > 0 ? sortedMessages[index - 1] : null;
+                const showHeader = !prevMessage || prevMessage.user.name !== message.user.name;
+                const isOwnMessage = currentUserId ? message.authorId === currentUserId : false;
 
-              return (
-                <div
-                  key={message.id}
-                  className="animate-in fade-in slide-in-from-bottom-4 duration-300"
-                >
-                  <ChatMessageItem
-                    message={message}
-                    isOwnMessage={isOwnMessage}
-                    showHeader={showHeader}
-                    avatar={avatarFor(message, isOwnMessage)}
-                    projectId={projectId}
-                    currentUserId={currentUserId}
-                    canModerateVoice={canModerateVoice}
-                    onRequestDeleteVoice={setDeleteVoiceTarget}
-                  />
-                </div>
-              );
-            })}
-          </div>
+                return (
+                  <div
+                    key={message.id}
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-300"
+                  >
+                    <ChatMessageItem
+                      message={message}
+                      isOwnMessage={isOwnMessage}
+                      showHeader={showHeader}
+                      avatar={avatarFor(message, isOwnMessage)}
+                      projectLogo={
+                        !isOwnMessage && userRole === "freelancer" ? projectLogo : null
+                      }
+                      projectId={projectId}
+                      currentUserId={currentUserId}
+                      canModerateVoice={canModerateVoice}
+                      onRequestDeleteVoice={setDeleteVoiceTarget}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
       <form
         onSubmit={(e) => void handleSend(e)}
-        className="flex w-full flex-col gap-2 border-t border-border bg-white/80 p-3 backdrop-blur-sm pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4"
+        className="relative z-20 flex w-full flex-col gap-2 border-t border-border bg-white/80 p-3 backdrop-blur-sm pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4"
       >
         {voiceComposer.panelVisible ? voiceComposer.panel : null}
         <div className="flex w-full items-center gap-2">
@@ -197,26 +278,68 @@ export function RealtimeChat({
           ) : (
             <span className="h-9 w-9 shrink-0" aria-hidden />
           )}
-          <Input
-            className="min-w-0 flex-1 rounded-full border-zinc-200 bg-background text-sm"
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={
-              isDemoChat
-                ? "Demo chat — text only"
-                : inputDisabled
-                  ? "Connecting…"
-                  : "Message"
-            }
-            disabled={inputDisabled || isDemoChat}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                if (canSend) void handleSend(e);
+          <div className="relative min-w-0 flex-1">
+            <ChatLibraryMentionPicker
+              open={Boolean(mentionState) && !isDemoChat && !inputDisabled}
+              loading={libraryLoading && libraryItems.length === 0}
+              items={filteredMentions}
+              activeIndex={mentionIndex}
+              onActiveIndexChange={setMentionIndex}
+              onSelect={insertMention}
+              query={mentionState?.query || ""}
+            />
+            <ChatMentionInput
+              ref={mentionInputRef}
+              value={newMessage}
+              onValueChange={setNewMessage}
+              onMentionQueryChange={syncMentionFromInput}
+              disabled={inputDisabled || isDemoChat}
+              placeholder={
+                isDemoChat
+                  ? "Demo chat — text only"
+                  : inputDisabled
+                    ? "Connecting…"
+                    : "Message · type @ for files & links"
               }
-            }}
-          />
+              onKeyDown={(e) => {
+                if (mentionState && !isDemoChat && !inputDisabled) {
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    if (filteredMentions.length === 0) return;
+                    setMentionIndex((i) => (i + 1) % filteredMentions.length);
+                    return;
+                  }
+                  if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    if (filteredMentions.length === 0) return;
+                    setMentionIndex(
+                      (i) =>
+                        (i - 1 + filteredMentions.length) % filteredMentions.length
+                    );
+                    return;
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setMentionState(null);
+                    return;
+                  }
+                  if (
+                    (e.key === "Enter" || e.key === "Tab") &&
+                    filteredMentions[mentionIndex]
+                  ) {
+                    e.preventDefault();
+                    insertMention(filteredMentions[mentionIndex]);
+                    return;
+                  }
+                }
+
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (canSend) void handleSend(e);
+                }
+              }}
+            />
+          </div>
           <Button
             variant="outline"
             type="submit"

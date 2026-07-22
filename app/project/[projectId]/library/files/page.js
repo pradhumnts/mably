@@ -1,7 +1,7 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -226,6 +226,7 @@ const LIBRARY_FILES_VIEW_KEY = "mably:library-files-view";
 export default function LibraryFiles() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const projectId = params.projectId;
   const portal = usePortalProject();
@@ -514,6 +515,53 @@ export default function LibraryFiles() {
     }
     window.open(r.url, "_blank", "noopener,noreferrer");
   };
+
+  const handledPreviewQueryRef = useRef(/** @type {string | null} */ (null));
+
+  useEffect(() => {
+    const fromQuery = searchParams.get("preview");
+    if (!fromQuery) {
+      handledPreviewQueryRef.current = null;
+      return;
+    }
+    if (!items.length) return;
+    if (handledPreviewQueryRef.current === fromQuery) return;
+
+    const row = items.find((item) => String(item.id) === String(fromQuery));
+    if (!row) return;
+
+    handledPreviewQueryRef.current = fromQuery;
+    const kind = inferFileKindFromMime(
+      row.mime_type,
+      row.original_filename || row.display_name
+    );
+    const file = {
+      id: row.id,
+      name: row.display_name,
+      type: kind,
+      logo: fileLogoForKind(kind),
+      uploadedBy: row.created_by_display_name || "Member",
+      uploadedByAvatar: row.created_by_avatar_url || null,
+      uploadedAt: formatUploadedAt(row.created_at),
+      uploadedAtFull: formatUploadedAtFull(row.created_at),
+      description: row.description || "",
+      fileId: row.id,
+      mimeType: row.mime_type || null,
+      versionCount: Number(row.version_count ?? 1),
+      currentVersionNumber: Number(row.current_version_number ?? 1),
+    };
+
+    if (isLibraryFilePreviewable(file.type, file.mimeType)) {
+      setPreviewFile(file);
+    } else {
+      void handleDownload(file.fileId);
+    }
+
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("preview");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [searchParams, items, projectId, pathname, router]);
 
   const handleFilePrimaryAction = (file) => {
     if (isLibraryFilePreviewable(file.type, file.mimeType)) {
