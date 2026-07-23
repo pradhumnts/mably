@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { sanitizeNextPath } from '@/lib/auth/safe-next-path'
 import { fetchProfileOnboardingRow } from '@/lib/auth/resolve-after-auth-redirect'
 import { resolveClientLandingPath } from '@/lib/auth/resolve-client-landing'
+import { isPublicDemoPortalPath } from '@/lib/data/demo-project'
 import { isMarketingHost, shouldSkipHostRouting } from '@/lib/site-hosts'
 import { applyHostRouting, isPublicMarketingRequest } from '@/lib/site-host-routing'
 
@@ -78,6 +79,11 @@ export async function middleware(request) {
                          path.startsWith('/project') ||
                          path.startsWith('/portal') ||
                          path.startsWith('/onboarding')
+
+  // Public marketing demo portal — browse without an account
+  if (!user && isPublicDemoPortalPath(path)) {
+    return supabaseResponse
+  }
 
   // Not signed in but trying to read a protected surface → push to login w/ next
   if (!user) {

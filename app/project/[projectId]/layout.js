@@ -17,9 +17,7 @@ export default async function ProjectLayout({ children, params }) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) {
-      redirect("/");
-    }
+    // Demo is public — guests get a fixed freelancer persona; signed-in users stay personalized.
     const freelancer = await resolveDemoFreelancerFromSupabase(supabase, user);
     const demoBundle = getDemoProjectPortalBundle(freelancer);
     return (

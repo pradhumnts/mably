@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { LEGAL_LINKS } from "@/lib/constants/legal-links";
+import { DEMO_PORTAL_HREF } from "@/lib/data/demo-project";
 import { appPath } from "@/lib/site-urls";
 
 const APP_SIGN_IN = appPath("/");
 const APP_SIGN_UP = appPath("/?intent=signup");
-const APP_DEMO = appPath("/?next=%2Fproject%2Fdemo-mably");
+const APP_DEMO = appPath(DEMO_PORTAL_HREF);
 
 /**
  * Footer link columns. Items with `soon: true` render as muted labels with a

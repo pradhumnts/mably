@@ -8,7 +8,7 @@ export default function robots() {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: ["/", "/project/demo-mably", "/project/demo-mably/"],
         disallow: [
           "/api/",
           "/embed/",

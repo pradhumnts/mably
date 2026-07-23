@@ -88,7 +88,7 @@ export function ProjectPortalShell({ bundle, children }) {
             <LegalFooterLinks />
           </footer> */}
         </SidebarInset>
-        <WebPushManager />
+        {!isDemo ? <WebPushManager /> : null}
         <FloatingChatWidget
           projectId={projectId}
           userRole={userRole}

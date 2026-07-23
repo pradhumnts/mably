@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LANDING_FAQ } from "@/lib/marketing/landing-faq";
+import { DEMO_PORTAL_HREF } from "@/lib/data/demo-project";
 import { appPath } from "@/lib/site-urls";
 import { MarketingHeader } from "@/components/marketing/marketing-header";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
@@ -53,7 +54,7 @@ import {
 } from "@/lib/billing/early-offer";
 
 const APP_SIGN_UP = appPath("/?intent=signup");
-const APP_DEMO = appPath("/?next=%2Fproject%2Fdemo-mably");
+const APP_DEMO = appPath(DEMO_PORTAL_HREF);
 
 /* ----------------------------------------------------------------------------
  * ASSETS — swap paths for your own files in /public

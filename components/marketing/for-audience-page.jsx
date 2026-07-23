@@ -13,9 +13,10 @@ import { HowItWorksSection } from "@/components/marketing/how-it-works-section";
 import { FallingChips } from "@/components/marketing/falling-chips";
 import { cn } from "@/lib/utils";
 import { appPath } from "@/lib/site-urls";
+import { DEMO_PORTAL_HREF } from "@/lib/data/demo-project";
 
 const APP_SIGN_UP = appPath("/?intent=signup");
-const APP_DEMO = appPath("/?next=%2Fproject%2Fdemo-mably");
+const APP_DEMO = appPath(DEMO_PORTAL_HREF);
 
 function FaqItem({ item, open, onToggle }) {
   return (

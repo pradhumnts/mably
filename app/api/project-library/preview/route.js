@@ -26,17 +26,11 @@ export async function GET(request) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
-
-  if (authErr || !user) {
-    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  }
-
   if (isDemoProjectId(projectId)) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     const fl = await resolveDemoFreelancerFromSupabase(supabase, user);
     const demoFiles = getDemoLibraryFiles(fl);
     const demoRow = demoFiles.find((f) => String(f.id) === fileId);
@@ -63,6 +57,16 @@ export async function GET(request) {
     }
 
     return NextResponse.json({ error: "File not found" }, { status: 404 });
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authErr,
+  } = await supabase.auth.getUser();
+
+  if (authErr || !user) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
   let storagePath = null;
