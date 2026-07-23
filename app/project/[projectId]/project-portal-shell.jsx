@@ -45,9 +45,9 @@ function persistDemoView(view) {
 function readStoredDemoView() {
   try {
     const raw = window.sessionStorage.getItem(DEMO_PORTAL_VIEW_STORAGE_KEY);
-    return raw === "client" ? "client" : "freelancer";
+    return raw === "freelancer" ? "freelancer" : "client";
   } catch {
-    return "freelancer";
+    return "client";
   }
 }
 
@@ -55,7 +55,7 @@ export function ProjectPortalShell({ bundle, children }) {
   const params = useParams();
   const projectId = params.projectId ?? bundle.projectId;
   const isDemo = Boolean(bundle.meta?.isDemo);
-  const [demoView, setDemoView] = useState(/** @type {"freelancer" | "client"} */ ("freelancer"));
+  const [demoView, setDemoView] = useState(/** @type {"freelancer" | "client"} */ ("client"));
   const [demoViewReady, setDemoViewReady] = useState(!isDemo);
 
   useEffect(() => {

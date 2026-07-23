@@ -156,6 +156,7 @@ function PortalHome({
   const [latest, setLatest] = useState(
     /** @type {null | { id: string; label: string; when: string; href: string }} */ (null)
   );
+  const [revealKey, setRevealKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -165,14 +166,15 @@ function PortalHome({
         demoAsClient: !isFreelancer,
       });
       if (cancelled) return;
-      setLoading(false);
       if (!res.ok) {
         setAttention([]);
         setLatest(null);
-        return;
+      } else {
+        setAttention(res.attention || []);
+        setLatest(res.latest || null);
       }
-      setAttention(res.attention || []);
-      setLatest(res.latest || null);
+      setLoading(false);
+      setRevealKey((k) => k + 1);
     })();
     return () => {
       cancelled = true;
@@ -224,26 +226,53 @@ function PortalHome({
     },
   ];
 
+  const enter = (delayClass = "") =>
+    cn(
+      "[animation-fill-mode:backwards] animate-in fade-in slide-in-from-bottom-3 duration-500 ease-out",
+      delayClass
+    );
+
   return (
     <div className="flex min-h-0 flex-1 flex-col justify-center px-4 py-10 sm:px-6 sm:py-12 md:px-12 lg:px-20 lg:py-16">
-      <div className="mx-auto w-full max-w-xl [animation-fill-mode:backwards] animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <p className="mb-2 text-sm font-medium text-zinc-600/90">{projectName}</p>
-        <h1 className="text-pretty text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">
+      <div className="mx-auto w-full max-w-xl">
+        <p className={cn("mb-2 text-sm font-medium text-zinc-600/90", enter())}>
+          {projectName}
+        </p>
+        <h1
+          className={cn(
+            "text-pretty text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl",
+            enter("delay-75")
+          )}
+        >
           {greeting}, {name}
         </h1>
-        <p className="mt-3 text-base leading-relaxed text-zinc-600 sm:text-lg">
-          {hasAttention ? attentionCopy : emptyCopy}
-        </p>
 
         {loading ? (
-          <div className="mt-10 space-y-3">
-            <div className="h-28 animate-pulse rounded-[28px] bg-white/50" />
-            <div className="h-12 animate-pulse rounded-full bg-white/40" />
+          <div className={cn("mt-3 space-y-10", enter("delay-100"))}>
+            <div className="h-5 max-w-md animate-pulse rounded-full bg-white/45" />
+            <div className="space-y-3">
+              <div className="h-28 animate-pulse rounded-[28px] bg-white/50" />
+              <div className="h-12 animate-pulse rounded-full bg-white/40" />
+            </div>
           </div>
         ) : (
-          <>
+          <div key={revealKey}>
+            <p
+              className={cn(
+                "mt-3 text-base leading-relaxed text-zinc-600 sm:text-lg",
+                enter()
+              )}
+            >
+              {hasAttention ? attentionCopy : emptyCopy}
+            </p>
+
             {hasAttention ? (
-              <section className="mt-10 overflow-hidden rounded-[28px] border border-white/70 bg-white/75 shadow-[0_12px_40px_-24px_rgba(24,24,27,0.35)] backdrop-blur-md">
+              <section
+                className={cn(
+                  "mt-10 overflow-hidden rounded-[28px] border border-white/70 bg-white/75 shadow-[0_12px_40px_-24px_rgba(24,24,27,0.35)] backdrop-blur-md",
+                  enter("delay-100")
+                )}
+              >
                 <div className="flex items-center gap-2 border-b border-zinc-200/70 px-5 py-4">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/15 text-amber-700">
                     <Sparkles className="h-3.5 w-3.5" strokeWidth={2} />
@@ -268,7 +297,8 @@ function PortalHome({
                 href={latest.href}
                 className={cn(
                   "mt-4 flex items-start gap-3 rounded-[24px] border border-white/60 bg-white/55 px-5 py-4 shadow-sm backdrop-blur-md transition-colors hover:bg-white/75",
-                  !hasAttention && "mt-10"
+                  !hasAttention && "mt-10",
+                  enter(hasAttention ? "delay-150" : "delay-100")
                 )}
               >
                 <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-900/5 text-zinc-600">
@@ -294,7 +324,14 @@ function PortalHome({
             <div
               className={cn(
                 "flex flex-wrap gap-2",
-                hasAttention || latest ? "mt-8" : "mt-10"
+                hasAttention || latest ? "mt-8" : "mt-10",
+                enter(
+                  hasAttention && latest
+                    ? "delay-200"
+                    : hasAttention || latest
+                      ? "delay-150"
+                      : "delay-100"
+                )
               )}
             >
               {shortcuts.map((item) => {
@@ -322,7 +359,7 @@ function PortalHome({
                 );
               })}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
@@ -355,7 +392,7 @@ export default function ProjectDashboard() {
 
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
         {showBookCall ? (
-          <div className="shrink-0 px-4 pt-4 md:absolute md:right-8 md:top-8 md:z-20 md:px-0 md:pt-0">
+          <div className="shrink-0 px-4 pt-4 [animation-fill-mode:backwards] animate-in fade-in slide-in-from-bottom-3 duration-500 ease-out md:absolute md:right-8 md:top-8 md:z-20 md:px-0 md:pt-0">
             <BookCallCard
               freelancerName={freelancerName}
               freelancerAvatar={dashboard.freelancerAvatar || undefined}
