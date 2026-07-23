@@ -103,8 +103,9 @@ export default function ProjectSettings() {
   const params = useParams();
   const router = useRouter();
   const projectId = params.projectId;
-  const { meta } = usePortalProject();
+  const { meta, sidebar, dashboard } = usePortalProject();
   const userRole = meta.isFreelancer ? "freelancer" : "client";
+  const isDemo = Boolean(meta?.isDemo);
 
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(null);
@@ -187,6 +188,38 @@ export default function ProjectSettings() {
       cancelled = true;
     };
   }, [projectId, ingest]);
+
+  // Demo Freelancer ↔ Client switch: keep contact card aligned with the active persona.
+  useEffect(() => {
+    if (!isDemo || !ready) return;
+    if (userRole === "client") {
+      setContactInfo((prev) => ({
+        ...prev,
+        fullName: sidebar?.clientName || prev.fullName,
+        email: sidebar?.clientEmail || prev.email,
+        company: "Pixel Lab",
+        avatar: sidebar?.clientAvatar || prev.avatar,
+      }));
+      return;
+    }
+    setContactInfo((prev) => ({
+      ...prev,
+      fullName: dashboard?.freelancerName || prev.fullName,
+      email: dashboard?.freelancerEmail || prev.email,
+      company: sidebar?.clientName ? "Pixel Lab" : prev.company,
+      avatar: dashboard?.freelancerAvatar || prev.avatar,
+    }));
+  }, [
+    isDemo,
+    ready,
+    userRole,
+    sidebar?.clientName,
+    sidebar?.clientEmail,
+    sidebar?.clientAvatar,
+    dashboard?.freelancerName,
+    dashboard?.freelancerEmail,
+    dashboard?.freelancerAvatar,
+  ]);
 
   const refreshFromServer = useCallback(async () => {
     const r = await getPortalProjectSettings(String(projectId));
@@ -384,7 +417,11 @@ export default function ProjectSettings() {
               </CardContent>
             </Card>
           ) : (
-            <Tabs defaultValue={userRole === "freelancer" ? "project-info" : "overview"} className="w-full">
+            <Tabs
+              key={userRole}
+              defaultValue={userRole === "freelancer" ? "project-info" : "overview"}
+              className="w-full"
+            >
               <TabsList
                 className={
                   userRole === "freelancer"

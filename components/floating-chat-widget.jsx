@@ -10,6 +10,7 @@ import { RealtimeChat } from "@/components/realtime-chat";
 import { PortalBrandBackdrop } from "@/components/portal-brand-backdrop";
 import { cn } from "@/lib/utils";
 import { getProjectChatBootstrap, markProjectChatRead } from "@/lib/actions/project-chat";
+import { DEMO_CLIENT_USER_ID, isDemoProjectId } from "@/lib/data/demo-project";
 import { toast } from "sonner";
 
 /**
@@ -131,6 +132,11 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
   }, [bootError, boot?.conversationId, handleOpenChat]);
 
   const chatDisabled = Boolean(bootError || !boot?.conversationId);
+  const isDemoChat = isDemoProjectId(String(projectId));
+  const effectiveCurrentUserId =
+    isDemoChat && userRole === "client"
+      ? DEMO_CLIENT_USER_ID
+      : (boot?.currentUserId ?? null);
 
   return (
     <div
@@ -197,9 +203,10 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
               </div>
             ) : (
               <RealtimeChat
+                key={isDemoChat ? `demo-${userRole}` : "live"}
                 projectId={String(projectId)}
                 conversationId={boot?.conversationId ?? null}
-                currentUserId={boot?.currentUserId ?? null}
+                currentUserId={effectiveCurrentUserId}
                 initialMessages={initialMessages}
                 userRole={userRole}
                 clientAvatar={clientAvatar}

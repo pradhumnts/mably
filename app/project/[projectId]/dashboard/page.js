@@ -161,7 +161,9 @@ function PortalHome({
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const res = await getPortalHomeBriefing(projectId);
+      const res = await getPortalHomeBriefing(projectId, {
+        demoAsClient: !isFreelancer,
+      });
       if (cancelled) return;
       setLoading(false);
       if (!res.ok) {
@@ -175,7 +177,7 @@ function PortalHome({
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [projectId, isFreelancer]);
 
   const greeting = useMemo(() => greetingForNow(), []);
   const hasAttention = attention.length > 0;

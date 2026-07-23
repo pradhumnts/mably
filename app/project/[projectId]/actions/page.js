@@ -246,15 +246,26 @@ export default function ProjectActionsPage() {
   }, [load]);
 
   const openRows = useMemo(
-    () => sortOpen(rows.filter((r) => r.status === "open")),
-    [rows]
+    () =>
+      sortOpen(
+        rows.filter((r) => {
+          if (r.status !== "open") return false;
+          if (isFreelancer) return true;
+          return r.visibility === "shared";
+        })
+      ),
+    [rows, isFreelancer]
   );
   const doneRows = useMemo(
     () =>
-      [...rows.filter((r) => r.status === "done")].sort((a, b) =>
+      [...rows.filter((r) => {
+        if (r.status !== "done") return false;
+        if (isFreelancer) return true;
+        return r.visibility === "shared";
+      })].sort((a, b) =>
         String(b.completedAt || "").localeCompare(String(a.completedAt || ""))
       ),
-    [rows]
+    [rows, isFreelancer]
   );
 
   const waitingCount = openRows.filter((r) => r.owner === "client").length;
