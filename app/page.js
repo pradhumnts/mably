@@ -17,6 +17,11 @@ export const metadata = {
     description,
     url: getCanonicalAppUrl(),
   }),
+  // app.mably.io root is a login screen — keep it out of Google so it doesn't
+  // compete with the mably.io marketing homepage for brand/home queries.
+  // No canonical either: noindex + canonical send conflicting signals.
+  robots: { index: false, follow: true },
+  alternates: {},
 };
 
 export default async function Home({ searchParams }) {
