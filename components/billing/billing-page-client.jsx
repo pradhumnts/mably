@@ -67,19 +67,46 @@ export function BillingPageClient({
     if (!autoSyncFromPolar) return;
 
     let cancelled = false;
+    const delaysMs = [0, 1500, 3500];
 
     (async () => {
       setReconcileLoading(true);
+      let lastError = null;
+      let lastSubscription = null;
+      let synced = false;
+
       try {
-        const res = await fetch("/api/billing/reconcile", { method: "POST" });
-        const json = await res.json();
+        for (let i = 0; i < delaysMs.length; i++) {
+          if (cancelled) return;
+          if (delaysMs[i] > 0) {
+            await new Promise((r) => setTimeout(r, delaysMs[i]));
+          }
+          if (cancelled) return;
+
+          try {
+            const res = await fetch("/api/billing/reconcile", { method: "POST" });
+            const json = await res.json().catch(() => ({}));
+            if (cancelled) return;
+            if (!res.ok) {
+              lastError = new Error(json.error ?? "Could not refresh");
+              continue;
+            }
+            lastSubscription = json.subscription ?? null;
+            setSubscription(lastSubscription);
+            if (json.synced || lastSubscription) {
+              synced = true;
+              break;
+            }
+          } catch (e) {
+            lastError = e;
+          }
+        }
+
         if (cancelled) return;
-        if (!res.ok) throw new Error(json.error ?? "Could not refresh");
-        setSubscription(json.subscription ?? null);
-        onSubscriptionSyncedRef.current?.();
-      } catch (e) {
-        if (!cancelled) {
-          toast.error(e?.message ?? "Could not sync subscription from Polar");
+        if (synced) {
+          onSubscriptionSyncedRef.current?.();
+        } else if (lastError && !lastSubscription) {
+          toast.error(lastError?.message ?? "Could not sync subscription from Polar");
         }
       } finally {
         if (!cancelled) setReconcileLoading(false);

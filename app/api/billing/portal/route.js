@@ -24,7 +24,7 @@ export async function POST() {
 
   const { data: row, error } = await supabase
     .from("freelancer_subscriptions")
-    .select("user_id")
+    .select("user_id, polar_customer_id")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -40,7 +40,11 @@ export async function POST() {
   const site = process.env.NEXT_PUBLIC_SITE_URL?.trim()?.replace(/\/$/, "") ?? "";
   const returnUrl = site ? `${site}/settings?tab=subscription` : undefined;
 
-  /** Same external id as checkout — Polar maps this to the customer. */
+  /** Prefer Polar customer id from our DB; fall back to external id from checkout. */
+  const sessionBody = row.polar_customer_id
+    ? { customer_id: String(row.polar_customer_id) }
+    : { external_customer_id: user.id };
+
   const res = await fetch(`${getPolarApiBase()}/customer-sessions/`, {
     method: "POST",
     headers: {
@@ -48,7 +52,7 @@ export async function POST() {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      external_customer_id: user.id,
+      ...sessionBody,
       ...(returnUrl ? { return_url: returnUrl } : {}),
     }),
   });

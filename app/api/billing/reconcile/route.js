@@ -15,7 +15,9 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const r = await reconcilePolarSubscriptionForUser(user.id);
+  const r = await reconcilePolarSubscriptionForUser(user.id, {
+    email: user.email ?? null,
+  });
   if (!r.ok) {
     return NextResponse.json({ error: r.error ?? "Reconcile failed" }, { status: 502 });
   }

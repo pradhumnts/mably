@@ -80,9 +80,14 @@ export async function POST(request) {
       products: [productId],
       customer_email: user.email,
       external_customer_id: user.id,
+      // Checkout metadata (may appear on order/subscription payloads).
       metadata: {
         supabase_user_id: user.id,
         ...(wantFounding ? { pricing_tier: "founding" } : {}),
+      },
+      // Copied onto Polar Customer.metadata after checkout — used by webhooks.
+      customer_metadata: {
+        supabase_user_id: user.id,
       },
       ...(successUrl ? { success_url: successUrl } : {}),
     }),
