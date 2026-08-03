@@ -21,6 +21,7 @@ import {
   queueFounderWelcomeAfterFirstProject,
 } from "@/lib/founder/founder-welcome";
 import { createProject, updateProjectInviteAndResend } from "@/lib/actions/projects";
+import { trackEvent } from "@/lib/analytics/client";
 
 /**
  * @param {{
@@ -162,6 +163,17 @@ export function CreateProjectStep5({
     }
 
     if (wasFirstCreate) {
+      trackEvent("project_created", {
+        project_id: result.id || null,
+        invite_sent: Boolean(result.inviteSent),
+        is_first_project: Boolean(result.isFirstProject),
+      });
+      if (result.inviteSent) {
+        trackEvent("client_invited", {
+          project_id: result.id || null,
+          source: "create_project",
+        });
+      }
       if (
         result.isFirstProject &&
         result.inviteSent &&

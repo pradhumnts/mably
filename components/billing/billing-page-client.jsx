@@ -16,6 +16,7 @@ import {
   PolarPlanPickerContent,
   PolarPlanPickerDialog,
 } from "@/components/billing/polar-plan-picker-dialog";
+import { trackEvent, setPersonProperties } from "@/lib/analytics/client";
 
 function formatUtcDate(value) {
   if (!value) return null;
@@ -104,6 +105,18 @@ export function BillingPageClient({
 
         if (cancelled) return;
         if (synced) {
+          if (lastSubscription) {
+            trackEvent("subscription_synced", {
+              plan: lastSubscription.plan_key || null,
+              status: lastSubscription.status || null,
+              source: "settings_reconcile",
+            });
+            setPersonProperties({
+              plan: lastSubscription.plan_key || "free",
+              subscription_status: lastSubscription.status || "none",
+              has_subscription: true,
+            });
+          }
           onSubscriptionSyncedRef.current?.();
         } else if (lastError && !lastSubscription) {
           toast.error(lastError?.message ?? "Could not sync subscription from Polar");

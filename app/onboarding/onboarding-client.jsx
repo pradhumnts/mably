@@ -26,6 +26,8 @@ import {
 import { updateProfile, uploadProfileAvatar } from "@/lib/actions/profile";
 import { completeFreelancerOnboarding } from "@/lib/actions/onboarding";
 import { MarketingEmailConsent } from "@/components/marketing-email-consent";
+import { trackEvent, setPersonProperties } from "@/lib/analytics/client";
+import { PostHogIdentify } from "@/components/posthog-identify";
 import { toast } from "sonner";
 // import { LegalFooterLinks } from "@/components/legal-footer-links"; // hidden until legal pages are live
 
@@ -84,7 +86,7 @@ const ROLE_OPTIONS = [
 const STEP_IMAGES = ["/images/library-screen.png", "/images/activity-screen.png"];
 
 /**
- * @param {{ initialProfile: { name: string; email: string; phone: string; title: string; location: string; avatar?: string | null } }} props
+ * @param {{ initialProfile: { id?: string; name: string; email: string; phone: string; title: string; location: string; avatar?: string | null } }} props
  */
 export function FreelancerOnboardingClient({ initialProfile }) {
   const router = useRouter();
@@ -167,6 +169,14 @@ export function FreelancerOnboardingClient({ initialProfile }) {
       toast.error(r.error || "Something went wrong");
       return;
     }
+    trackEvent("onboarding_completed", {
+      survey_category: selectedRole,
+      marketing_emails: Boolean(marketingEmails),
+    });
+    setPersonProperties({
+      onboarding_completed: true,
+      freelancer_survey_category: selectedRole,
+    });
     toast.success("You're all set");
     router.replace("/projects");
     router.refresh();
@@ -176,6 +186,16 @@ export function FreelancerOnboardingClient({ initialProfile }) {
 
   return (
     <div className="flex min-h-screen flex-col overflow-hidden bg-background">
+      <PostHogIdentify
+        userId={initialProfile.id}
+        email={initialProfile.email}
+        name={initialProfile.name}
+        role="freelancer"
+        plan="free"
+        subscriptionStatus="none"
+        hasSubscription={false}
+        extra={{ surface: "onboarding" }}
+      />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
       <div className="flex flex-col w-full lg:w-[48%] min-h-0 px-8 py-10 sm:px-12 sm:py-14 lg:px-20 lg:py-20 justify-between overflow-y-auto">
         <div className="mb-0">

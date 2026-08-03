@@ -31,6 +31,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth/actions";
+import { resetAnalytics } from "@/lib/analytics/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -46,6 +47,7 @@ export function NavUser({ user }) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      resetAnalytics();
       await signOut();
     } catch (error) {
       console.error("Logout error:", error);

@@ -37,7 +37,8 @@ function initPostHogOnce() {
     posthog.init(posthogKey, {
       api_host: posthogHost,
       defaults: "2025-05-24",
-      person_profiles: "always",
+      // Only create person profiles when we call identify (signed-in users).
+      person_profiles: "identified_only",
       capture_pageview: false,
       capture_pageleave: true,
       capture_exceptions: false,

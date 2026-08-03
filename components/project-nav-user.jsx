@@ -26,6 +26,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth/actions";
+import { resetAnalytics } from "@/lib/analytics/client";
 
 /**
  * Portal sidebar footer.
@@ -46,6 +47,7 @@ export function ProjectNavUser({ user, projectId, isFreelancer }) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      resetAnalytics();
       await signOut();
     } catch (error) {
       console.error("Logout error:", error);

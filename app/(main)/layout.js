@@ -19,7 +19,11 @@ export default async function MainLayout({ children }) {
   const hasSubscription = hasPaidFreelancerSubscription(subscription);
 
   return (
-    <MainAppShell user={user} hasSubscription={hasSubscription}>
+    <MainAppShell
+      user={user}
+      hasSubscription={hasSubscription}
+      subscription={subscription}
+    >
       {children}
     </MainAppShell>
   );

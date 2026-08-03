@@ -18,6 +18,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { sanitizeNextPath } from "@/lib/auth/safe-next-path";
+import { trackEvent } from "@/lib/analytics/client";
 
 export function LoginForm({ className, next = null, intent = null, ...props }) {
   const [email, setEmail] = useState("");
@@ -30,6 +31,10 @@ export function LoginForm({ className, next = null, intent = null, ...props }) {
     e.preventDefault();
     setIsLoading(true);
     setMessage("");
+
+    trackEvent("auth_otp_requested", {
+      intent: intent || "login",
+    });
 
     const { signInWithEmail } = await import('@/lib/auth/actions');
     const result = await signInWithEmail(email);
@@ -67,6 +72,10 @@ export function LoginForm({ className, next = null, intent = null, ...props }) {
   const handleGoogleAuth = async () => {
     setIsLoading(true);
     setMessage("");
+
+    trackEvent("auth_google_started", {
+      intent: intent || "login",
+    });
 
     const { signInWithOAuth } = await import("@/lib/auth/actions");
     const fromUrl =

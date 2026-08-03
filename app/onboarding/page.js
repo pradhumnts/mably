@@ -19,6 +19,7 @@ export default async function OnboardingPage() {
   return (
     <FreelancerOnboardingClient
       initialProfile={{
+        id: profile.id,
         name: profile.name,
         email: profile.email,
         phone: profile.phone,

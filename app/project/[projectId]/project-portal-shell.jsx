@@ -15,6 +15,8 @@ import { PortalOnboardingDialog } from "@/components/portal-onboarding-dialog";
 import { WebPushManager } from "@/components/web-push-manager";
 import { PortalBrandProvider } from "@/components/portal-brand";
 import { cn } from "@/lib/utils";
+import { PostHogIdentify } from "@/components/posthog-identify";
+import { trackEvent } from "@/lib/analytics/client";
 import { DEMO_PORTAL_VIEW_STORAGE_KEY } from "@/lib/data/demo-project";
 // import { LegalFooterLinks } from "@/components/legal-footer-links"; // hidden until legal pages are live
 
@@ -83,8 +85,27 @@ export function ProjectPortalShell({ bundle, children }) {
 
   useEffect(() => {
     if (!projectId || isFreelancer || isDemo) return;
-    void recordClientPortalFirstOpen(projectId);
+    void recordClientPortalFirstOpen(projectId).then((result) => {
+      if (result?.isFirst) {
+        trackEvent("client_portal_first_open", { project_id: String(projectId) });
+      }
+    });
   }, [projectId, isFreelancer, isDemo]);
+
+  const viewer = portalBundle.meta?.viewer;
+  const identify = viewer?.id ? (
+    <PostHogIdentify
+      userId={viewer.id}
+      email={viewer.email}
+      name={viewer.name}
+      role={userRole}
+      extra={{
+        surface: "portal",
+        is_demo: isDemo,
+        project_id: String(projectId || ""),
+      }}
+    />
+  ) : null;
 
   const setDemoRole = (next) => {
     const view = next === "client" ? "client" : "freelancer";
@@ -110,6 +131,7 @@ export function ProjectPortalShell({ bundle, children }) {
   return (
     <PortalProjectContext.Provider value={portalBundle}>
       <PortalBrandProvider brandColor={bundle.branding?.brandColor}>
+      {identify}
       <SidebarProvider>
         <ProjectAppSidebar
           projectData={bundle.sidebar}
