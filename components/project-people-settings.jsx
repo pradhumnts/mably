@@ -112,8 +112,7 @@ export function ProjectPeopleSettings({ projectId, disabled = false }) {
       <CardHeader>
         <CardTitle>People</CardTitle>
         <CardDescription>
-          Invite extra clients or stakeholders to this portal. They get their own login and the
-          same access as the primary client — free, no seat charges.
+          Invite extra clients or stakeholders to this portal.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
