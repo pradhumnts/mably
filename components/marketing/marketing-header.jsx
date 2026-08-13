@@ -37,7 +37,7 @@ export const MARKETING_SOLUTIONS = [
   {
     href: "/for/agencies",
     label: "Agencies",
-    description: "A branded portal for every client engagement.",
+    description: "A branded portal for every engagement — invite the whole client side.",
     live: true,
   },
   {

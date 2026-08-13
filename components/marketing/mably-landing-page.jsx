@@ -273,7 +273,7 @@ const GALLERY = [
       {
         icon: Shield,
         title: "Project-scoped access",
-        description: "Only people invited to the project can view or comment.",
+        description: "Invite the people who need to see the work — primary contact plus anyone else.",
       },
     ],
   },
@@ -515,6 +515,7 @@ const PRICING = [
     features: [
       "1 active project",
       "Branded client workspace",
+      "Invite multiple clients",
       "Files, links & approvals",
       "Activity timeline & project chat",
       "Per-file feedback & revisions",
@@ -1887,7 +1888,7 @@ export function MablyLandingPage() {
 
       {/* How it works */}
       <HowItWorksSection
-        intro="Set up a branded client portal, send one link, and keep client collaboration, files, feedback, and approvals in one place clients understand."
+        intro="Set up a branded client portal, invite your client (and anyone else who needs access), and keep files, feedback, and approvals in one place clients understand."
       />
 
       {/* Horizontal gallery — Oura-style */}

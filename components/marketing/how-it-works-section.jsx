@@ -21,7 +21,7 @@ const DEFAULT_STEPS = [
   {
     step: "2",
     title: "Send one link.",
-    copy: "No walkthrough, no \"check your email,\" no explaining which folder is which.",
+    copy: "Invite your client — and anyone else who needs access — without a walkthrough or folder scavenger hunt.",
     icon: Link2,
     iconClass: "bg-blue-500",
     preview: "invite",
