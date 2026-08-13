@@ -91,14 +91,39 @@ export function MarketingHeader({ theme = "dark" }) {
 
   useEffect(() => {
     if (!mobileOpen) return undefined;
+
+    const scrollY = window.scrollY;
+    const { style } = document.body;
+    const prev = {
+      position: style.position,
+      top: style.top,
+      left: style.left,
+      right: style.right,
+      width: style.width,
+      overflow: style.overflow,
+    };
+
+    style.position = "fixed";
+    style.top = `-${scrollY}px`;
+    style.left = "0";
+    style.right = "0";
+    style.width = "100%";
+    style.overflow = "hidden";
+
     const onKey = (e) => {
       if (e.key === "Escape") setMobileOpen(false);
     };
     document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
+
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
+      style.position = prev.position;
+      style.top = prev.top;
+      style.left = prev.left;
+      style.right = prev.right;
+      style.width = prev.width;
+      style.overflow = prev.overflow;
+      window.scrollTo(0, scrollY);
     };
   }, [mobileOpen]);
 
@@ -282,90 +307,85 @@ export function MarketingHeader({ theme = "dark" }) {
         </div>
       </div>
 
-      {/* Mobile sheet */}
-      <div
-        className={cn(
-          "fixed inset-x-0 top-[4.25rem] z-40 px-4 transition duration-300 md:hidden",
-          mobileOpen
-            ? "pointer-events-auto opacity-100"
-            : "pointer-events-none opacity-0"
-        )}
-      >
-        <div className="mx-auto max-w-lg overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-[0_24px_60px_-20px_rgba(0,0,0,0.22)]">
-          <div className="border-b border-zinc-100 px-4 py-3">
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">
-              Who it&apos;s for
-            </p>
-            <div className="mt-2 space-y-1">
-              {MARKETING_SOLUTIONS.map((item) =>
-                item.live ? (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="block rounded-xl px-3 py-2.5 transition hover:bg-zinc-50"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <span className="text-sm font-semibold text-zinc-900">
-                      {item.label}
-                    </span>
-                    <span className="mt-0.5 block text-xs text-zinc-500">
-                      {item.description}
-                    </span>
+      {/* Mobile sheet — mount only when open so a fixed panel can't block page scroll */}
+      {mobileOpen ? (
+        <>
+          <div className="fixed inset-x-0 top-[4.25rem] z-40 px-4 md:hidden">
+            <div className="mx-auto max-h-[calc(100dvh-5.5rem)] max-w-lg overflow-y-auto overscroll-contain rounded-2xl border border-zinc-100 bg-white shadow-[0_24px_60px_-20px_rgba(0,0,0,0.22)] [-webkit-overflow-scrolling:touch]">
+              <div className="border-b border-zinc-100 px-4 py-3">
+                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">
+                  Who it&apos;s for
+                </p>
+                <div className="mt-2 space-y-1">
+                  {MARKETING_SOLUTIONS.map((item) =>
+                    item.live ? (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="block rounded-xl px-3 py-2.5 transition hover:bg-zinc-50"
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        <span className="text-sm font-semibold text-zinc-900">
+                          {item.label}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-zinc-500">
+                          {item.description}
+                        </span>
+                      </Link>
+                    ) : (
+                      <div key={item.href} className="rounded-xl px-3 py-2.5 opacity-60">
+                        <span className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-900">
+                          {item.label}
+                          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium uppercase text-zinc-500">
+                            Soon
+                          </span>
+                        </span>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col gap-1 p-3">
+                <Link
+                  href="/#pricing"
+                  className="rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Pricing
+                </Link>
+                <Link
+                  href="/whats-new"
+                  className="rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  What&apos;s new
+                </Link>
+                <Link
+                  href={APP_SIGN_IN}
+                  className="rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 sm:hidden"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Sign in
+                </Link>
+                <Button
+                  asChild
+                  className="mt-1 rounded-full bg-orange-500 text-white hover:bg-orange-600 sm:hidden"
+                >
+                  <Link href={APP_SIGN_UP} onClick={() => setMobileOpen(false)}>
+                    Get started
                   </Link>
-                ) : (
-                  <div key={item.href} className="rounded-xl px-3 py-2.5 opacity-60">
-                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-900">
-                      {item.label}
-                      <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium uppercase text-zinc-500">
-                        Soon
-                      </span>
-                    </span>
-                  </div>
-                )
-              )}
+                </Button>
+              </div>
             </div>
           </div>
-          <div className="flex flex-col gap-1 p-3">
-            <Link
-              href="/#pricing"
-              className="rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-              onClick={() => setMobileOpen(false)}
-            >
-              Pricing
-            </Link>
-            <Link
-              href="/whats-new"
-              className="rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-              onClick={() => setMobileOpen(false)}
-            >
-              What&apos;s new
-            </Link>
-            <Link
-              href={APP_SIGN_IN}
-              className="rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 sm:hidden"
-              onClick={() => setMobileOpen(false)}
-            >
-              Sign in
-            </Link>
-            <Button
-              asChild
-              className="mt-1 rounded-full bg-orange-500 text-white hover:bg-orange-600 sm:hidden"
-            >
-              <Link href={APP_SIGN_UP} onClick={() => setMobileOpen(false)}>
-                Get started
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
 
-      {mobileOpen ? (
-        <button
-          type="button"
-          className="fixed inset-0 z-30 bg-black/20 md:hidden"
-          aria-label="Close menu overlay"
-          onClick={() => setMobileOpen(false)}
-        />
+          <button
+            type="button"
+            className="fixed inset-0 z-30 bg-black/20 md:hidden"
+            aria-label="Close menu overlay"
+            onClick={() => setMobileOpen(false)}
+          />
+        </>
       ) : null}
     </header>
   );
