@@ -26,6 +26,7 @@ export default async function CreateProjectPage(props) {
   const initialClients = await listClientsForCurrentUser({
     seedSamples: false,
     includeSamples: false,
+    includePortalPeople: false,
   });
   const initialClientId =
     fromQuery && initialClients.some((c) => c.id === fromQuery) ? fromQuery : "";

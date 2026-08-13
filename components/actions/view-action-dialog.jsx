@@ -58,16 +58,17 @@ export function ViewActionDialog({
   canEdit = false,
   onEdit,
 }) {
-  const { sidebar, dashboard } = usePortalProject();
+  const { dashboard } = usePortalProject();
   const freelancerName = dashboard?.freelancerName?.trim() || "You";
   const freelancerAvatar = dashboard?.freelancerAvatar || null;
-  const clientName = sidebar?.clientName?.trim() || "Client";
-  const clientAvatar = sidebar?.clientAvatar || null;
+  // Actions are role-scoped (all clients), not a single primary person.
+  const clientName = "Client side";
+  const clientAvatar = null;
 
   const forClient = action?.owner === "client";
   const ownerName = forClient ? clientName : freelancerName;
   const ownerAvatar = forClient ? clientAvatar : freelancerAvatar;
-  const ownerSubtitle = forClient ? "Shared with client" : "Private · For you";
+  const ownerSubtitle = forClient ? "Shared with all clients on this project" : "Private · For you";
   const dueLabel = formatDueLabel(action?.dueDate);
 
   return (

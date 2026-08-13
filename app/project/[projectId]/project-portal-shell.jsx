@@ -120,6 +120,8 @@ export function ProjectPortalShell({ bundle, children }) {
     clientAvatar: bundle.sidebar?.clientAvatar ?? null,
     freelancerName: bundle.dashboard?.freelancerName,
     freelancerAvatar: bundle.dashboard?.freelancerAvatar ?? null,
+    viewerName: portalBundle.meta?.viewer?.name ?? null,
+    viewerAvatar: portalBundle.meta?.viewer?.avatar ?? null,
   };
 
   const freelancerData = {
@@ -136,6 +138,17 @@ export function ProjectPortalShell({ bundle, children }) {
         <ProjectAppSidebar
           projectData={bundle.sidebar}
           freelancerData={freelancerData}
+          viewer={
+            isFreelancer
+              ? null
+              : isDemo
+                ? {
+                    name: bundle.sidebar?.clientName,
+                    email: bundle.sidebar?.clientEmail,
+                    avatar: bundle.sidebar?.clientAvatar ?? null,
+                  }
+                : (bundle.meta?.viewer ?? null)
+          }
           isFreelancer={isFreelancer}
         />
         <SidebarInset className="flex min-h-screen flex-col">

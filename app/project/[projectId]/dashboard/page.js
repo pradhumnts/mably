@@ -372,7 +372,8 @@ export default function ProjectDashboard() {
   const { sidebar, dashboard, meta } = usePortalProject();
   const isFreelancer = Boolean(meta?.isFreelancer);
   const calendarLink = dashboard.calendarLink?.trim() || "";
-  const clientFirst = sidebar.clientName?.split(/\s+/)[0] || "there";
+  const viewerFirst =
+    (meta?.viewer?.name || dashboard.greetingName || "").trim().split(/\s+/)[0] || "there";
   const freelancerFirst =
     dashboard.freelancerName?.trim()?.split(/\s+/)[0] || "there";
   const freelancerName = dashboard.freelancerName?.trim() || "Freelancer";
@@ -403,7 +404,7 @@ export default function ProjectDashboard() {
         <PortalHome
           projectId={projectId}
           isFreelancer={isFreelancer}
-          greetName={isFreelancer ? freelancerFirst : clientFirst}
+          greetName={isFreelancer ? freelancerFirst : viewerFirst}
           otherPartyName={isFreelancer ? clientName : freelancerName}
           projectName={sidebar.projectName || "Your project"}
         />

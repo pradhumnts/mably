@@ -140,11 +140,14 @@ export function RealtimeChat({
     (message, isOwn) => {
       if (message.authorAvatarUrl) return message.authorAvatarUrl;
       if (isOwn) {
-        return userRole === "client" ? clientAvatar : freelancerAvatar;
+        return selfAvatarUrl || (userRole === "client" ? clientAvatar : freelancerAvatar);
       }
-      return userRole === "client" ? freelancerAvatar : clientAvatar;
+      // Peer without a stored avatar: clients see freelancer; freelancers should not
+      // collapse every client into the primary client snapshot avatar.
+      if (userRole === "client") return freelancerAvatar;
+      return null;
     },
-    [clientAvatar, freelancerAvatar, userRole]
+    [clientAvatar, freelancerAvatar, selfAvatarUrl, userRole]
   );
 
   const canSend = Boolean(

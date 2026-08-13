@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -122,8 +123,30 @@ export function ClientDetailsDialog({
                   {(client.name || "?").charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <h3 className="text-base font-semibold">{client.name}</h3>
+              <div className="min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-base font-semibold">{client.name}</h3>
+                  {client.accessRole === "primary" ? (
+                    <Badge variant="secondary" className="text-[10px]">
+                      Primary client
+                    </Badge>
+                  ) : null}
+                  {client.accessRole === "additional" ? (
+                    <Badge variant="secondary" className="text-[10px]">
+                      Additional access
+                    </Badge>
+                  ) : null}
+                  {client.portalStatus === "invited" ? (
+                    <Badge variant="outline" className="text-[10px]">
+                      Invite pending
+                    </Badge>
+                  ) : null}
+                  {client.portalStatus === "joined" ? (
+                    <Badge variant="outline" className="text-[10px]">
+                      Joined
+                    </Badge>
+                  ) : null}
+                </div>
                 <p className="text-muted-foreground">{client.email}</p>
               </div>
             </div>
@@ -197,11 +220,12 @@ export function ClientDetailsDialog({
               <div>
                 <h3 className="text-xl font-semibold">Projects</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  List of all the projects you have with{" "}
-                  {(client.name || "").trim().split(/\s+/)[0] || "this client"}.
+                  {client.isPortalOnly
+                    ? "Projects where this person has portal access."
+                    : `List of all the projects you have with ${(client.name || "").trim().split(/\s+/)[0] || "this client"}.`}
                 </p>
               </div>
-              {!client.isSample ? (
+              {!client.isSample && !client.isPortalOnly ? (
                 <Button
                   className="w-full shrink-0 gap-1 rounded-lg font-semibold sm:ml-auto sm:mb-[2px] sm:w-auto"
                   asChild

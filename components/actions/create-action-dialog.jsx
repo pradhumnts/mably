@@ -73,11 +73,12 @@ export function CreateActionDialog({
   action = null,
   onSaved,
 }) {
-  const { sidebar, dashboard } = usePortalProject();
+  const { dashboard } = usePortalProject();
   const freelancerName = dashboard?.freelancerName?.trim() || "You";
   const freelancerAvatar = dashboard?.freelancerAvatar || null;
-  const clientName = sidebar?.clientName?.trim() || "Client";
-  const clientAvatar = sidebar?.clientAvatar || null;
+  // Actions are role-scoped (all clients), not a single primary person.
+  const clientName = "Client side";
+  const clientAvatar = null;
 
   const isEdit = Boolean(action?.id);
   const [title, setTitle] = useState("");

@@ -7,6 +7,7 @@ import {
   getDemoProjectPortalBundle,
   resolveDemoFreelancerFromSupabase,
 } from "@/lib/data/demo-project";
+import { ensureProjectPortalMembership } from "@/lib/actions/project-stakeholders";
 import { ProjectPortalShell } from "./project-portal-shell";
 
 export default async function ProjectLayout({ children, params }) {
@@ -27,6 +28,9 @@ export default async function ProjectLayout({ children, params }) {
       </>
     );
   }
+
+  // Promote pending invite / primary invite_email into project_members when eligible.
+  await ensureProjectPortalMembership(projectId);
 
   const bundle = await getProjectPortalBundle(projectId);
 

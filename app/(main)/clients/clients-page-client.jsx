@@ -28,6 +28,7 @@ import { useEffect, useState } from "react";
 
 export function ClientsPageClient({ initialClients }) {
   const router = useRouter();
+  const [clients, setClients] = useState(() => initialClients ?? []);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedClient, setSelectedClient] = useState(null);
@@ -41,6 +42,10 @@ export function ClientsPageClient({ initialClients }) {
   const itemsPerPage = 10;
 
   useEffect(() => {
+    setClients(initialClients ?? []);
+  }, [initialClients]);
+
+  useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
 
@@ -50,10 +55,13 @@ export function ClientsPageClient({ initialClients }) {
       setClientProjectsLoading(false);
       return;
     }
+
     let cancelled = false;
     setClientProjectsLoading(true);
     (async () => {
-      const res = await getProjectsForClient(selectedClient.id);
+      const res = await getProjectsForClient(selectedClient.id, {
+        portalProjectIds: selectedClient.portalProjectIds ?? [],
+      });
       if (!cancelled) {
         setClientProjects(res.ok ? res.projects : []);
         setClientProjectsLoading(false);
@@ -62,13 +70,13 @@ export function ClientsPageClient({ initialClients }) {
     return () => {
       cancelled = true;
     };
-  }, [dialogOpen, selectedClient?.id]);
+  }, [dialogOpen, selectedClient]);
 
-  const filteredClients = initialClients.filter((client) => {
+  const filteredClients = clients.filter((client) => {
     const searchLower = searchQuery.toLowerCase();
     return (
-      client.name.toLowerCase().includes(searchLower) ||
-      client.email.toLowerCase().includes(searchLower) ||
+      (client.name || "").toLowerCase().includes(searchLower) ||
+      (client.email || "").toLowerCase().includes(searchLower) ||
       (client.location || "").toLowerCase().includes(searchLower) ||
       (client.phone || "").includes(searchQuery)
     );
@@ -108,11 +116,13 @@ export function ClientsPageClient({ initialClients }) {
   };
 
   const openEditClient = (client) => {
+    if (client?.isPortalOnly) return;
     setClientBeingEdited(client);
     setClientFormOpen(true);
   };
 
   const requestDeleteClient = (client) => {
+    if (client?.isPortalOnly) return;
     setClientPendingDeletion(client);
     setDeleteDialogOpen(true);
   };
@@ -230,7 +240,7 @@ export function ClientsPageClient({ initialClients }) {
         }}
         client={clientBeingEdited}
         onSaved={() => router.refresh()}
-        existingClients={initialClients}
+        existingClients={clients}
       />
 
       <DeleteClientDialog

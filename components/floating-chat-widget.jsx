@@ -24,6 +24,8 @@ import { toast } from "sonner";
  *     clientAvatar?: string | null;
  *     freelancerName?: string;
  *     freelancerAvatar?: string | null;
+ *     viewerName?: string | null;
+ *     viewerAvatar?: string | null;
  *   };
  * }}
  */
@@ -42,8 +44,14 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
   const clientName = h?.clientName?.trim() || portalChatPersonas?.clientName || "Client";
   const freelancerName = h?.freelancerName?.trim() || portalChatPersonas?.freelancerName || "Freelancer";
   const projectName = h?.projectName?.trim() || portalChatPersonas?.projectName || "Project";
-  const senderDisplayName = userRole === "client" ? clientName : freelancerName;
-  const selfAvatarUrl = userRole === "client" ? clientAvatar : freelancerAvatar;
+  const viewerName =
+    portalChatPersonas?.viewerName?.trim() ||
+    (userRole === "client" ? clientName : freelancerName);
+  const viewerAvatar =
+    portalChatPersonas?.viewerAvatar ??
+    (userRole === "client" ? clientAvatar : freelancerAvatar);
+  const senderDisplayName = userRole === "client" ? viewerName : freelancerName;
+  const selfAvatarUrl = userRole === "client" ? viewerAvatar : freelancerAvatar;
 
   useEffect(() => {
     const timer = setTimeout(() => setIntroPhase("avatar"), 1800);

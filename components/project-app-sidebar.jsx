@@ -52,7 +52,13 @@ function SidebarLogo({ projectName, planType, logoUrl }) {
   );
 }
 
-export function ProjectAppSidebar({ projectData, freelancerData, isFreelancer = false, ...props }) {
+export function ProjectAppSidebar({
+  projectData,
+  freelancerData,
+  viewer = null,
+  isFreelancer = false,
+  ...props
+}) {
   const pathname = usePathname();
   const params = useParams();
   const projectId = params.projectId;
@@ -152,9 +158,10 @@ export function ProjectAppSidebar({ projectData, freelancerData, isFreelancer = 
         avatar: freelancerData?.avatar || null,
       }
     : {
-        name: projectData?.clientName || "User",
-        email: projectData?.clientEmail || "user@example.com",
-        avatar: projectData?.clientAvatar || null,
+        // Signed-in stakeholder — not always the project's primary client snapshot.
+        name: viewer?.name || projectData?.clientName || "User",
+        email: viewer?.email || projectData?.clientEmail || "",
+        avatar: viewer?.avatar || projectData?.clientAvatar || null,
       };
   
   return (

@@ -127,6 +127,7 @@ export function AddClientDialog({
     trimmedEmail && Array.isArray(existingClients)
       ? existingClients.find(
           (c) =>
+            !c?.isPortalOnly &&
             (c?.email || "").trim().toLowerCase() === trimmedEmail &&
             (!isEdit || String(c?.id) !== String(client?.id))
         )

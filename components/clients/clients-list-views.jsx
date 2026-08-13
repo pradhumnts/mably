@@ -21,7 +21,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Phone, MapPin, Clock, MoreVertical, ArrowUpDown } from "lucide-react";
 
+function accessBadgeLabel(client) {
+  if (client?.accessRole === "primary") return "Primary client";
+  if (client?.accessRole === "additional") return "Additional access";
+  return null;
+}
+
 function ClientRowMenu({ client, onView, onEdit, onDelete }) {
+  const canManageCrm = !client.isPortalOnly;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild className="border border-slate-200">
@@ -36,7 +44,7 @@ function ClientRowMenu({ client, onView, onEdit, onDelete }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="border border-slate-200">
-        {!client.isSample ? (
+        {canManageCrm && !client.isSample ? (
           <DropdownMenuItem asChild>
             <Link
               href={`/projects/new?clientId=${encodeURIComponent(client.id)}`}
@@ -55,38 +63,60 @@ function ClientRowMenu({ client, onView, onEdit, onDelete }) {
         >
           View Details
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(client);
-          }}
-        >
-          Edit Client
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="text-destructive focus:text-destructive"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(client);
-          }}
-        >
-          Delete Client
-        </DropdownMenuItem>
+        {canManageCrm ? (
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(client);
+            }}
+          >
+            Edit Client
+          </DropdownMenuItem>
+        ) : null}
+        {canManageCrm ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(client);
+              }}
+            >
+              Delete Client
+            </DropdownMenuItem>
+          </>
+        ) : null}
+        {!canManageCrm && client.portalProjectIds?.[0] ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/project/${client.portalProjectIds[0]}/settings`}
+                className="cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Manage in project
+              </Link>
+            </DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
 function ClientIdentity({ client, avatarClassName = "h-9 w-9" }) {
+  const accessLabel = accessBadgeLabel(client);
+
   return (
-    <div className="flex min-w-0 flex-1 items-start gap-3">
+    <div className="flex min-w-0 flex-1 items-center gap-3">
       <Avatar className={`${avatarClassName} shrink-0`}>
         <AvatarImage src={client.avatar || undefined} alt={client.name} />
         <AvatarFallback>{(client.name || "?").charAt(0).toUpperCase()}</AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="truncate font-medium">{client.name}</span>
           {client.isSample ? (
             <Badge
@@ -97,7 +127,17 @@ function ClientIdentity({ client, avatarClassName = "h-9 w-9" }) {
             </Badge>
           ) : null}
         </div>
-        <p className="truncate text-sm text-muted-foreground">{client.email}</p>
+        <div className="mt-0.5 flex min-w-0 items-center gap-2">
+          <p className="truncate text-sm text-muted-foreground">{client.email}</p>
+          {accessLabel ? (
+            <Badge
+              variant="secondary"
+              className="h-5 shrink-0 px-1.5 text-[10px] font-medium text-muted-foreground"
+            >
+              {accessLabel}
+            </Badge>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -178,13 +218,11 @@ export function ClientsListViews({ clients, onClientClick, onEditClient, onReque
             {clients.map((client) => (
               <TableRow
                 key={client.id}
-                className="group h-16 cursor-pointer border-none hover:bg-zinc-100"
+                className="group min-h-16 cursor-pointer border-none hover:bg-zinc-100"
                 onClick={() => onClientClick(client)}
               >
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <ClientIdentity client={client} />
-                  </div>
+                <TableCell className="py-3">
+                  <ClientIdentity client={client} />
                 </TableCell>
                 <TableCell className="text-foreground">
                   {client.phone?.trim() ? client.phone : "—"}

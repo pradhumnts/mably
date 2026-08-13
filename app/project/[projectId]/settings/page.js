@@ -51,6 +51,7 @@ import {
   DEFAULT_BRAND_COLOR_HEX,
 } from "@/components/brand-color-field";
 import { PortalBrandPreview } from "@/components/create-project/portal-brand-preview";
+import { ProjectPeopleSettings } from "@/components/project-people-settings";
 
 function parseIsoDate(iso) {
   if (!iso || typeof iso !== "string") return undefined;
@@ -163,7 +164,7 @@ export default function ProjectSettings() {
       fullName: r.profile.fullName,
       email: r.profile.email,
       phone: r.profile.phone,
-      company: r.project.clientNameSnapshot || "",
+      company: r.project.name || "",
       avatar: r.profile.avatarUrl ?? "",
     });
     return true;
@@ -425,13 +426,14 @@ export default function ProjectSettings() {
               <TabsList
                 className={
                   userRole === "freelancer"
-                    ? "grid w-fit grid-cols-3 mb-6"
+                    ? "grid w-fit grid-cols-4 mb-6"
                     : "grid w-fit grid-cols-3 mb-6"
                 }
               >
                 {userRole === "freelancer" ? (
                   <>
                     <TabsTrigger value="project-info">Project Information</TabsTrigger>
+                    <TabsTrigger value="people">People</TabsTrigger>
                     <TabsTrigger value="branding">Branding</TabsTrigger>
                     <TabsTrigger value="notifications">Notifications</TabsTrigger>
                   </>
@@ -578,6 +580,12 @@ export default function ProjectSettings() {
                       </Button>
                     </CardContent>
                   </Card>
+                </TabsContent>
+              )}
+
+              {userRole === "freelancer" && (
+                <TabsContent value="people">
+                  <ProjectPeopleSettings projectId={String(projectId)} disabled={isDemo} />
                 </TabsContent>
               )}
 
@@ -1023,7 +1031,7 @@ export default function ProjectSettings() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="company">Company (from project)</Label>
+                        <Label htmlFor="company">Project</Label>
                         <Input id="company" value={contactInfo.company} disabled />
                         <p className="text-xs text-muted-foreground">
                           Shown as captured on the project; ask your freelancer to update the project if it is wrong.
