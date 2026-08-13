@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 export const POLAR_PLAN_STARTER_FEATURES = [
   "1 active project",
   "Full client portal",
+  "Invite multiple clients",
   "Files & links library",
   "Project chat",
   "Activity feed",
@@ -41,7 +42,6 @@ export const POLAR_PLAN_GROWTH_FEATURES = [
   "Everything in Starter",
   "Unlimited projects",
   `${GROWTH_LIBRARY_TOTAL_LABEL} storage · up to ${GROWTH_LIBRARY_MAX_FILE_LABEL} per file`,
-  "Custom domain",
   "Hide Powered by tag",
   "Priority support",
 ];
@@ -131,15 +131,7 @@ function PlanCard({
           {features.map((f) => (
             <li key={f} className="flex gap-2">
               <Check className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
-              <span className="flex flex-wrap items-center gap-2">
-                <span>{f}</span>
-                {f.toLowerCase().includes("custom domain") ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-300/50 bg-white/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-700 shadow-sm dark:border-orange-700/40 dark:bg-orange-950/40 dark:text-orange-200">
-                    <Sparkles className="h-3 w-3 shrink-0" aria-hidden />
-                    Coming soon
-                  </span>
-                ) : null}
-              </span>
+              <span>{f}</span>
             </li>
           ))}
         </ul>

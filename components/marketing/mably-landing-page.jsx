@@ -232,11 +232,6 @@ const GALLERY = [
         description: "Set expectations from the first click — clear, calm, professional.",
       },
       {
-        icon: Shield,
-        title: "Custom domain",
-        description: "On Growth, serve the workspace from your own domain.",
-      },
-      {
         icon: Users,
         title: "Part of how you sell",
         description: "Clients see a polished process before the work even starts.",
@@ -539,7 +534,6 @@ const PRICING = [
       "Everything in Starter",
       "Unlimited projects",
       "25 GB storage (no per-file cap)",
-      "Custom domain",
       "Hide \"Powered by\" badge",
       "Priority support",
     ],
