@@ -269,6 +269,9 @@ export function MarketingHeader({ theme = "dark" }) {
           <Link href="/whats-new" className={cn("transition", navHover)}>
             What&apos;s new
           </Link>
+          <Link href="/blog" className={cn("transition", navHover)}>
+            Blog
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2">
@@ -359,6 +362,13 @@ export function MarketingHeader({ theme = "dark" }) {
                   onClick={() => setMobileOpen(false)}
                 >
                   What&apos;s new
+                </Link>
+                <Link
+                  href="/blog"
+                  className="rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Blog
                 </Link>
                 <Link
                   href={APP_SIGN_IN}

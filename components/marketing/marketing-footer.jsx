@@ -38,7 +38,7 @@ const FOOTER_COLUMNS = [
     title: "Resources",
     links: [
       { label: "What’s new", href: "/whats-new" },
-      { label: "Blog", soon: true },
+      { label: "Blog", href: "/blog" },
       { label: "Compare", soon: true },
     ],
   },
@@ -56,9 +56,9 @@ const FOOTER_COLUMNS = [
  * Shared marketing footer — brand column + categorized link columns.
  * @param {{ blurb?: string }} props — per-page tagline under the logo.
  */
-export function MarketingFooter({ blurb }) {
+export function MarketingFooter({ blurb, noBorder = false }) {
   return (
-    <footer className="border-t border-zinc-100 bg-[#faf9f6] px-4 pb-10 pt-16 sm:px-5 sm:pt-20">
+    <footer className={`${noBorder ? "pt-10 sm:pt-12" : "border-t border-zinc-100 pt-16 sm:pt-20"} bg-[#faf9f6] px-4 pb-10 sm:px-5`}>
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)] lg:gap-20">
           {/* Brand */}
