@@ -16,7 +16,7 @@ const FOOTER_COLUMNS = [
   {
     title: "Product",
     links: [
-      { label: "Pricing", href: "/#pricing" },
+      { label: "Pricing", href: "/pricing" },
       { label: "Explore the demo", href: APP_DEMO },
       { label: "Get started", href: APP_SIGN_UP },
       { label: "Sign in", href: APP_SIGN_IN },

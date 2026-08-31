@@ -62,7 +62,7 @@ export const MARKETING_SOLUTIONS = [
 
 /**
  * Shared marketing header — landing glass pill + Solutions mega menu.
- * Pricing stays as /#pricing; other hash scroll links are removed.
+ * Pricing links to /pricing.
  * @param {{ theme?: "dark" | "light" }} props — "dark" for heroes with dark
  * media behind the nav (white text at top); "light" for white heroes.
  */
@@ -263,7 +263,7 @@ export function MarketingHeader({ theme = "dark" }) {
             </div>
           </div>
 
-          <Link href="/#pricing" className={cn("transition", navHover)}>
+          <Link href="/pricing" className={cn("transition", navHover)}>
             Pricing
           </Link>
           <Link href="/whats-new" className={cn("transition", navHover)}>
@@ -347,7 +347,7 @@ export function MarketingHeader({ theme = "dark" }) {
               </div>
               <div className="flex flex-col gap-1 p-3">
                 <Link
-                  href="/#pricing"
+                  href="/pricing"
                   className="rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
                   onClick={() => setMobileOpen(false)}
                 >

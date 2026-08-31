@@ -62,7 +62,7 @@ export function WhatsNewPage() {
             />
           </Link>
           <nav className="flex items-center gap-5 text-sm text-zinc-500">
-            <Link href="/#pricing" className="transition hover:text-orange-600">
+            <Link href="/pricing" className="transition hover:text-orange-600">
               Pricing
             </Link>
             <Link href={appPath("/")} className="transition hover:text-orange-600">
