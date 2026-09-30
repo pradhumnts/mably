@@ -1,5 +1,9 @@
 import { getCanonicalMarketingUrl } from "@/lib/marketing/social-share-metadata";
 import { LEGAL_SLUGS } from "@/lib/marketing/legal-pages";
+import { getAllBlogPosts } from "@/lib/marketing/blog-posts";
+
+/** Picks up new blog posts at most every 5 minutes, or straight away when a post is published from Mably HQ. */
+export const revalidate = 300;
 
 const FOR_PATHS = [
   "/for/freelancers",
@@ -12,7 +16,7 @@ const FOR_PATHS = [
 ];
 
 /** Marketing sitemap for mably.io — only publicly indexable pages. */
-export default function sitemap() {
+export default async function sitemap() {
   const base = getCanonicalMarketingUrl();
   const now = new Date();
 
@@ -39,6 +43,26 @@ export default function sitemap() {
       changeFrequency: "monthly",
       priority: 0.8,
     });
+  }
+
+  try {
+    const posts = await getAllBlogPosts();
+    entries.push({
+      url: `${base}/blog`,
+      lastModified: posts[0] ? new Date(posts[0].publishedAt) : now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    });
+    for (const post of posts) {
+      entries.push({
+        url: `${base}/blog/${post.slug}`,
+        lastModified: new Date(post.updatedAt ?? post.publishedAt),
+        changeFrequency: "monthly",
+        priority: 0.7,
+      });
+    }
+  } catch {
+    // Blog database unreachable: still serve the rest of the sitemap.
   }
 
   for (const slug of LEGAL_SLUGS) {

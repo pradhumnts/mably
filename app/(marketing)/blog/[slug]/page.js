@@ -1,24 +1,43 @@
 import { notFound } from "next/navigation";
-import { getBlogPost, getAllBlogPosts } from "@/lib/marketing/blog-posts";
+import {
+  getAllBlogPosts,
+  getBlogPost,
+  getBlogPostsBySlugs,
+} from "@/lib/marketing/blog-posts";
 import {
   getCanonicalMarketingUrl,
   getSocialShareMetadata,
 } from "@/lib/marketing/social-share-metadata";
 import { BlogPostClient } from "@/components/marketing/blog-post-client";
 
-export function generateStaticParams() {
-  return getAllBlogPosts().map((post) => ({ slug: post.slug }));
+/** Rebuilt at most every 5 minutes, or straight away when a post is published from Mably HQ. */
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  try {
+    const posts = await getAllBlogPosts();
+    return posts.map((post) => ({ slug: post.slug }));
+  } catch {
+    // Database unreachable at build time: posts render on first request instead.
+    return [];
+  }
+}
+
+function absoluteImageUrl(src) {
+  if (!src) return null;
+  return src.startsWith("/") ? `${getCanonicalMarketingUrl()}${encodeURI(src)}` : src;
 }
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const post = getBlogPost(slug);
+  const post = await getBlogPost(slug);
   if (!post) return {};
 
   const title = `${post.title} — Mably Blog`;
   const description = post.description;
   const url = `${getCanonicalMarketingUrl()}/blog/${post.slug}`;
   const base = getSocialShareMetadata({ title, description, url });
+  const cover = absoluteImageUrl(post.coverImage);
 
   return {
     title,
@@ -28,17 +47,22 @@ export async function generateMetadata({ params }) {
       ...base.openGraph,
       type: "article",
       publishedTime: post.publishedAt,
+      modifiedTime: post.updatedAt,
       authors: [post.author.name],
+      ...(cover ? { images: [{ url: cover, alt: post.coverAlt || post.title }] } : {}),
     },
+    ...(cover ? { twitter: { ...base.twitter, images: [cover] } } : {}),
   };
 }
 
 export default async function BlogPostPage({ params }) {
   const { slug } = await params;
-  const post = getBlogPost(slug);
+  const post = await getBlogPost(slug);
   if (!post) notFound();
 
+  const relatedPosts = await getBlogPostsBySlugs(post.related);
   const canonicalUrl = `${getCanonicalMarketingUrl()}/blog/${post.slug}`;
+  const cover = absoluteImageUrl(post.coverImage);
 
   const articleSchema = {
     "@context": "https://schema.org",
@@ -46,7 +70,8 @@ export default async function BlogPostPage({ params }) {
     headline: post.title,
     description: post.description,
     datePublished: post.publishedAt,
-    dateModified: post.publishedAt,
+    dateModified: post.updatedAt ?? post.publishedAt,
+    ...(cover ? { image: [cover] } : {}),
     author: {
       "@type": "Organization",
       name: post.author.name,
@@ -81,15 +106,20 @@ export default async function BlogPostPage({ params }) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(articleSchema) }}
       />
       {faqSchema && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+          dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }}
         />
       )}
-      <BlogPostClient post={post} />
+      <BlogPostClient post={post} relatedPosts={relatedPosts} />
     </>
   );
+}
+
+/** JSON for a <script> tag — escapes "<" so post text can't close the tag. */
+function jsonLd(value) {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
 }

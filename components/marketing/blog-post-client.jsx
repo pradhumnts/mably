@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { MarketingHeader } from "@/components/marketing/marketing-header";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
-import { formatBlogDate, getBlogPost, getAllBlogPosts } from "@/lib/marketing/blog-posts";
+import { formatBlogDate, safeBlogUrl } from "@/lib/marketing/blog-format";
 import {
   EARLY_OFFER_COPY,
   EARLY_OFFER_DISCOUNT_PERCENT,
@@ -185,6 +185,22 @@ function ShareBar({ post }) {
   );
 }
 
+/** Link to a safe URL; site-relative links stay in the same tab. Unsafe URLs render as text. */
+function InlineLink({ href, className, children }) {
+  const safe = safeBlogUrl(href);
+  if (!safe) return <>{children}</>;
+  const external = !safe.startsWith("/") && !safe.startsWith("#");
+  return (
+    <a
+      href={safe}
+      className={className}
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+    >
+      {children}
+    </a>
+  );
+}
+
 /**
  * Tiny inline markdown parser.
  * Supports (in priority order):
@@ -209,18 +225,18 @@ function parseInline(text) {
     if (match[1] && match[2]) {
       // **[text](url)**
       nodes.push(
-        <a key={key++} href={match[2]} target="_blank" rel="noopener noreferrer"
+        <InlineLink key={key++} href={match[2]}
           className="font-semibold text-zinc-800 underline underline-offset-2 decoration-zinc-300 transition hover:text-orange-500 hover:decoration-orange-400">
           {match[1]}
-        </a>
+        </InlineLink>
       );
     } else if (match[3] && match[4]) {
       // [text](url)
       nodes.push(
-        <a key={key++} href={match[4]} target="_blank" rel="noopener noreferrer"
+        <InlineLink key={key++} href={match[4]}
           className="font-medium text-zinc-800 underline underline-offset-2 decoration-zinc-300 transition hover:text-orange-500 hover:decoration-orange-400">
           {match[3]}
-        </a>
+        </InlineLink>
       );
     } else if (match[5]) {
       // **bold**
@@ -329,18 +345,33 @@ function Block({ block }) {
           </a>
         </div>
       );
+    case "image": {
+      const src = safeBlogUrl(block.url);
+      if (!src) return null;
+      return (
+        <figure className="mt-8">
+          <img
+            src={src}
+            alt={block.alt || ""}
+            className="w-full rounded-2xl"
+            loading="lazy"
+            draggable={false}
+          />
+          {block.caption && (
+            <figcaption className="mt-3 text-center text-sm text-zinc-400">
+              <Inline text={block.caption} />
+            </figcaption>
+          )}
+        </figure>
+      );
+    }
     default:
       return null;
   }
 }
 
-function RelatedArticles({ slugs }) {
-  const posts = slugs
-    .map((s) => getBlogPost(s))
-    .filter(Boolean)
-    .slice(0, 3);
-
-  if (posts.length === 0) return null;
+function RelatedArticles({ posts }) {
+  if (!posts?.length) return null;
 
   return (
     <div className="mt-16 border-t border-zinc-100 pt-12 pb-16">
@@ -388,7 +419,7 @@ function RelatedArticles({ slugs }) {
   );
 }
 
-export function BlogPostClient({ post }) {
+export function BlogPostClient({ post, relatedPosts = [] }) {
   const [bannerVisible, setBannerVisible] = useState(false);
 
   useEffect(() => {
@@ -458,7 +489,7 @@ export function BlogPostClient({ post }) {
             <div className="mx-auto mt-10 max-w-3xl overflow-hidden rounded-t-2xl px-4 sm:px-6">
               <img
                 src={post.coverImage}
-                alt={post.title}
+                alt={post.coverAlt || post.title}
                 className="w-full rounded-2xl object-cover shadow-sm"
                 draggable={false}
               />
@@ -504,10 +535,10 @@ export function BlogPostClient({ post }) {
         </section>
 
         {/* ── Related articles — full width ── */}
-        {post.related?.length > 0 && (
+        {relatedPosts.length > 0 && (
           <section className="bg-white">
             <div className="mx-auto max-w-7xl px-4 sm:px-5">
-              <RelatedArticles slugs={post.related} />
+              <RelatedArticles posts={relatedPosts} />
             </div>
           </section>
         )}
