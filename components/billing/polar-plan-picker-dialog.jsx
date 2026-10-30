@@ -28,7 +28,8 @@ import { cn } from "@/lib/utils";
 export const POLAR_PLAN_STARTER_FEATURES = [
   "1 active project",
   "Full client portal",
-  "Invite multiple clients",
+  "Invite multiple clients (free)",
+  "Team seats $9 each when they join",
   "Files & links library",
   "Project chat",
   "Activity feed",
@@ -41,6 +42,7 @@ export const POLAR_PLAN_STARTER_FEATURES = [
 export const POLAR_PLAN_GROWTH_FEATURES = [
   "Everything in Starter",
   "Unlimited projects",
+  "Team seats $19 each when they join",
   `${GROWTH_LIBRARY_TOTAL_LABEL} storage · up to ${GROWTH_LIBRARY_MAX_FILE_LABEL} per file`,
   "Hide Powered by tag",
   "Priority support",

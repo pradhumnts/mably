@@ -76,6 +76,8 @@ export async function POST(request) {
     headers: getPolarRequestHeaders(token, { json: true }),
     body: JSON.stringify({
       products: [productId],
+      // Seat-based products: owner is seat 1 (solo). Extra teammates sync later via PATCH.
+      seats: 1,
       customer_email: user.email,
       external_customer_id: user.id,
       // Checkout metadata (may appear on order/subscription payloads).

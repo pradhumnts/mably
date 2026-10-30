@@ -39,14 +39,14 @@ export function MarketingPricingSection({
               className="mt-3 text-balance text-3xl font-semibold tracking-[-0.03em] text-zinc-900 sm:text-4xl lg:text-[2.75rem]"
             >
               One workspace for your clients.
-              <span className="font-normal text-zinc-400"> One honest price for you.</span>
+              <span className="font-normal text-zinc-400"> Plans that grow with seats.</span>
             </h2>
             <p
               data-reveal
               className="mt-4 text-base leading-relaxed text-zinc-500 sm:mt-5 sm:text-lg"
             >
-              Stop stitching together email, Drive, and invoices. Send one branded client portal
-              — clients know what to review, what changed, and what was approved. Cancel anytime.
+              Stop stitching together email, Drive, and invoices. Send one branded client portal —
+              then invite teammates when you need them. Cancel anytime.
             </p>
           </div>
         ) : null}

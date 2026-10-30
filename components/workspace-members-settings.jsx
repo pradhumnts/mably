@@ -67,6 +67,7 @@ export function WorkspaceMembersSettings() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("member");
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
+  const [seatBilling, setSeatBilling] = useState(null);
 
   const refresh = useCallback(async () => {
     const res = await listWorkspaceTeam();
@@ -79,6 +80,7 @@ export function WorkspaceMembersSettings() {
     setMembers(res.members || []);
     setInvites(res.invites || []);
     setInvitesEnabled(Boolean(res.invitesEnabled));
+    setSeatBilling(res.seatBilling ?? null);
     setLoading(false);
   }, []);
 
@@ -97,6 +99,7 @@ export function WorkspaceMembersSettings() {
         setMembers(teamRes.members || []);
         setInvites(teamRes.invites || []);
         setInvitesEnabled(Boolean(teamRes.invitesEnabled));
+        setSeatBilling(teamRes.seatBilling ?? null);
       }
       if (projectRes.ok) setProjects(projectRes.projects || []);
       setLoading(false);
@@ -170,6 +173,29 @@ export function WorkspaceMembersSettings() {
               everything. Members only see the projects listed under their name — you can
               change that when you invite them, or later in a project’s Settings → Team.
             </CardDescription>
+            {seatBilling?.paid ? (
+              <p className="text-sm text-muted-foreground pt-1">
+                {seatBilling.seats} seat{seatBilling.seats === 1 ? "" : "s"} ·{" "}
+                <span className="capitalize">{seatBilling.planKey}</span>
+                {seatBilling.founding ? (
+                  <>
+                    {" "}
+                    · founding on your plan; extra teammates $
+                    {String(seatBilling.planKey).toLowerCase() === "growth" ? "19" : "9"}
+                    /mo each
+                  </>
+                ) : (
+                  <>
+                    {" "}
+                    × $
+                    {Number(seatBilling.dollarsPerSeat) % 1 === 0
+                      ? String(Math.round(Number(seatBilling.dollarsPerSeat)))
+                      : Number(seatBilling.dollarsPerSeat).toFixed(2)}
+                    /mo each
+                  </>
+                )}
+              </p>
+            ) : null}
           </div>
           {canManage && invitesEnabled ? (
             <Button type="button" onClick={() => setInviteOpen(true)} className="shrink-0">
@@ -256,7 +282,11 @@ export function WorkspaceMembersSettings() {
                           const res = await removeWorkspaceMember(m.userId);
                           if (!res.ok) toast.error(res.error || "Could not remove");
                           else {
-                            toast.success("Member removed");
+                            if (res.warning) {
+                              toast.message("Member removed", { description: res.warning });
+                            } else {
+                              toast.success("Member removed");
+                            }
                             await refresh();
                           }
                         }}
@@ -322,6 +352,8 @@ export function WorkspaceMembersSettings() {
             <DialogTitle>Invite teammate</DialogTitle>
             <DialogDescription>
               Admins get the full workspace. Members only open the projects you select.
+              You’ll be charged for an extra seat when they accept — pending invites stay free.
+              Client portal guests are still free.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={onInvite} className="space-y-5">

@@ -177,6 +177,9 @@ export function BillingPageClient({
                 <code className="text-xs">POLAR_PRODUCT_ID_STARTER_FOUNDING</code>, and{" "}
                 <code className="text-xs">POLAR_PRODUCT_ID_GROWTH_FOUNDING</code> (and{" "}
                 <code className="text-xs">POLAR_SERVER=sandbox|production</code>), then redeploy.
+                Products must use Polar <strong>seat-based</strong> / graduated pricing ($9 /
+                $19 list per extra seat; founding twins discount the owner’s first seat only).
+                Checkout starts at 1 seat.
                 When creating the Organization Access Token in Polar, include the{" "}
                 <code className="text-xs">customer_sessions:write</code> scope so “Manage
                 subscription” can open the customer portal. Optionally set{" "}
@@ -197,7 +200,22 @@ export function BillingPageClient({
                   <span className="font-medium text-foreground">{subscription.plan_key ?? "—"}</span>{" "}
                   · Status:{" "}
                   <span className="font-medium text-foreground">{subscription.status}</span>
+                  {Number(subscription.seats) >= 1 ? (
+                    <>
+                      {" "}
+                      · Seats:{" "}
+                      <span className="font-medium text-foreground normal-case">
+                        {Math.floor(Number(subscription.seats))} billed
+                      </span>
+                    </>
+                  ) : null}
                 </p>
+                {Number(subscription.seats) >= 1 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Team seats bill per occupied member ($9 Starter / $19 Growth each). Portal
+                    clients stay free. Invites are free until accepted.
+                  </p>
+                ) : null}
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
                 {canManage ? (
