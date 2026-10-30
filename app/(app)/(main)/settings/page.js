@@ -35,8 +35,18 @@ export default async function SettingsPage({ searchParams }) {
     subscription = await getFreelancerSubscriptionForUser();
   }
 
+  const allowedTabs = new Set([
+    "profile",
+    "subscription",
+    "branding",
+    "notifications",
+    "calendar",
+    "portal",
+    "members",
+  ]);
+  const requested = typeof sp?.tab === "string" ? sp.tab : "profile";
   const initialTab =
-    isFreelancer && sp?.tab === "subscription" ? "subscription" : "profile";
+    isFreelancer && allowedTabs.has(requested) ? requested : "profile";
 
   const foundingPricing = isFreelancer ? await getFoundingPricingState() : null;
   const preferFoundingCheckout =

@@ -5,6 +5,7 @@ import { checkoutErrorMessageFromPayload } from "@/lib/billing/format-polar-api-
 import {
   getPolarAccessToken,
   getPolarApiBase,
+  getPolarRequestHeaders,
   getPolarServer,
   resolvePolarCheckoutProductId,
 } from "@/lib/billing/polar-env";
@@ -72,10 +73,7 @@ export async function POST(request) {
 
   const res = await fetch(`${getPolarApiBase()}/checkouts/`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
+    headers: getPolarRequestHeaders(token, { json: true }),
     body: JSON.stringify({
       products: [productId],
       customer_email: user.email,

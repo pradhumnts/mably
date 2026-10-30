@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Bell, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,10 @@ import { cn } from "@/lib/utils";
 
 /** Base panel width 24rem + 20% */
 const NOTIFICATIONS_PANEL_WIDTH = "28.8rem";
+
+const POLL_INTERVAL_MS = 45_000;
+/** Most notification types are written at event time; only time-based ones need the rebuild. */
+const FULL_SYNC_INTERVAL_MS = 5 * 60_000;
 
 /**
  * @param {Record<string, unknown>} item
@@ -64,26 +68,45 @@ export function NotificationsMenuItem() {
     if (sync.ok) clearLegacyLocalReadNotificationIds();
   }, []);
 
-  const loadNotifications = useCallback(async () => {
-    setLoading(true);
-    try {
-      await syncLegacyReads();
-      const res = await fetchFreelancerNotificationsAction();
-      if (res.ok) setItems(res.items ?? []);
-    } finally {
-      setLoading(false);
-    }
-  }, [syncLegacyReads]);
+  const lastFullSyncRef = useRef(0);
+
+  /**
+   * Server actions run one at a time per tab, so background refreshes must stay cheap:
+   * `sync: false` is a single inbox read instead of a full derived rebuild.
+   */
+  const loadNotifications = useCallback(
+    async ({ sync = true, background = false } = {}) => {
+      if (!background) setLoading(true);
+      try {
+        await syncLegacyReads();
+        const res = await fetchFreelancerNotificationsAction({ sync });
+        if (sync) lastFullSyncRef.current = Date.now();
+        if (res.ok && res.items) setItems(res.items);
+      } finally {
+        if (!background) setLoading(false);
+      }
+    },
+    [syncLegacyReads]
+  );
+
+  const refreshInBackground = useCallback(() => {
+    if (document.visibilityState !== "visible") return;
+    const sync = Date.now() - lastFullSyncRef.current >= FULL_SYNC_INTERVAL_MS;
+    void loadNotifications({ sync, background: true });
+  }, [loadNotifications]);
 
   useEffect(() => {
     void loadNotifications();
   }, [loadNotifications]);
 
   useEffect(() => {
-    const refresh = () => void loadNotifications();
-    const interval = window.setInterval(refresh, 45_000);
-    return () => window.clearInterval(interval);
-  }, [loadNotifications]);
+    const interval = window.setInterval(refreshInBackground, POLL_INTERVAL_MS);
+    document.addEventListener("visibilitychange", refreshInBackground);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshInBackground);
+    };
+  }, [refreshInBackground]);
 
   useEffect(() => {
     if (!open) return;
@@ -102,7 +125,7 @@ export function NotificationsMenuItem() {
   const handleDismiss = useCallback(
     async (entry) => {
       const res = await dismissFreelancerNotificationAction(entry);
-      if (res.ok) void loadNotifications();
+      if (res.ok) void loadNotifications({ sync: false, background: true });
     },
     [loadNotifications]
   );
@@ -110,7 +133,7 @@ export function NotificationsMenuItem() {
   const handleDismissAll = useCallback(async () => {
     const entries = items.filter((n) => !n.readAt).map(dismissEntryFromItem);
     const res = await dismissFreelancerNotificationsAction(entries);
-    if (res.ok) void loadNotifications();
+    if (res.ok) void loadNotifications({ sync: false, background: true });
   }, [items, loadNotifications]);
 
   const unreadCount = useMemo(

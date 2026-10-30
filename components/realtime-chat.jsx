@@ -34,6 +34,7 @@ export function RealtimeChat({
   selfAvatarUrl,
   onRemoteMessage,
   disabled = false,
+  messagesLoading = false,
 }) {
   const { containerRef, scrollToBottom } = useChatScroll();
   const isDemoChat = isDemoProjectId(String(projectId));
@@ -229,7 +230,7 @@ export function RealtimeChat({
           ref={containerRef}
           className="relative z-10 flex h-full min-h-0 flex-col overflow-y-auto p-3 backdrop-blur-sm sm:p-4"
         >
-          {!conversationId ? (
+          {!conversationId || (messagesLoading && sortedMessages.length === 0) ? (
             <div className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">
               Loading chat…
             </div>

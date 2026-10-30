@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Toaster } from "@/components/ui/sonner";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { getProjectPortalBundle } from "@/lib/data/project-portal";
 import {
   isDemoProjectId,
@@ -14,10 +15,7 @@ export default async function ProjectLayout({ children, params }) {
   const { projectId } = await params;
 
   if (isDemoProjectId(projectId)) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const [supabase, user] = await Promise.all([createClient(), getCurrentUser()]);
     // Demo is public — guests get a fixed freelancer persona; signed-in users stay personalized.
     const freelancer = await resolveDemoFreelancerFromSupabase(supabase, user);
     const demoBundle = getDemoProjectPortalBundle(freelancer);
@@ -30,15 +28,15 @@ export default async function ProjectLayout({ children, params }) {
   }
 
   // Promote pending invite / primary invite_email into project_members when eligible.
-  await ensureProjectPortalMembership(projectId);
-
-  const bundle = await getProjectPortalBundle(projectId);
+  // Runs alongside the bundle: projects RLS already admits invitees (invite_email / pending
+  // invite), so the bundle does not depend on the membership row existing yet.
+  const [, bundle] = await Promise.all([
+    ensureProjectPortalMembership(projectId),
+    getProjectPortalBundle(projectId),
+  ]);
 
   if (!bundle) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     redirect(user ? "/projects" : "/");
   }
 

@@ -2,6 +2,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getUserFromClaims } from "@/lib/auth/current-user";
 import {
   getDemoLibraryFilePreviewUrl,
   isDemoProjectId,
@@ -28,9 +29,7 @@ export async function GET(request) {
 
   if (isDemoProjectId(projectId)) {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getUserFromClaims(supabase);
     const fl = await resolveDemoFreelancerFromSupabase(supabase, user);
     const demoFiles = getDemoLibraryFiles(fl);
     const demoRow = demoFiles.find((f) => String(f.id) === fileId);
@@ -60,12 +59,9 @@ export async function GET(request) {
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
+  const user = await getUserFromClaims(supabase);
 
-  if (authErr || !user) {
+  if (!user) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 

@@ -1,17 +1,35 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import dynamic from "next/dynamic";
 import { X, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { RealtimeChat } from "@/components/realtime-chat";
 import { PortalBrandBackdrop } from "@/components/portal-brand-backdrop";
 import { cn } from "@/lib/utils";
-import { getProjectChatBootstrap, markProjectChatRead } from "@/lib/actions/project-chat";
+import {
+  getProjectChatBootstrap,
+  getProjectChatSummary,
+  markProjectChatRead,
+} from "@/lib/actions/project-chat";
 import { DEMO_CLIENT_USER_ID, isDemoProjectId } from "@/lib/data/demo-project";
 import { toast } from "sonner";
+
+const RealtimeChat = dynamic(
+  () => import("@/components/realtime-chat").then((m) => m.RealtimeChat),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        Loading chat…
+      </div>
+    ),
+  }
+);
+
+const PREFETCH_TTL_MS = 15_000;
 
 /**
  * @param {{
@@ -63,7 +81,7 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
     setBoot(null);
     setBootError(null);
     (async () => {
-      const r = await getProjectChatBootstrap(String(projectId));
+      const r = await getProjectChatSummary(String(projectId));
       if (cancelled) return;
       if (!r.ok) {
         setBootError(r.error || "Could not load chat");
@@ -95,18 +113,56 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
     };
   }, [isOpen]);
 
+  const remoteSeqRef = useRef(0);
+
   const onRemoteMessage = useCallback(() => {
+    remoteSeqRef.current += 1;
     setUnreadCount((n) => (isOpenRef.current ? n : n + 1));
   }, []);
 
-  // Refetch persisted messages when opening (heals stale snapshot) then mark read.
+  /** @type {React.MutableRefObject<{ projectId: string; at: number; seq: number; promise: Promise<any> } | null>} */
+  const prefetchRef = useRef(null);
+
+  // Opening replaces the message list with this snapshot, so a prefetch taken before a
+  // live message arrived would drop that message; such prefetches are discarded.
+  const prefetchMessages = useCallback(() => {
+    const pid = String(projectId);
+    const cur = prefetchRef.current;
+    if (
+      cur &&
+      cur.projectId === pid &&
+      cur.seq === remoteSeqRef.current &&
+      Date.now() - cur.at < PREFETCH_TTL_MS
+    ) {
+      return;
+    }
+    prefetchRef.current = {
+      projectId: pid,
+      at: Date.now(),
+      seq: remoteSeqRef.current,
+      promise: getProjectChatBootstrap(pid).catch(() => ({ ok: false })),
+    };
+  }, [projectId]);
+
+  // Load persisted messages when opening (the closed widget only has the summary),
+  // reusing a hover/press prefetch when fresh, then mark read.
   useEffect(() => {
     if (!isOpen || !boot?.conversationId) return;
     const cid = String(boot.conversationId);
     let cancelled = false;
     void (async () => {
-      const r = await getProjectChatBootstrap(String(projectId));
-      if (cancelled || !r.ok) return;
+      prefetchMessages();
+      const pending = prefetchRef.current;
+      prefetchRef.current = null;
+      const r = await pending.promise;
+      if (cancelled) return;
+      if (!r.ok) {
+        setBoot((prev) =>
+          prev && !Array.isArray(prev.messages) ? { ...prev, messages: [] } : prev
+        );
+        toast.error(r.error || "Could not load messages");
+        return;
+      }
       setBoot(r);
       setUnreadCount(typeof r.unreadCount === "number" ? r.unreadCount : 0);
       const mark = await markProjectChatRead(String(projectId), cid);
@@ -116,7 +172,7 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
     return () => {
       cancelled = true;
     };
-  }, [isOpen, boot?.conversationId, projectId]);
+  }, [isOpen, boot?.conversationId, projectId, prefetchMessages]);
 
   const handleOpenChat = useCallback(() => {
     setIsOpen(true);
@@ -224,6 +280,7 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
                 selfAvatarUrl={selfAvatarUrl}
                 onRemoteMessage={onRemoteMessage}
                 disabled={chatDisabled}
+                messagesLoading={isOpen && Boolean(boot) && !Array.isArray(boot.messages)}
               />
             )}
           </div>
@@ -243,6 +300,9 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
             }
             handleOpenChat();
           }}
+          onPointerEnter={bootError ? undefined : prefetchMessages}
+          onPointerDown={bootError ? undefined : prefetchMessages}
+          onFocus={bootError ? undefined : prefetchMessages}
           size="icon"
           variant="outline"
           className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-white p-0 shadow-xl transition-shadow duration-300 hover:shadow-2xl sm:h-16 sm:w-16"

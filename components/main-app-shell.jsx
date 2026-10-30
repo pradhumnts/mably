@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
  *   children: import("react").ReactNode;
  *   hasSubscription?: boolean;
  *   subscription?: { plan_key?: string | null; status?: string | null } | null;
+ *   workspaces?: { workspaceId: string; name: string; role: string }[];
+ *   activeWorkspaceId?: string | null;
  * }} props
  */
 export function MainAppShell({
@@ -26,6 +28,8 @@ export function MainAppShell({
   children,
   hasSubscription = false,
   subscription = null,
+  workspaces = [],
+  activeWorkspaceId = null,
 }) {
   const pathname = usePathname();
   const isCreateProjectWizard = pathname.startsWith("/projects/new");
@@ -60,7 +64,7 @@ export function MainAppShell({
       {identify}
       <Toaster />
       <EarlyPricingOfferHost hasSubscription={hasSubscription} />
-      <AppSidebar user={user} />
+      <AppSidebar user={user} workspaces={workspaces} activeWorkspaceId={activeWorkspaceId} />
       <SidebarInset
         className={cn(
           "flex flex-col",

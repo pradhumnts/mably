@@ -5,6 +5,7 @@ import { Bell, ClipboardList, Home, MessageCircle, Users, Settings } from "lucid
 import { usePathname } from "next/navigation";
 
 import { NavUser } from "@/components/nav-user";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import {
   Sidebar,
   SidebarContent,
@@ -83,7 +84,7 @@ function SidebarLogo() {
   );
 }
 
-export function AppSidebar({ user, ...props }) {
+export function AppSidebar({ user, workspaces = [], activeWorkspaceId = null, ...props }) {
   const pathname = usePathname();
   const { isMobile } = useSidebar();
 
@@ -109,6 +110,10 @@ export function AppSidebar({ user, ...props }) {
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarLogo />
+        <WorkspaceSwitcher
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspaceId}
+        />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navGeneralWithActive} label="General" />

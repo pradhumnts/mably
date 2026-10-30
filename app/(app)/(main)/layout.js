@@ -1,20 +1,21 @@
-import { redirect } from "next/navigation";
 import { MainAppShell } from "@/components/main-app-shell";
-import { getCurrentUserProfile } from "@/lib/data/profile";
+import { requireFreelancerAppProfile } from "@/lib/auth/freelancer-app-gate";
 import { getFreelancerSubscriptionForUser } from "@/lib/data/billing";
 import { hasPaidFreelancerSubscription } from "@/lib/billing/project-limits";
+import {
+  getActiveWorkspaceForCurrentUser,
+  listWorkspacesForCurrentUser,
+} from "@/lib/data/workspaces";
 
 export const dynamic = "force-dynamic";
 
 export default async function MainLayout({ children }) {
-  const [user, subscription] = await Promise.all([
-    getCurrentUserProfile(),
+  const [user, subscription, workspaces, active] = await Promise.all([
+    requireFreelancerAppProfile(),
     getFreelancerSubscriptionForUser(),
+    listWorkspacesForCurrentUser(),
+    getActiveWorkspaceForCurrentUser(),
   ]);
-
-  if (!user) {
-    redirect("/");
-  }
 
   const hasSubscription = hasPaidFreelancerSubscription(subscription);
 
@@ -23,6 +24,8 @@ export default async function MainLayout({ children }) {
       user={user}
       hasSubscription={hasSubscription}
       subscription={subscription}
+      workspaces={workspaces}
+      activeWorkspaceId={active?.workspaceId ?? null}
     >
       {children}
     </MainAppShell>

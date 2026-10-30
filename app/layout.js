@@ -2,6 +2,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PostHogProvider } from "@/components/posthog-provider";
+import { GoogleAdsTag } from "@/components/google-ads-tag";
 import { MobileAccessGate } from "@/components/mobile-access-gate";
 import {
   getMetadataBaseUrl,
@@ -49,6 +50,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <GoogleAdsTag />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

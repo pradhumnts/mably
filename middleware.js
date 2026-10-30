@@ -7,6 +7,47 @@ import { isPublicDemoPortalPath } from '@/lib/data/demo-project'
 import { isMarketingHost, shouldSkipHostRouting } from '@/lib/site-hosts'
 import { applyHostRouting, isPublicMarketingRequest } from '@/lib/site-host-routing'
 
+/**
+ * `getClaims()` verifies the access token locally when the project uses asymmetric JWT
+ * signing keys (JWKS is cached in-process), and falls back to an Auth round trip for legacy
+ * HS256 secrets. Pages still verify with `getUser()`, so revoked sessions are caught there.
+ *
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @returns {Promise<string | null>}
+ */
+async function resolveSignedInUserId(supabase) {
+  try {
+    const { data, error } = await supabase.auth.getClaims()
+    if (error) return null
+    const sub = data?.claims?.sub
+    return typeof sub === 'string' && sub ? sub : null
+  } catch {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    return user?.id ?? null
+  }
+}
+
+/** Top-level segments of routes under `app/(app)/(main)` (gated in that layout). */
+const FREELANCER_APP_SEGMENTS = [
+  'dashboard',
+  'notifications',
+  'messages',
+  'projects',
+  'clients',
+  'features',
+  'billing',
+  'settings',
+  'demo',
+]
+
+function isFreelancerAppPath(path) {
+  return FREELANCER_APP_SEGMENTS.some(
+    (segment) => path === `/${segment}` || path.startsWith(`/${segment}/`)
+  )
+}
+
 export async function middleware(request) {
   const hostRoute = applyHostRouting(request)
   if (hostRoute) return hostRoute
@@ -59,9 +100,7 @@ export async function middleware(request) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const userId = await resolveSignedInUserId(supabase)
 
   const onMarketingHost = isMarketingHost(host)
   const isAuthPage =
@@ -81,12 +120,12 @@ export async function middleware(request) {
                          path.startsWith('/onboarding')
 
   // Public marketing demo portal — browse without an account
-  if (!user && isPublicDemoPortalPath(path)) {
+  if (!userId && isPublicDemoPortalPath(path)) {
     return supabaseResponse
   }
 
   // Not signed in but trying to read a protected surface → push to login w/ next
-  if (!user) {
+  if (!userId) {
     if (isProtectedPage) {
       const url = request.nextUrl.clone()
       url.pathname = '/'
@@ -100,8 +139,25 @@ export async function middleware(request) {
     return supabaseResponse
   }
 
+  // Hot paths skip the profile lookup:
+  //  - /project/* and /auth/* are open to every signed-in role and exempt from onboarding.
+  //  - Freelancer app routes get their role + onboarding gate from the (main) layout
+  //    (`requireFreelancerAppProfile`), which loads the profile anyway.
+  if (path.startsWith('/project/') || path.startsWith('/auth')) {
+    return supabaseResponse
+  }
+  if (isFreelancerAppPath(path)) {
+    if (path === '/dashboard' || path.startsWith('/dashboard/')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/projects'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+    return supabaseResponse
+  }
+
   // Single profile lookup feeds every downstream decision
-  const prof = await fetchProfileOnboardingRow(supabase, user.id)
+  const prof = await fetchProfileOnboardingRow(supabase, userId)
   const role = prof?.role ?? 'freelancer'
   const isClient = role === 'client'
 
@@ -151,13 +207,6 @@ export async function middleware(request) {
 
   // Freelancers don't belong on /portal (chooser is client-only)
   if (path === '/portal' || path.startsWith('/portal/')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/projects'
-    url.search = ''
-    return NextResponse.redirect(url)
-  }
-
-  if (path === '/dashboard' || path.startsWith('/dashboard/')) {
     const url = request.nextUrl.clone()
     url.pathname = '/projects'
     url.search = ''

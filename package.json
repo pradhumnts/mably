@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:resend": "node --env-file=.env.local scripts/test-resend.mjs"
+    "test:resend": "node --env-file=.env.local scripts/test-resend.mjs",
+    "test:workspace-access": "node scripts/test-workspace-access-matrix.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.51.0",

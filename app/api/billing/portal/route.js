@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getPolarApiBase, getPolarTokenForCustomerSessions } from "@/lib/billing/polar-env";
+import {
+  getPolarApiBase,
+  getPolarRequestHeaders,
+  getPolarTokenForCustomerSessions,
+} from "@/lib/billing/polar-env";
 
 export const runtime = "nodejs";
 
@@ -47,10 +51,7 @@ export async function POST() {
 
   const res = await fetch(`${getPolarApiBase()}/customer-sessions/`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
+    headers: getPolarRequestHeaders(token, { json: true }),
     body: JSON.stringify({
       ...sessionBody,
       ...(returnUrl ? { return_url: returnUrl } : {}),

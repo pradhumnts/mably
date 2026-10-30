@@ -42,6 +42,7 @@ import {
 import { Upload } from "lucide-react";
 import { toast } from "sonner";
 import { BillingPageClient } from "@/components/billing/billing-page-client";
+import { WorkspaceMembersSettings } from "@/components/workspace-members-settings";
 import { cn } from "@/lib/utils";
 
 export function SettingsPageClient({ initialProfile, initialTab = "profile", billing = null }) {
@@ -246,8 +247,8 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
                   className={cn(
                     "inline-flex h-auto w-max flex-nowrap gap-1 p-1",
                     billing
-                      ? "sm:grid sm:w-fit sm:grid-cols-3 lg:grid-cols-6"
-                      : "sm:grid sm:w-fit sm:grid-cols-2 lg:grid-cols-5"
+                      ? "sm:grid sm:w-fit sm:grid-cols-3 lg:grid-cols-7"
+                      : "sm:grid sm:w-fit sm:grid-cols-2 lg:grid-cols-6"
                   )}
                 >
                   <TabsTrigger value="profile" className="shrink-0">
@@ -266,6 +267,9 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
                   </TabsTrigger>
                   <TabsTrigger value="calendar" className="shrink-0">
                     Calendar
+                  </TabsTrigger>
+                  <TabsTrigger value="members" className="shrink-0">
+                    Team
                   </TabsTrigger>
                   <TabsTrigger value="portal" className="shrink-0">
                     Portal
@@ -646,6 +650,11 @@ export function SettingsPageClient({ initialProfile, initialTab = "profile", bil
                     </Button>
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              {/* Workspace Members Tab */}
+              <TabsContent value="members">
+                <WorkspaceMembersSettings />
               </TabsContent>
 
               {/* Client Portal Defaults Tab */}
