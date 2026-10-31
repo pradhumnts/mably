@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +27,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ProjectLogo } from "@/components/freelancer-dashboard/project-logo";
 import {
-  acceptWorkspaceInviteAction,
   inviteWorkspaceMember,
   listWorkspaceProjectsForInvite,
   listWorkspaceTeam,
@@ -55,7 +54,6 @@ function projectStatusDotClass(statusKey) {
  * Settings → Members: invite and manage teammates on this workspace.
  */
 export function WorkspaceMembersSettings() {
-  const acceptedRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -103,24 +101,11 @@ export function WorkspaceMembersSettings() {
       }
       if (projectRes.ok) setProjects(projectRes.projects || []);
       setLoading(false);
-
-      if (acceptedRef.current || typeof window === "undefined") return;
-      const acceptId = new URLSearchParams(window.location.search).get("acceptInvite");
-      if (!acceptId) return;
-      acceptedRef.current = true;
-      const acceptRes = await acceptWorkspaceInviteAction(acceptId);
-      if (cancelled) return;
-      if (!acceptRes.ok) {
-        toast.error(acceptRes.error || "Could not accept invite");
-        return;
-      }
-      toast.success("Joined workspace");
-      await refresh();
     })();
     return () => {
       cancelled = true;
     };
-  }, [refresh]);
+  }, []);
 
   const canManage = workspace?.role === "owner" || workspace?.role === "admin";
 

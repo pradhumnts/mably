@@ -115,6 +115,7 @@ export async function middleware(request) {
                          path.startsWith('/billing') ||
                          path.startsWith('/settings') ||
                          path.startsWith('/demo') ||
+                         path.startsWith('/invite') ||
                          path.startsWith('/project') ||
                          path.startsWith('/portal') ||
                          path.startsWith('/onboarding')

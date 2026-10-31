@@ -15,6 +15,14 @@ export const metadata = {
 
 export default async function SettingsPage({ searchParams }) {
   const sp = await searchParams;
+  // Legacy invite emails used ?acceptInvite= on Settings → Team; send them to the
+  // dedicated accept route so accept runs server-side without relying on tab mount.
+  const legacyAccept =
+    typeof sp?.acceptInvite === "string" ? sp.acceptInvite.trim() : "";
+  if (legacyAccept) {
+    redirect(`/invite/workspace/${legacyAccept}`);
+  }
+
   const profile = await getCurrentUserProfile();
   if (!profile) {
     redirect("/");

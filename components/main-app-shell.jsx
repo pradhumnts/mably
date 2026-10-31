@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
@@ -9,6 +10,7 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { EarlyPricingOfferHost } from "@/components/billing/early-pricing-offer-host";
 import { PostHogIdentify } from "@/components/posthog-identify";
+import { WorkspaceInviteFlash } from "@/components/workspace-invite-flash";
 import { cn } from "@/lib/utils";
 // import { LegalFooterLinks } from "@/components/legal-footer-links"; // hidden until legal pages are live
 
@@ -63,6 +65,9 @@ export function MainAppShell({
     <SidebarProvider>
       {identify}
       <Toaster />
+      <Suspense fallback={null}>
+        <WorkspaceInviteFlash />
+      </Suspense>
       <EarlyPricingOfferHost hasSubscription={hasSubscription} />
       <AppSidebar user={user} workspaces={workspaces} activeWorkspaceId={activeWorkspaceId} />
       <SidebarInset
