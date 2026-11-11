@@ -1,4 +1,5 @@
 import { MainAppShell } from "@/components/main-app-shell";
+import { PresenceHeartbeat } from "@/components/presence-heartbeat";
 import { requireFreelancerAppProfile } from "@/lib/auth/freelancer-app-gate";
 import { getFreelancerSubscriptionForUser } from "@/lib/data/billing";
 import { hasPaidFreelancerSubscription } from "@/lib/billing/project-limits";
@@ -27,6 +28,7 @@ export default async function MainLayout({ children }) {
       workspaces={workspaces}
       activeWorkspaceId={active?.workspaceId ?? null}
     >
+      <PresenceHeartbeat />
       {children}
     </MainAppShell>
   );

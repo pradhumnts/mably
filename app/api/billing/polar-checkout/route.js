@@ -70,6 +70,7 @@ export async function POST(request) {
 
   const site = process.env.NEXT_PUBLIC_SITE_URL?.trim()?.replace(/\/$/, "") ?? "";
   const successUrl = site ? `${site}/settings?tab=subscription` : undefined;
+  const returnUrl = site ? `${site}/settings?tab=subscription` : undefined;
 
   const res = await fetch(`${getPolarApiBase()}/checkouts/`, {
     method: "POST",
@@ -90,6 +91,7 @@ export async function POST(request) {
         supabase_user_id: user.id,
       },
       ...(successUrl ? { success_url: successUrl } : {}),
+      ...(returnUrl ? { return_url: returnUrl } : {}),
     }),
   });
 

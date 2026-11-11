@@ -27,7 +27,8 @@ export async function POST(request) {
   });
 
   try {
-    const wh = new Webhook(secret);
+    // Polar secrets (`polar_whs_…`) are raw strings; standardwebhooks expects base64.
+    const wh = new Webhook(Buffer.from(secret, "utf8").toString("base64"));
     const event = wh.verify(rawBody, headersObj);
     const result = await processPolarWebhookEvent(event, deliveryId);
     if (!result.ok) {

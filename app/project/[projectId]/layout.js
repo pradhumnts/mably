@@ -9,6 +9,7 @@ import {
   resolveDemoFreelancerFromSupabase,
 } from "@/lib/data/demo-project";
 import { ensureProjectPortalMembership } from "@/lib/actions/project-stakeholders";
+import { PresenceHeartbeat } from "@/components/presence-heartbeat";
 import { ProjectPortalShell } from "./project-portal-shell";
 
 export default async function ProjectLayout({ children, params }) {
@@ -43,6 +44,7 @@ export default async function ProjectLayout({ children, params }) {
   return (
     <>
       <ProjectPortalShell bundle={bundle}>{children}</ProjectPortalShell>
+      <PresenceHeartbeat />
       <Toaster />
     </>
   );

@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   getActiveMentionFromEditor,
+  hydrateLibraryMentionChips,
   insertLibraryMentionChipAtCaret,
   serializeLibraryMentionPlainText,
 } from "@/lib/chat/mention-dom";
@@ -17,6 +18,7 @@ import {
  * @typedef {{
  *   focus: () => void;
  *   clear: () => void;
+ *   setContent: (text: string) => void;
  *   insertMention: (item: { kind: "file" | "link"; id: string; label: string }) => void;
  * }} ChatMentionInputHandle
  */
@@ -82,6 +84,16 @@ export const ChatMentionInput = forwardRef(function ChatMentionInput(
       onValueChange("");
       onMentionQueryChange(null);
     },
+    setContent(text) {
+      const el = editorRef.current;
+      if (!el) return;
+      const next = typeof text === "string" ? text : "";
+      el.textContent = next;
+      hydrateLibraryMentionChips(el);
+      skipExternalSync.current = true;
+      onValueChange(serializeLibraryMentionPlainText(el));
+      onMentionQueryChange(null);
+    },
     insertMention(item) {
       const el = editorRef.current;
       if (!el || !item?.id) return;
@@ -103,8 +115,8 @@ export const ChatMentionInput = forwardRef(function ChatMentionInput(
           "relative min-w-0 w-full overflow-y-auto border border-zinc-200 bg-background px-3 py-2 text-sm shadow-xs outline-none",
           "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
           multiline
-            ? "min-h-[4.5rem] max-h-40 rounded-md whitespace-pre-wrap"
-            : "min-h-9 max-h-28 rounded-full",
+            ? "min-h-[4.5rem] max-h-40 rounded-lg whitespace-pre-wrap"
+            : "min-h-9 max-h-36 rounded-lg whitespace-pre-wrap",
           disabled && "pointer-events-none cursor-not-allowed opacity-50",
           className
         )}
@@ -132,8 +144,8 @@ export const ChatMentionInput = forwardRef(function ChatMentionInput(
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-0 z-10 px-3 text-sm text-muted-foreground",
-            multiline ? "pt-2" : "flex items-center"
+            "pointer-events-none absolute inset-0 z-10 px-3 pt-2 text-sm text-muted-foreground",
+            !multiline && "sm:pt-2"
           )}
         >
           {placeholder}

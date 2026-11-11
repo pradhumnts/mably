@@ -11,15 +11,42 @@ import { useChatScroll } from "@/hooks/use-chat-scroll";
 import { useProjectMessages } from "@/hooks/use-project-messages";
 import { useLibraryVoiceComposerState } from "@/components/library-voice-composer";
 import { DeleteChatVoiceMessageDialog } from "@/components/delete-chat-voice-message-dialog";
+import { DeleteChatMessageDialog } from "@/components/delete-chat-message-dialog";
 import { ChatMentionInput } from "@/components/chat-mention-input";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
+import { format, isThisYear, isToday, isYesterday } from "date-fns";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { isDemoProjectId } from "@/lib/data/demo-project";
 import {
   listLibraryFiles,
   listLibraryLinks,
 } from "@/lib/actions/project-library";
+
+/**
+ * @param {string | null | undefined} iso
+ * @returns {string}
+ */
+function dayKeyFromIso(iso) {
+  const d = new Date(iso || "");
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+/**
+ * Slack-style day label for chat separators.
+ * @param {string | null | undefined} iso
+ * @returns {string}
+ */
+function formatChatDayLabel(iso) {
+  const d = new Date(iso || "");
+  if (Number.isNaN(d.getTime())) return "";
+  if (isToday(d)) return "Today";
+  if (isYesterday(d)) return "Yesterday";
+  if (isThisYear(d)) return format(d, "EEEE, MMMM do");
+  return format(d, "EEEE, MMMM do, yyyy");
+}
 
 export function RealtimeChat({
   projectId,
@@ -41,16 +68,24 @@ export function RealtimeChat({
   /** @type {React.MutableRefObject<import("@/components/chat-mention-input").ChatMentionInputHandle | null>} */
   const mentionInputRef = useRef(null);
 
-  const { messages, sendMessage, sendVoiceMessage, removeMessage, replaceMessage, isConnected } =
-    useProjectMessages({
-      projectId,
-      conversationId,
-      currentUserId,
-      initialMessages,
-      onRemoteMessage,
-      senderDisplayName,
-      selfAvatarUrl,
-    });
+  const {
+    messages,
+    sendMessage,
+    sendVoiceMessage,
+    removeMessage,
+    replaceMessage,
+    editMessage,
+    deleteMessage,
+    isConnected,
+  } = useProjectMessages({
+    projectId,
+    conversationId,
+    currentUserId,
+    initialMessages,
+    onRemoteMessage,
+    senderDisplayName,
+    selfAvatarUrl,
+  });
 
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -58,6 +93,8 @@ export function RealtimeChat({
   const [pendingVoice, setPendingVoice] = useState(null);
   /** @type {[null | { messageId: string; durationMs: number; hasMessageText: boolean }, React.Dispatch<any>]} */
   const [deleteVoiceTarget, setDeleteVoiceTarget] = useState(null);
+  /** @type {[null | { messageId: string; hasVoice: boolean }, React.Dispatch<any>]} */
+  const [deleteMessageTarget, setDeleteMessageTarget] = useState(null);
 
   /** @type {[any[], React.Dispatch<any>]} */
   const [libraryItems, setLibraryItems] = useState([]);
@@ -225,6 +262,23 @@ export function RealtimeChat({
         }}
       />
 
+      <DeleteChatMessageDialog
+        open={Boolean(deleteMessageTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteMessageTarget(null);
+        }}
+        hasVoice={Boolean(deleteMessageTarget?.hasVoice)}
+        onConfirm={async () => {
+          if (!deleteMessageTarget?.messageId) return false;
+          const ok = await deleteMessage(deleteMessageTarget.messageId);
+          if (ok) {
+            toast.success("Message deleted");
+            setDeleteMessageTarget(null);
+          }
+          return ok;
+        }}
+      />
+
       <div className="relative min-h-0 flex-1">
         <div
           ref={containerRef}
@@ -242,7 +296,15 @@ export function RealtimeChat({
             <div className="mt-auto flex w-full flex-col justify-end">
               {sortedMessages.map((message, index) => {
                 const prevMessage = index > 0 ? sortedMessages[index - 1] : null;
-                const showHeader = !prevMessage || prevMessage.user.name !== message.user.name;
+                const dayChanged =
+                  !prevMessage ||
+                  dayKeyFromIso(prevMessage.createdAt) !== dayKeyFromIso(message.createdAt);
+                const dayLabel = dayChanged ? formatChatDayLabel(message.createdAt) : "";
+                const showHeader =
+                  dayChanged ||
+                  !prevMessage ||
+                  prevMessage.user.name !== message.user.name ||
+                  prevMessage.authorId !== message.authorId;
                 const isOwnMessage = currentUserId ? message.authorId === currentUserId : false;
 
                 return (
@@ -250,6 +312,19 @@ export function RealtimeChat({
                     key={message.id}
                     className="animate-in fade-in slide-in-from-bottom-4 duration-300"
                   >
+                    {dayLabel ? (
+                      <div
+                        className="relative my-5 flex items-center"
+                        role="separator"
+                        aria-label={dayLabel}
+                      >
+                        <div className="h-px min-w-0 flex-1 bg-zinc-200/80" />
+                        <span className="mx-0 shrink-0 rounded-full border border-zinc-200/70 bg-white/55 px-2.5 py-0.5 text-[11px] font-medium text-zinc-600 backdrop-blur-[2px]">
+                          {dayLabel}
+                        </span>
+                        <div className="h-px min-w-0 flex-1 bg-zinc-200/80" />
+                      </div>
+                    ) : null}
                     <ChatMessageItem
                       message={message}
                       isOwnMessage={isOwnMessage}
@@ -261,7 +336,13 @@ export function RealtimeChat({
                       projectId={projectId}
                       currentUserId={currentUserId}
                       canModerateVoice={canModerateVoice}
-                      onRequestDeleteVoice={setDeleteVoiceTarget}
+                      onRequestDeleteVoice={
+                        isDemoChat ? undefined : setDeleteVoiceTarget
+                      }
+                      onEditMessage={isDemoChat ? undefined : editMessage}
+                      onRequestDeleteMessage={
+                        isDemoChat ? undefined : setDeleteMessageTarget
+                      }
                     />
                   </div>
                 );

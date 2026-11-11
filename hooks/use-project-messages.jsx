@@ -1,14 +1,18 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { sendProjectChatMessage } from "@/lib/actions/project-chat";
+import {
+  deleteProjectChatMessage,
+  editProjectChatMessage,
+  sendProjectChatMessage,
+} from "@/lib/actions/project-chat";
 import { postProjectChatVoiceMessage } from "@/lib/client/post-project-chat-voice-message";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { normalizeVoiceWaveformPeaks } from "@/lib/library/normalize-voice-waveform";
 
 const MESSAGE_SELECT =
-  "id, author_id, author_display_name, author_avatar_url, body, created_at, voice_note_storage_path, voice_note_duration_ms, voice_note_mime_type, voice_note_size_bytes, voice_note_waveform, voice_note_transcript";
+  "id, author_id, author_display_name, author_avatar_url, body, created_at, edited_at, voice_note_storage_path, voice_note_duration_ms, voice_note_mime_type, voice_note_size_bytes, voice_note_waveform, voice_note_transcript";
 
 function mapRowFromDb(row) {
   const hasVoice = Boolean(row.voice_note_storage_path);
@@ -17,6 +21,7 @@ function mapRowFromDb(row) {
     content: row.body ?? "",
     authorId: row.author_id,
     createdAt: row.created_at,
+    editedAt: row.edited_at ?? null,
     authorAvatarUrl: row.author_avatar_url,
     user: { name: row.author_display_name || "Member" },
     voiceNote: hasVoice
@@ -154,6 +159,42 @@ export function useProjectMessages({
             const filtered = current.filter((m) => !matchesOptimisticMessage(m, mapped));
             return [...filtered, merged];
           });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "project_messages",
+          filter,
+        },
+        (payload) => {
+          const row = payload.new;
+          if (!row?.id) return;
+          const mapped = mapRowFromDb(row);
+          setMessages((current) => {
+            if (!current.some((m) => m.id === mapped.id)) {
+              return [...current, mapped];
+            }
+            return current.map((m) =>
+              m.id === mapped.id ? mergeVoiceFields(m, mapped) : m
+            );
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "project_messages",
+          filter,
+        },
+        (payload) => {
+          const id = payload.old?.id;
+          if (!id) return;
+          setMessages((current) => current.filter((m) => m.id !== id));
         }
       )
       .subscribe((status) => {
@@ -309,12 +350,69 @@ export function useProjectMessages({
     );
   }, []);
 
+  const editMessage = useCallback(
+    async (messageId, body) => {
+      const id = String(messageId || "").trim();
+      const text = typeof body === "string" ? body.trim() : "";
+      if (!projectId || !id) return false;
+
+      /** @type {object | null} */
+      let prev = null;
+      setMessages((current) => {
+        prev = current.find((m) => m.id === id) ?? null;
+        if (!prev) return current;
+        return current.map((m) =>
+          m.id === id
+            ? { ...m, content: text, editedAt: new Date().toISOString() }
+            : m
+        );
+      });
+
+      const res = await editProjectChatMessage(String(projectId), id, text);
+      if (!res.ok) {
+        if (prev) replaceMessage(id, prev);
+        toast.error(res.error || "Could not edit message");
+        return false;
+      }
+      if (res.message) replaceMessage(id, res.message);
+      return true;
+    },
+    [projectId, replaceMessage]
+  );
+
+  const deleteMessage = useCallback(
+    async (messageId) => {
+      const id = String(messageId || "").trim();
+      if (!projectId || !id) return false;
+
+      /** @type {object | null} */
+      let prev = null;
+      setMessages((current) => {
+        prev = current.find((m) => m.id === id) ?? null;
+        return current.filter((m) => m.id !== id);
+      });
+
+      const res = await deleteProjectChatMessage(String(projectId), id);
+      if (!res.ok) {
+        if (prev) {
+          setMessages((current) => mergeById(current, [{ ...prev, optimistic: false }]));
+        }
+        toast.error(res.error || "Could not delete message");
+        return false;
+      }
+      return true;
+    },
+    [projectId]
+  );
+
   return {
     messages,
     sendMessage,
     sendVoiceMessage,
     removeMessage,
     replaceMessage,
+    editMessage,
+    deleteMessage,
     isConnected,
   };
 }

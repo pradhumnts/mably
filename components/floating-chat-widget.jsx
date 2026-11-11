@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
-import { X, MessageCircle } from "lucide-react";
+import { X, MessageCircle, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -49,6 +49,7 @@ const PREFETCH_TTL_MS = 15_000;
  */
 export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [boot, setBoot] = useState(null);
   const [bootError, setBootError] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -212,9 +213,14 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
       {/* Keep chat mounted when closed so Realtime + local message state are not lost to the initial bootstrap snapshot. */}
       <Card
         className={cn(
-          "relative flex flex-col gap-0 overflow-hidden border p-0 shadow-2xl",
+          "relative flex flex-col gap-0 overflow-hidden border p-0 shadow-2xl transition-[width,height] duration-300 ease-out",
           isOpen
-            ? "h-[100dvh] w-full max-md:rounded-none md:mb-4 md:h-[70vh] md:w-[500px] md:rounded-lg animate-in slide-in-from-bottom-4 duration-300"
+            ? cn(
+                "h-[100dvh] w-full max-md:rounded-none md:mb-4 md:rounded-lg animate-in slide-in-from-bottom-4 duration-300",
+                isExpanded
+                  ? "md:h-[min(88vh,820px)] md:w-[min(720px,calc(100vw-3rem))]"
+                  : "md:h-[70vh] md:w-[500px]"
+              )
             : "hidden pointer-events-none"
         )}
         aria-hidden={!isOpen}
@@ -248,16 +254,33 @@ export function FloatingChatWidget({ projectId, userRole, portalChatPersonas }) 
                 </h3>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 shrink-0 rounded-full"
-              type="button"
-              onClick={() => setIsOpen(false)}
-              aria-label="Close chat"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="icon"
+                className="hidden h-8 w-8 rounded-full md:inline-flex"
+                type="button"
+                onClick={() => setIsExpanded((v) => !v)}
+                aria-label={isExpanded ? "Shrink chat window" : "Expand chat window"}
+                title={isExpanded ? "Shrink" : "Expand"}
+              >
+                {isExpanded ? (
+                  <Minimize2 className="h-4 w-4" />
+                ) : (
+                  <Maximize2 className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                type="button"
+                onClick={() => setIsOpen(false)}
+                aria-label="Close chat"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           <div className="relative z-10 flex min-h-0 flex-1 flex-col">
