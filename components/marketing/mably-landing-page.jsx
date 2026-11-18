@@ -1050,7 +1050,7 @@ function FreelancerCarouselSection() {
               className="group h-12 rounded-full bg-orange-500 px-8 text-base font-semibold text-white shadow-[0_8px_30px_-6px_rgba(249,115,22,0.55)] hover:bg-orange-600"
             >
               <Link href={APP_SIGN_UP}>
-                Get started
+                Try Mably for Free
                 <ArrowRight className="ml-1.5 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
             </Button>
@@ -1809,7 +1809,7 @@ export function MablyLandingPage() {
                   className="group h-12 rounded-full bg-orange-500 px-8 text-base font-semibold text-white shadow-[0_8px_30px_-6px_rgba(249,115,22,0.55)] hover:bg-orange-600"
                 >
                   <Link href={APP_SIGN_UP}>
-                    Get started
+                    Try Mably for Free
                     <ArrowRight className="ml-1.5 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                   </Link>
                 </Button>
@@ -1823,7 +1823,7 @@ export function MablyLandingPage() {
                 </Button>
               </div>
               <p data-hero-fade className="mt-5 text-xs text-white/60">
-                From $9/month · Cancel anytime · One link clients remember
+                Try Mably for Free · 14-day trial · From $9/month
               </p>
             </div>
           </div>
@@ -2064,7 +2064,7 @@ export function MablyLandingPage() {
               className="group h-12 rounded-full bg-orange-500 px-10 text-white hover:bg-orange-600"
             >
               <Link href={APP_SIGN_UP}>
-                Get started
+                Try Mably for Free
                 <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </Button>
@@ -2078,7 +2078,7 @@ export function MablyLandingPage() {
             </Button>
           </div>
           <p data-reveal className="mt-6 text-sm text-white/60">
-            From $9/month · Cancel anytime · One link clients remember
+            Try Mably for Free · 14-day trial · From $9/month
           </p>
         </div>
       </section>

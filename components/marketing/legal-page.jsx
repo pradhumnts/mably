@@ -89,7 +89,7 @@ export function LegalPage({ page, activeSlug }) {
             href={appPath("/")}
             className="text-sm text-zinc-500 transition hover:text-orange-600"
           >
-            Get started
+            Try Mably for Free
           </Link>
         </div>
       </header>

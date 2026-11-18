@@ -26,10 +26,11 @@ import { startPolarCheckout } from "@/lib/client/start-polar-checkout";
 import { cn } from "@/lib/utils";
 
 export const POLAR_PLAN_STARTER_FEATURES = [
+  "14-day free trial — no card required",
   "1 active project",
   "Full client portal",
   "Invite multiple clients (free)",
-  "Team seats $9 each when they join",
+  "Team seats $9 each when they join (billed after trial)",
   "Files & links library",
   "Project chat",
   "Activity feed",
@@ -42,7 +43,7 @@ export const POLAR_PLAN_STARTER_FEATURES = [
 export const POLAR_PLAN_GROWTH_FEATURES = [
   "Everything in Starter",
   "Unlimited projects",
-  "Team seats $19 each when they join",
+  "Team seats $19 each when they join (billed after trial)",
   `${GROWTH_LIBRARY_TOTAL_LABEL} storage · up to ${GROWTH_LIBRARY_MAX_FILE_LABEL} per file`,
   "Hide Powered by tag",
   "Priority support",
@@ -207,7 +208,7 @@ export function PolarPlanPickerContent({
         ? "Current plan"
         : useUpgradeCtas
           ? "Upgrade to Starter"
-          : `Subscribe — Starter${foundingCtaSuffix}`;
+          : `Try Mably for Free — Starter${foundingCtaSuffix}`;
   const growthCta =
     checkoutLoading === "growth"
       ? "Redirecting…"
@@ -215,7 +216,7 @@ export function PolarPlanPickerContent({
         ? "Current plan"
         : useUpgradeCtas
           ? "Upgrade to Growth"
-          : `Subscribe — Growth${foundingCtaSuffix}`;
+          : `Try Mably for Free — Growth${foundingCtaSuffix}`;
 
   const starterPrices = planPricing("starter", useFounding);
   const growthPrices = planPricing("growth", useFounding);

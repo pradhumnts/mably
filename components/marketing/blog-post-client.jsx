@@ -564,7 +564,7 @@ export function BlogPostClient({ post, relatedPosts = [] }) {
                 href={APP_SIGN_UP}
                 className="inline-flex h-12 items-center rounded-full bg-orange-500 px-10 text-sm font-semibold text-white transition hover:bg-orange-600"
               >
-                Get started
+                Try Mably for Free
               </a>
               <a
                 href="https://app.mably.io/demo"

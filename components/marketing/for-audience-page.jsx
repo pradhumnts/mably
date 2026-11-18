@@ -161,7 +161,7 @@ function FitStatements({ fit }) {
             asChild
             className="rounded-full bg-orange-500 px-6 text-white hover:bg-orange-600"
           >
-            <Link href={APP_SIGN_UP}>Get started</Link>
+            <Link href={APP_SIGN_UP}>Try Mably for Free</Link>
           </Button>
         </div>
       </div>
@@ -261,7 +261,7 @@ function FitCheck({ fit }) {
                 : "pointer-events-none translate-y-1 opacity-0"
             )}
           >
-            <Link href={APP_SIGN_UP}>Get started</Link>
+            <Link href={APP_SIGN_UP}>Try Mably for Free</Link>
           </Button>
         </div>
       </div>
@@ -874,7 +874,7 @@ export function ForAudiencePage({ content }) {
                 className="group h-12 rounded-full bg-orange-500 px-8 text-base font-semibold text-white shadow-[0_8px_30px_-6px_rgba(249,115,22,0.55)] hover:bg-orange-600"
               >
                 <Link href={APP_SIGN_UP}>
-                  Get started
+                  Try Mably for Free
                   <ArrowRight className="ml-1.5 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                 </Link>
               </Button>
@@ -1122,7 +1122,7 @@ export function ForAudiencePage({ content }) {
               className="group h-12 rounded-full bg-orange-500 px-10 text-white hover:bg-orange-600"
             >
               <Link href={APP_SIGN_UP}>
-                Get started
+                Try Mably for Free
                 <ArrowRight className="ml-1.5 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
             </Button>

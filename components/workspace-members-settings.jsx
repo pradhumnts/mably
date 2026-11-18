@@ -162,7 +162,14 @@ export function WorkspaceMembersSettings() {
               <p className="text-sm text-muted-foreground pt-1">
                 {seatBilling.seats} seat{seatBilling.seats === 1 ? "" : "s"} ·{" "}
                 <span className="capitalize">{seatBilling.planKey}</span>
-                {seatBilling.founding ? (
+                {seatBilling.trialing ? (
+                  <>
+                    {" "}
+                    · free during trial; after trial, teammates $
+                    {String(seatBilling.planKey).toLowerCase() === "growth" ? "19" : "9"}
+                    /mo each
+                  </>
+                ) : seatBilling.founding ? (
                   <>
                     {" "}
                     · founding on your plan; extra teammates $
@@ -337,7 +344,9 @@ export function WorkspaceMembersSettings() {
             <DialogTitle>Invite teammate</DialogTitle>
             <DialogDescription>
               Admins get the full workspace. Members only open the projects you select.
-              You’ll be charged for an extra seat when they accept — pending invites stay free.
+              {seatBilling?.trialing
+                ? " During your free trial, seats stay free — you’ll be asked for payment and charged for occupied seats when the trial ends."
+                : " You’ll be charged for an extra seat when they accept — pending invites stay free."}{" "}
               Client portal guests are still free.
             </DialogDescription>
           </DialogHeader>

@@ -157,10 +157,18 @@ export function BillingPageClient({
     }
   };
 
+  const status = String(subscription?.status || "").toLowerCase();
+  const isTrialing = status === "trialing";
+  const isPaidLike = status === "active" || isTrialing || status === "past_due";
   const canManage = Boolean(subscription);
   const currentPlan = subscription?.plan_key ?? null;
-  const isSubscribed = Boolean(subscription);
+  const isSubscribed = isPaidLike;
   const formattedPeriodEnd = formatUtcDate(subscription?.current_period_end);
+  const statusLabel = isTrialing
+    ? "Trialing"
+    : status
+      ? status.replaceAll("_", " ")
+      : "—";
 
   return (
     <>
@@ -179,7 +187,7 @@ export function BillingPageClient({
                 <code className="text-xs">POLAR_SERVER=sandbox|production</code>), then redeploy.
                 Products must use Polar <strong>seat-based</strong> / graduated pricing ($9 /
                 $19 list per extra seat; founding twins discount the owner’s first seat only).
-                Checkout starts at 1 seat.
+                Checkout starts at 1 seat with a 14-day free trial.
                 When creating the Organization Access Token in Polar, include the{" "}
                 <code className="text-xs">customer_sessions:write</code> scope so “Manage
                 subscription” can open the customer portal. Optionally set{" "}
@@ -199,18 +207,26 @@ export function BillingPageClient({
                   Plan:{" "}
                   <span className="font-medium text-foreground">{subscription.plan_key ?? "—"}</span>{" "}
                   · Status:{" "}
-                  <span className="font-medium text-foreground">{subscription.status}</span>
+                  <span className="font-medium text-foreground">{statusLabel}</span>
                   {Number(subscription.seats) >= 1 ? (
                     <>
                       {" "}
                       · Seats:{" "}
                       <span className="font-medium text-foreground normal-case">
-                        {Math.floor(Number(subscription.seats))} billed
+                        {Math.floor(Number(subscription.seats))}
+                        {isTrialing ? " on trial" : " billed"}
                       </span>
                     </>
                   ) : null}
                 </p>
-                {Number(subscription.seats) >= 1 ? (
+                {isTrialing ? (
+                  <p className="text-xs text-muted-foreground">
+                    You&apos;re on a free trial
+                    {formattedPeriodEnd ? ` until ${formattedPeriodEnd}` : ""}. Invite teammates
+                    anytime — occupied seats are charged when the trial ends ($9 Starter / $19
+                    Growth each). Portal clients stay free.
+                  </p>
+                ) : Number(subscription.seats) >= 1 ? (
                   <p className="text-xs text-muted-foreground">
                     Team seats bill per occupied member ($9 Starter / $19 Growth each). Portal
                     clients stay free. Invites are free until accepted.
@@ -231,11 +247,11 @@ export function BillingPageClient({
                   </Button>
                 ) : null}
                 <Button size="sm" onClick={() => setUpgradeModalOpen(true)} disabled={!polarConfigured}>
-                  {isSubscribed ? "Upgrade" : "Choose a plan"}
+                  {isSubscribed ? "Upgrade" : "Try Mably for Free"}
                 </Button>
               </div>
             </div>
-            {formattedPeriodEnd ? (
+            {formattedPeriodEnd && !isTrialing ? (
               <p className="text-xs text-muted-foreground">Current period ends: {formattedPeriodEnd}</p>
             ) : null}
           </div>
@@ -304,11 +320,11 @@ export function BillingPageClient({
         foundingPricing={foundingPricing}
         preferFoundingCheckout={false}
         defaultPlan={checkoutPlan}
-        title="Upgrade your plan"
+        title={isSubscribed ? "Upgrade your plan" : "Try Mably for Free"}
         description={
           currentPlan
             ? `You are currently on the ${currentPlan} plan.`
-            : "Choose the plan that fits your workload."
+            : "14-day free trial · No card required · Cancel anytime."
         }
       />
 

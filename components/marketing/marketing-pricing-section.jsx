@@ -46,7 +46,7 @@ export function MarketingPricingSection({
               className="mt-4 text-base leading-relaxed text-zinc-500 sm:mt-5 sm:text-lg"
             >
               Stop stitching together email, Drive, and invoices. Send one branded client portal —
-              then invite teammates when you need them. Cancel anytime.
+              then invite teammates when you need them. Start with a 14-day free trial.
             </p>
           </div>
         ) : null}

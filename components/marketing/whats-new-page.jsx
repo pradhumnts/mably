@@ -66,7 +66,7 @@ export function WhatsNewPage() {
               Pricing
             </Link>
             <Link href={appPath("/")} className="transition hover:text-orange-600">
-              Get started
+              Try Mably for Free
             </Link>
           </nav>
         </div>
@@ -114,7 +114,7 @@ export function WhatsNewPage() {
               asChild
               className="h-11 rounded-full bg-orange-500 px-6 text-white hover:bg-orange-600"
             >
-              <Link href={appPath("/?intent=signup")}>Get started free</Link>
+              <Link href={appPath("/?intent=signup")}>Try Mably for Free</Link>
             </Button>
             <Button
               asChild

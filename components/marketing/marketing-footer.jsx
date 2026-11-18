@@ -18,7 +18,7 @@ const FOOTER_COLUMNS = [
     links: [
       { label: "Pricing", href: "/pricing" },
       { label: "Explore the demo", href: APP_DEMO },
-      { label: "Get started", href: APP_SIGN_UP },
+      { label: "Try Mably for Free", href: APP_SIGN_UP },
       { label: "Sign in", href: APP_SIGN_IN },
     ],
   },
@@ -73,7 +73,7 @@ export function MarketingFooter({ blurb, noBorder = false }) {
               {blurb || "A calmer client experience — one branded link for files, feedback, and approvals."}
             </p>
             <p className="mt-6 text-xs text-zinc-400">
-              From $9/month · Cancel anytime
+              Try Mably for Free · 14-day trial · From $9/month
             </p>
           </div>
 

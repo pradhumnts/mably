@@ -288,7 +288,7 @@ export function MarketingHeader({ theme = "dark" }) {
             asChild
             className="hidden rounded-full bg-orange-500 px-5 text-white transition-colors duration-500 hover:bg-orange-600 sm:inline-flex"
           >
-            <Link href={APP_SIGN_UP}>Get started</Link>
+            <Link href={APP_SIGN_UP}>Try Mably for Free</Link>
           </Button>
           <button
             type="button"
@@ -372,7 +372,7 @@ export function MarketingHeader({ theme = "dark" }) {
                   className="mt-1 rounded-full bg-orange-500 text-white hover:bg-orange-600 sm:hidden"
                 >
                   <Link href={APP_SIGN_UP} onClick={() => setMobileOpen(false)}>
-                    Get started
+                    Try Mably for Free
                   </Link>
                 </Button>
               </div>
