@@ -16,7 +16,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, ExternalLink, Search, LinkIcon, Trash2 } from "lucide-react";
+import {
+  Plus,
+  ExternalLink,
+  Search,
+  LinkIcon,
+  MoreVertical,
+  Pencil,
+  Pin,
+  Trash2,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -24,14 +33,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { AddLinkDialog } from "@/components/add-link-dialog";
 import { DeleteLibraryItemDialog } from "@/components/delete-library-item-dialog";
 import { usePortalProject } from "../../project-portal-shell";
-import { listLibraryLinks } from "@/lib/actions/project-library";
+import { listLibraryLinks, setLibraryLinkPinned } from "@/lib/actions/project-library";
 import {
   inferLinkKindFromUrl,
-  linkLogoForKind,
   resolveLibraryLinkHref,
+  resolveLinkLogo,
 } from "@/lib/library/infer-types";
 import { toast } from "sonner";
 import {
@@ -54,17 +70,34 @@ function formatUploadedAt(iso) {
   }
 }
 
-const getLinkIcon = (logo) => {
+function LinkLogo({ logo, name }) {
+  const [failed, setFailed] = useState(false);
+  const showImage = Boolean(logo) && !failed;
+
   return (
-    <div className="w-12 h-12 rounded-lg border border-slate-200 bg-white flex items-center justify-center p-2">
-      {logo ? (
-        <img src={logo} alt="" className="w-full h-full object-contain" />
+    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50 p-1.5 shadow-sm">
+      {showImage ? (
+        <img
+          src={logo}
+          alt=""
+          className="h-full w-full rounded-md object-cover"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+        />
       ) : (
-        <LinkIcon className="h-7 w-7 text-slate-500" strokeWidth={2} aria-hidden />
+        <div
+          className="flex h-full w-full items-center justify-center rounded-lg bg-slate-100 text-sm font-semibold uppercase tracking-wide text-slate-500"
+          aria-hidden
+        >
+          {(name || "?").trim().charAt(0) || (
+            <LinkIcon className="h-5 w-5 text-slate-400" strokeWidth={2} />
+          )}
+        </div>
       )}
     </div>
   );
-};
+}
 
 function isLibraryLinkActionTarget(target) {
   if (!(target instanceof Element)) return false;
@@ -98,7 +131,9 @@ export default function LibraryLinks({ initialData = null }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [linkTypeFilter, setLinkTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
+  const [pinBusyId, setPinBusyId] = useState(/** @type {string | null} */ (null));
   const [addLinkDialogOpen, setAddLinkDialogOpen] = useState(false);
+  const [editLink, setEditLink] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const load = useCallback(async () => {
@@ -145,12 +180,13 @@ export default function LibraryLinks({ initialData = null }) {
       id: row.id,
       name: row.title,
       type: kind,
-      logo: linkLogoForKind(kind),
+      logo: resolveLinkLogo(kind, row.url),
       uploadedBy: row.created_by_display_name || "Member",
       uploadedByAvatar: row.created_by_avatar_url || null,
       uploadedAt: formatUploadedAt(row.created_at),
       description: row.description || "",
       linkUrl: row.url,
+      pinned: Boolean(row.pinned_at),
     };
   });
 
@@ -176,6 +212,40 @@ export default function LibraryLinks({ initialData = null }) {
   } else if (sortBy === "name") {
     filteredLinks = [...filteredLinks].sort((a, b) => a.name.localeCompare(b.name));
   }
+
+  filteredLinks = [
+    ...filteredLinks.filter((link) => link.pinned),
+    ...filteredLinks.filter((link) => !link.pinned),
+  ];
+
+  const toggleLinkPin = useCallback(
+    async (linkId) => {
+      const id = String(linkId);
+      const row = items.find((item) => String(item.id) === id);
+      if (!row || !projectId || pinBusyId) return;
+      const nextPinned = !row.pinned_at;
+      const previousPinnedAt = row.pinned_at ?? null;
+      setPinBusyId(id);
+      setItems((prev) =>
+        prev.map((item) =>
+          String(item.id) === id
+            ? { ...item, pinned_at: nextPinned ? new Date().toISOString() : null }
+            : item
+        )
+      );
+      const res = await setLibraryLinkPinned(String(projectId), id, nextPinned);
+      setPinBusyId(null);
+      if (!res.ok) {
+        setItems((prev) =>
+          prev.map((item) =>
+            String(item.id) === id ? { ...item, pinned_at: previousPinnedAt } : item
+          )
+        );
+        toast.error(res.error || "Could not update pin");
+      }
+    },
+    [items, pinBusyId, projectId]
+  );
 
   const openDeleteLink = (linkId, label) => {
     setDeleteTarget({ id: linkId, label });
@@ -249,6 +319,11 @@ export default function LibraryLinks({ initialData = null }) {
                   <SelectItem value="miro">Miro</SelectItem>
                   <SelectItem value="notion">Notion</SelectItem>
                   <SelectItem value="calendly">Calendly</SelectItem>
+                  <SelectItem value="loom">Loom</SelectItem>
+                  <SelectItem value="drive">Google Drive</SelectItem>
+                  <SelectItem value="dropbox">Dropbox</SelectItem>
+                  <SelectItem value="github">GitHub</SelectItem>
+                  <SelectItem value="wordpress">WordPress</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
@@ -271,7 +346,9 @@ export default function LibraryLinks({ initialData = null }) {
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {filteredLinks.length > 0 ? (
-                filteredLinks.map((link) => (
+                filteredLinks.map((link) => {
+                  const isPinned = link.pinned;
+                  return (
                   <Card
                     key={link.id}
                     id={`library-link-${link.id}`}
@@ -298,11 +375,17 @@ export default function LibraryLinks({ initialData = null }) {
                             handleLinkOpen(link);
                           }}
                         >
-                          {getLinkIcon(link.logo)}
+                          <LinkLogo logo={link.logo} name={link.name} />
                         </button>
 
                         <div className="min-w-0 flex-1">
                           <div className="mb-1 flex min-w-0 flex-wrap items-center gap-2">
+                            {isPinned ? (
+                              <Pin
+                                className="h-3.5 w-3.5 shrink-0 fill-current text-amber-600"
+                                aria-label="Pinned"
+                              />
+                            ) : null}
                             <button
                               type="button"
                               className="truncate text-left text-base font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
@@ -373,7 +456,7 @@ export default function LibraryLinks({ initialData = null }) {
                               <Button
                                 variant="outline"
                                 size="icon"
-                                className="border border-slate-200"
+                                className="border border-slate-200 shrink-0"
                                 asChild
                               >
                                 <a
@@ -390,32 +473,73 @@ export default function LibraryLinks({ initialData = null }) {
                             </TooltipTrigger>
                             <TooltipContent side="bottom">Open link in new tab</TooltipContent>
                           </Tooltip>
-                          {isFreelancer ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  className="border border-slate-200 text-destructive hover:text-destructive"
-                                  aria-label="Remove link"
-                                  data-library-link-action
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    openDeleteLink(link.id, link.name);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom">Remove link</TooltipContent>
-                            </Tooltip>
-                          ) : null}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="border border-slate-200 shrink-0"
+                                data-library-link-action
+                                aria-label={`More actions for ${link.name}`}
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="w-auto min-w-44 border border-slate-200"
+                              data-library-link-action
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <DropdownMenuItem
+                                data-library-link-action
+                                className="whitespace-nowrap"
+                                disabled={pinBusyId === String(link.id)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void toggleLinkPin(link.id);
+                                }}
+                              >
+                                <Pin className="h-4 w-4" />
+                                {isPinned ? "Unpin link" : "Pin link"}
+                              </DropdownMenuItem>
+                              {isFreelancer ? (
+                                <>
+                                  <DropdownMenuItem
+                                    data-library-link-action
+                                    className="whitespace-nowrap"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setEditLink(link);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                    Edit link
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    data-library-link-action
+                                    className="whitespace-nowrap text-destructive focus:text-destructive"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      openDeleteLink(link.id, link.name);
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete link
+                                  </DropdownMenuItem>
+                                </>
+                              ) : null}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                ))
+                  );
+                })
               ) : (
                 <div className="col-span-full flex flex-col items-center justify-center py-12 px-4 text-center">
                   <div className="rounded-full bg-muted p-6 mb-4">
@@ -452,6 +576,17 @@ export default function LibraryLinks({ initialData = null }) {
         open={addLinkDialogOpen}
         onOpenChange={setAddLinkDialogOpen}
         projectId={String(projectId)}
+        onSaved={() => void load()}
+      />
+
+      <AddLinkDialog
+        open={Boolean(editLink)}
+        onOpenChange={(open) => {
+          if (!open) setEditLink(null);
+        }}
+        projectId={String(projectId)}
+        mode="edit"
+        link={editLink}
         onSaved={() => void load()}
       />
 

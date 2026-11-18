@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,18 +12,45 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { addLibraryLink } from "@/lib/actions/project-library";
+import { addLibraryLink, updateLibraryLink } from "@/lib/actions/project-library";
 import { toast } from "sonner";
 
 /**
- * @param {{ open: boolean; onOpenChange: (open: boolean) => void; projectId: string; onSaved?: () => void }}
+ * @param {{
+ *   open: boolean;
+ *   onOpenChange: (open: boolean) => void;
+ *   projectId: string;
+ *   onSaved?: () => void;
+ *   mode?: "create" | "edit";
+ *   link?: { id: string; name: string; linkUrl: string; description?: string } | null;
+ * }}
  */
-export function AddLinkDialog({ open, onOpenChange, projectId, onSaved }) {
+export function AddLinkDialog({
+  open,
+  onOpenChange,
+  projectId,
+  onSaved,
+  mode = "create",
+  link = null,
+}) {
+  const isEdit = mode === "edit";
   const [formData, setFormData] = useState({
     linkName: "",
     linkUrl: "",
   });
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    if (isEdit && link) {
+      setFormData({
+        linkName: link.name || "",
+        linkUrl: link.linkUrl || "",
+      });
+      return;
+    }
+    setFormData({ linkName: "", linkUrl: "" });
+  }, [open, isEdit, link]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -36,21 +63,23 @@ export function AddLinkDialog({ open, onOpenChange, projectId, onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    const res = await addLibraryLink(projectId, {
+    const payload = {
       title: formData.linkName.trim(),
       url: formData.linkUrl.trim(),
-    });
+    };
+
+    const res = isEdit
+      ? await updateLibraryLink(projectId, link?.id || "", payload)
+      : await addLibraryLink(projectId, payload);
+
     setSubmitting(false);
     if (!res.ok) {
-      toast.error(res.error || "Could not add link");
+      toast.error(res.error || (isEdit ? "Could not update link" : "Could not add link"));
       return;
     }
-    toast.success("Link added");
+    toast.success(isEdit ? "Link updated" : "Link added");
     onOpenChange(false);
-    setFormData({
-      linkName: "",
-      linkUrl: "",
-    });
+    setFormData({ linkName: "", linkUrl: "" });
     onSaved?.();
   };
 
@@ -58,9 +87,13 @@ export function AddLinkDialog({ open, onOpenChange, projectId, onSaved }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">Add Link</DialogTitle>
+          <DialogTitle className="text-2xl font-bold">
+            {isEdit ? "Edit Link" : "Add Link"}
+          </DialogTitle>
           <DialogDescription>
-            Add a link to share with your team. You can add links from Figma, Loom, Google Drive, or any other platform.
+            {isEdit
+              ? "Update the name or URL for this shared link."
+              : "Add a link to share with your team. You can add links from Figma, Loom, Google Drive, or any other platform."}
           </DialogDescription>
         </DialogHeader>
 
@@ -92,15 +125,19 @@ export function AddLinkDialog({ open, onOpenChange, projectId, onSaved }) {
                 disabled={submitting}
               />
             </div>
-
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={submitting}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving…" : "Add Link"}
+              {submitting ? "Saving…" : isEdit ? "Save changes" : "Add Link"}
             </Button>
           </DialogFooter>
         </form>

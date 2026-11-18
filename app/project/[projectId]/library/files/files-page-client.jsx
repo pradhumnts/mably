@@ -33,6 +33,7 @@ import {
   Repeat,
   LayoutGrid,
   List,
+  Pin,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -57,6 +58,7 @@ import {
   listLibraryFiles,
   markLibraryFileCommentsRead,
   setLibraryFileApprovalStatus,
+  setLibraryFilePinned,
 } from "@/lib/actions/project-library";
 import { formatStorageShort } from "@/lib/billing/library-storage-policy";
 import { LibraryFileDiscussion } from "@/components/library-file-discussion";
@@ -263,6 +265,7 @@ export default function LibraryFiles({ initialData = null }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [fileTypeFilter, setFileTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
+  const [pinBusyId, setPinBusyId] = useState(/** @type {string | null} */ (null));
   const [uploadFileDialogOpen, setUploadFileDialogOpen] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -465,6 +468,7 @@ export default function LibraryFiles({ initialData = null }) {
           : null,
       versionCount: Number(row.version_count ?? 1),
       currentVersionNumber: Number(row.current_version_number ?? 1),
+      pinned: Boolean(row.pinned_at),
     };
   });
 
@@ -501,6 +505,40 @@ export default function LibraryFiles({ initialData = null }) {
       return (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0);
     });
   }
+
+  filteredFiles = [
+    ...filteredFiles.filter((file) => file.pinned),
+    ...filteredFiles.filter((file) => !file.pinned),
+  ];
+
+  const toggleFilePin = useCallback(
+    async (fileId) => {
+      const id = String(fileId);
+      const row = items.find((item) => String(item.id) === id);
+      if (!row || !projectId || pinBusyId) return;
+      const nextPinned = !row.pinned_at;
+      const previousPinnedAt = row.pinned_at ?? null;
+      setPinBusyId(id);
+      setItems((prev) =>
+        prev.map((item) =>
+          String(item.id) === id
+            ? { ...item, pinned_at: nextPinned ? new Date().toISOString() : null }
+            : item
+        )
+      );
+      const res = await setLibraryFilePinned(String(projectId), id, nextPinned);
+      setPinBusyId(null);
+      if (!res.ok) {
+        setItems((prev) =>
+          prev.map((item) =>
+            String(item.id) === id ? { ...item, pinned_at: previousPinnedAt } : item
+          )
+        );
+        toast.error(res.error || "Could not update pin");
+      }
+    },
+    [items, pinBusyId, projectId]
+  );
 
   const handleFileRenamed = useCallback((fileId, newName) => {
     const id = String(fileId);
@@ -795,6 +833,7 @@ export default function LibraryFiles({ initialData = null }) {
             >
               {filteredFiles.length > 0 ? (
                 filteredFiles.map((file) => {
+                  const isPinned = file.pinned;
                   return (
                   <Fragment key={file.id}>
                   <Card
@@ -834,6 +873,12 @@ export default function LibraryFiles({ initialData = null }) {
 
                         <div className="col-start-2 row-start-1 min-w-0">
                           <div className="mb-1 flex min-w-0 flex-nowrap items-center gap-1.5">
+                            {isPinned ? (
+                              <Pin
+                                className="h-3.5 w-3.5 shrink-0 fill-current text-amber-600"
+                                aria-label="Pinned"
+                              />
+                            ) : null}
                             {file.fromDiscussion ? (
                               <FileDiscussionSourceIcon name={file.fromDiscussion} />
                             ) : null}
@@ -938,6 +983,18 @@ export default function LibraryFiles({ initialData = null }) {
                               data-library-file-action
                               onClick={(event) => event.stopPropagation()}
                             >
+                              <DropdownMenuItem
+                                data-library-file-action
+                                className="whitespace-nowrap"
+                                disabled={pinBusyId === String(file.id)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void toggleFilePin(file.id);
+                                }}
+                              >
+                                <Pin className="h-4 w-4" />
+                                {isPinned ? "Unpin file" : "Pin file"}
+                              </DropdownMenuItem>
                               {isFreelancer ? (
                                 <DropdownMenuItem
                                   data-library-file-action
